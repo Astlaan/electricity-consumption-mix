@@ -43,7 +43,10 @@ class ElectricityMixCalculator:
         # Calculate Portugal's mix
         pt_mix = pt_gen.copy()
         for source in pt_gen.columns:
-            pt_mix[source] += pt_imports * es_fractions[source]
+            if source in es_fractions.columns:
+                pt_mix[source] += pt_imports * es_fractions[source]
+            else:
+                print(f"Warning: Source {source} not found in Spanish data")
         
         # Calculate percentages
         pt_total = pt_mix.sum(axis=1)
