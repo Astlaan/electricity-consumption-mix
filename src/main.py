@@ -68,11 +68,11 @@ def main():
                 aggregated_results = aggregate_results(pt_results, args.granularity)
 
                 print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
-                print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
+                print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max() + pd.Timedelta(hours=1)}")
                 print(f"Number of periods: {len(aggregated_results)}")
                 print(f"Energy sources: {aggregated_results.columns.tolist()}")
                 print("\nSample of results:")
-                print(aggregated_results.head(10))
+                print(aggregated_results)
                 
                 print("\nSummary statistics:")
                 print(aggregated_results.describe())

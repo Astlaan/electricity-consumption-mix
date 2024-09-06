@@ -40,4 +40,8 @@ class ElectricityMixCalculator:
         pt_total = pt_mix.sum(axis=1)
         pt_percentages = pt_mix.div(pt_total, axis=0) * 100
 
+        # Replace negative values with 0 and recalculate percentages
+        pt_percentages[pt_percentages < 0] = 0
+        pt_percentages = pt_percentages.div(pt_percentages.sum(axis=1), axis=0) * 100
+
         return pt_percentages
