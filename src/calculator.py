@@ -17,19 +17,19 @@ class ElectricityMixCalculator:
         es_imports_fr = es_data['imports_fr']
         
         # Calculate the fraction of each source in France's generation mix
-        fr_total = fr_gen.sum(axis=1)
-        fr_fractions = fr_gen.div(fr_total, axis=0)
+        fr_total = fr_gen.groupby('start_time')['quantity'].sum()
+        fr_fractions = fr_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack().div(fr_total, axis=0)
         
         # Adjust Spain's mix based on imports from France
-        es_adjusted = es_gen.copy()
-        for source in es_gen.columns:
-            es_adjusted[source] += es_imports_fr * fr_fractions[source]
+        es_adjusted = es_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
+        for source in es_adjusted.columns:
+            es_adjusted[source] += es_imports_fr['quantity'] * fr_fractions[source]
         
         return es_adjusted
 
     def _calculate_portugal_mix(self, pt_data, es_adjusted):
-        pt_gen = pt_data['generation']
-        pt_imports = pt_data['imports']
+        pt_gen = pt_data['generation'].groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
+        pt_imports = pt_data['imports'].groupby('start_time')['quantity'].sum()
         
         # Calculate the fraction of each source in Spain's adjusted mix
         es_total = es_adjusted.sum(axis=1)

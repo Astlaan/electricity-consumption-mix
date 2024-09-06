@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
+import xml.etree.ElementTree as ET
 
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
@@ -14,6 +15,24 @@ class ENTSOEDataFetcher:
         response.raise_for_status()
         return response.text
 
+    def _parse_xml_to_dataframe(self, xml_data):
+        root = ET.fromstring(xml_data)
+        data = []
+        for time_series in root.findall(".//TimeSeries"):
+            psr_type = time_series.find(".//psrType").text if time_series.find(".//psrType") is not None else "Unknown"
+            for period in time_series.findall(".//Period"):
+                start_time = period.find(".//start").text
+                for point in period.findall(".//Point"):
+                    position = point.find(".//position").text
+                    quantity = point.find(".//quantity").text
+                    data.append({
+                        'start_time': start_time,
+                        'position': int(position),
+                        'quantity': float(quantity),
+                        'psr_type': psr_type
+                    })
+        return pd.DataFrame(data)
+
     def get_generation_data(self, country_code, start_date, end_date):
         params = {
             'documentType': 'A75',
@@ -24,9 +43,7 @@ class ENTSOEDataFetcher:
             'periodEnd': end_date.strftime('%Y%m%d%H%M')
         }
         xml_data = self._make_request(params)
-        # Parse XML data and convert to DataFrame
-        # This is a placeholder and needs to be implemented
-        return pd.DataFrame()
+        return self._parse_xml_to_dataframe(xml_data)
 
     def get_physical_flows(self, in_domain, out_domain, start_date, end_date):
         params = {
@@ -37,9 +54,7 @@ class ENTSOEDataFetcher:
             'periodEnd': end_date.strftime('%Y%m%d%H%M')
         }
         xml_data = self._make_request(params)
-        # Parse XML data and convert to DataFrame
-        # This is a placeholder and needs to be implemented
-        return pd.DataFrame()
+        return self._parse_xml_to_dataframe(xml_data)
 
     def get_portugal_data(self, start_date, end_date):
         generation = self.get_generation_data('10YPT-REN------W', start_date, end_date)

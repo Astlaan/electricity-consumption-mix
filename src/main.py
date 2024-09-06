@@ -1,4 +1,6 @@
 import argparse
+import os
+from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
@@ -14,12 +16,20 @@ def main():
     if not validate_inputs(args):
         return
 
-    data_fetcher = ENTSOEDataFetcher()
+    security_token = os.environ.get('ENTSOE_SECURITY_TOKEN')
+    if not security_token:
+        print("Error: ENTSOE_SECURITY_TOKEN environment variable not set.")
+        return
+
+    data_fetcher = ENTSOEDataFetcher(security_token)
     calculator = ElectricityMixCalculator()
 
-    pt_data = data_fetcher.get_portugal_data(args.start_date, args.end_date)
-    es_data = data_fetcher.get_spain_data(args.start_date, args.end_date)
-    fr_data = data_fetcher.get_france_data(args.start_date, args.end_date) if args.include_france else None
+    start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
+
+    pt_data = data_fetcher.get_portugal_data(start_date, end_date)
+    es_data = data_fetcher.get_spain_data(start_date, end_date)
+    fr_data = data_fetcher.get_france_data(start_date, end_date) if args.include_france else None
 
     results = calculator.calculate_mix(pt_data, es_data, fr_data, args.include_france)
     aggregated_results = aggregate_results(results, args.granularity)
