@@ -11,13 +11,9 @@ class ENTSOEDataFetcher:
 
     def _make_request(self, params):
         params['securityToken'] = self.security_token
-        try:
-            response = requests.get(self.BASE_URL, params=params)
-            response.raise_for_status()
-            return response.text
-        except requests.RequestException as e:
-            logging.error(f"API request failed: {e}")
-            raise
+        response = requests.get(self.BASE_URL, params=params)
+        response.raise_for_status()
+        return response.text
 
     def _parse_xml_to_dataframe(self, xml_data):
         root = ET.fromstring(xml_data)
@@ -68,10 +64,4 @@ class ENTSOEDataFetcher:
 
     def get_spain_data(self, start_date, end_date):
         generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
-        imports_fr = self.get_physical_flows('10YFR-RTE------C', '10YES-REE------0', start_date, end_date)
-        exports_fr = self.get_physical_flows('10YES-REE------0', '10YFR-RTE------C', start_date, end_date)
-        return {'generation': generation, 'imports_fr': imports_fr, 'exports_fr': exports_fr}
-
-    def get_france_data(self, start_date, end_date):
-        generation = self.get_generation_data('10YFR-RTE------C', start_date, end_date)
         return {'generation': generation}

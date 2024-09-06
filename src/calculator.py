@@ -1,104 +1,43 @@
 import pandas as pd
-import numpy as np
-import logging
 
 class ElectricityMixCalculator:
-    def calculate_mix(self, pt_data, es_data, fr_data, include_france):
-        if include_france:
-            es_adjusted, es_percentages = self._adjust_spain_mix(es_data, fr_data)
-        else:
-            es_adjusted = es_data['generation']
-            es_total = es_adjusted.sum(axis=1)
-            es_percentages = es_adjusted.div(es_total, axis=0) * 100
-
-        pt_mix, pt_percentages = self._calculate_portugal_mix(pt_data, es_adjusted)
-        
-        return pt_percentages, es_percentages
-
-    def _adjust_spain_mix(self, es_data, fr_data):
+    def calculate_mix(self, pt_data, es_data):
+        pt_gen = pt_data['generation']
+        pt_imports = pt_data['imports']
+        pt_exports = pt_data['exports']
         es_gen = es_data['generation']
-        fr_gen = fr_data['generation']
-        es_imports_fr = es_data['imports_fr']
-        es_exports_fr = es_data['exports_fr']
-        
+
         # Ensure 'start_time' is in datetime format
-        for df in [es_gen, fr_gen, es_imports_fr, es_exports_fr]:
+        for df in [pt_gen, pt_imports, pt_exports, es_gen]:
             if 'start_time' in df.columns:
                 df['start_time'] = pd.to_datetime(df['start_time'])
             elif 'start' in df.columns:
                 df['start_time'] = pd.to_datetime(df['start'])
                 df = df.rename(columns={'start': 'start_time'})
-            else:
-                raise ValueError(f"DataFrame is missing 'start_time' or 'start' column: {df.columns}")
-        
-        # Calculate the fraction of each source in France's generation mix
-        fr_total = fr_gen.groupby('start_time')['quantity'].sum()
-        fr_fractions = fr_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack().div(fr_total, axis=0)
-        
-        # Adjust Spain's mix based on net imports from France
-        es_adjusted = es_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
-        net_imports_fr = es_imports_fr.set_index('start_time')['quantity'] - es_exports_fr.set_index('start_time')['quantity']
-        
-        for source in es_adjusted.columns:
-            if net_imports_fr.sum() > 0:  # Spain is importing from France
-                es_adjusted[source] += net_imports_fr * fr_fractions[source]
-            else:  # Spain is exporting to France or net exchange is zero
-                es_adjusted[source] += 0  # No adjustment needed
-        
-        # Calculate percentages
-        es_total = es_adjusted.sum(axis=1)
-        es_percentages = es_adjusted.div(es_total, axis=0) * 100
-        
-        return es_adjusted, es_percentages
 
-    def _calculate_portugal_mix(self, pt_data, es_adjusted):
-        # Ensure 'start_time' is in datetime format for all DataFrames
-        for key, df in pt_data.items():
-            if 'start_time' in df.columns:
-                df['start_time'] = pd.to_datetime(df['start_time'])
-            elif 'start' in df.columns:
-                df['start_time'] = pd.to_datetime(df['start'])
-                df = df.rename(columns={'start': 'start_time'})
-            else:
-                raise ValueError(f"DataFrame '{key}' is missing 'start_time' or 'start' column: {df.columns}")
-            pt_data[key] = df
-        
-        # Ensure es_adjusted has 'start_time' column
-        if 'start_time' not in es_adjusted.index.names:
-            raise ValueError(f"es_adjusted DataFrame is missing 'start_time' in index: {es_adjusted.index.names}")
-
-        pt_gen = pt_data['generation'].groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
-        pt_imports = pt_data['imports'].groupby('start_time')['quantity'].sum()
-        pt_exports = pt_data['exports'].groupby('start_time')['quantity'].sum()
-        
-        # Ensure all data is numeric
-        pt_gen = pt_gen.apply(pd.to_numeric, errors='coerce')
-        pt_imports = pd.to_numeric(pt_imports, errors='coerce')
-        pt_exports = pd.to_numeric(pt_exports, errors='coerce')
-        es_adjusted = es_adjusted.apply(pd.to_numeric, errors='coerce')
-        
-        # Calculate the fraction of each source in Spain's adjusted mix
-        es_total = es_adjusted.sum(axis=1)
-        es_fractions = es_adjusted.div(es_total, axis=0)
-        
         # Calculate Portugal's mix
-        pt_mix = pt_gen.copy()
-        net_imports = pt_imports - pt_exports
-        for source in pt_gen.columns:
-            if source in es_fractions.columns:
-                pt_mix[source] += net_imports * es_fractions[source]
+        pt_gen_grouped = pt_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        pt_imports_grouped = pt_imports.groupby('start_time')['quantity'].sum()
+        pt_exports_grouped = pt_exports.groupby('start_time')['quantity'].sum()
+
+        # Calculate net imports
+        net_imports = pt_imports_grouped - pt_exports_grouped
+
+        # Calculate Spain's generation mix
+        es_gen_grouped = es_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        es_total = es_gen_grouped.sum(axis=1)
+        es_percentages = es_gen_grouped.div(es_total, axis=0)
+
+        # Adjust Portugal's mix based on imports from Spain
+        pt_mix = pt_gen_grouped.copy()
+        for source in es_percentages.columns:
+            if source in pt_mix.columns:
+                pt_mix[source] += net_imports * es_percentages[source]
             else:
-                # Use the average fraction of known sources for unknown sources
-                known_fractions = es_fractions.mean(axis=1)
-                pt_mix[source] += net_imports * known_fractions
-                logging.warning(f"Source {source} not found in Spanish data. Using average of known sources.")
-        
-        # Apply transmission loss (assuming 5% loss)
-        transmission_efficiency = 0.95
-        pt_mix = pt_mix * transmission_efficiency
-        
+                pt_mix[source] = net_imports * es_percentages[source]
+
         # Calculate percentages
         pt_total = pt_mix.sum(axis=1)
         pt_percentages = pt_mix.div(pt_total, axis=0) * 100
-        
-        return pt_mix, pt_percentages
+
+        return pt_percentages
