@@ -31,6 +31,11 @@ class ElectricityMixCalculator:
         pt_gen = pt_data['generation'].groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
         pt_imports = pt_data['imports'].groupby('start_time')['quantity'].sum()
         
+        # Ensure all data is numeric
+        pt_gen = pt_gen.apply(pd.to_numeric, errors='coerce')
+        pt_imports = pd.to_numeric(pt_imports, errors='coerce')
+        es_adjusted = es_adjusted.apply(pd.to_numeric, errors='coerce')
+        
         # Calculate the fraction of each source in Spain's adjusted mix
         es_total = es_adjusted.sum(axis=1)
         es_fractions = es_adjusted.div(es_total, axis=0)
