@@ -1,11 +1,13 @@
 import argparse
 import os
+import logging
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
     parser.add_argument("--start_date", required=True, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end_date", required=True, help="End date (YYYY-MM-DD)")

@@ -46,7 +46,8 @@ class ElectricityMixCalculator:
             if source in es_fractions.columns:
                 pt_mix[source] += pt_imports * es_fractions[source]
             else:
-                print(f"Warning: Source {source} not found in Spanish data")
+                import logging
+                logging.warning(f"Source {source} not found in Spanish data. Using Portuguese generation data only.")
                 # Use Portuguese generation data only for this source
                 pt_mix[source] = pt_gen[source]
         
