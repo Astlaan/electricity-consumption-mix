@@ -11,9 +11,13 @@ class ENTSOEDataFetcher:
 
     def _make_request(self, params):
         params['securityToken'] = self.security_token
-        response = requests.get(self.BASE_URL, params=params)
-        response.raise_for_status()
-        return response.text
+        try:
+            response = requests.get(self.BASE_URL, params=params)
+            response.raise_for_status()
+            return response.text
+        except requests.RequestException as e:
+            logging.error(f"API request failed: {e}")
+            raise
 
     def _parse_xml_to_dataframe(self, xml_data):
         root = ET.fromstring(xml_data)

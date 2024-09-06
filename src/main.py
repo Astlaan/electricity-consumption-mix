@@ -6,11 +6,20 @@ from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
 
-def main():
+def setup_logging():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='electricity_mix_calculator.log')
     console = logging.StreamHandler()
     console.setLevel(logging.WARNING)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
     logging.getLogger('').addHandler(console)
+
+def save_results_to_csv(results, filename):
+    results.to_csv(filename)
+    logging.info(f"Results saved to {filename}")
+
+def main():
+    setup_logging()
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
     parser.add_argument("--start_date", required=True, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end_date", required=True, help="End date (YYYY-MM-DD)")
@@ -36,6 +45,10 @@ def main():
     aggregated_results = aggregate_results(results, args.granularity)
 
     print(aggregated_results)
+
+    # Save results to CSV
+    output_filename = f"electricity_mix_{args.start_date}_{args.end_date}_{args.granularity}.csv"
+    save_results_to_csv(aggregated_results, output_filename)
 
 if __name__ == "__main__":
     main()
