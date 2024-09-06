@@ -13,7 +13,9 @@ class ENTSOEDataFetcher:
         params['securityToken'] = self.security_token
         response = requests.get(self.BASE_URL, params=params)
         response.raise_for_status()
-        return response.text
+        xml_response = response.text
+        print(f"Raw XML response:\n{xml_response[:1000]}...")  # Print first 1000 characters
+        return xml_response
 
     def _parse_xml_to_dataframe(self, xml_data):
         root = ET.fromstring(xml_data)

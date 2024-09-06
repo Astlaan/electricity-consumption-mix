@@ -22,7 +22,9 @@ def main():
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
 
     try:
+        print("Fetching Portugal data...")
         pt_data = data_fetcher.get_portugal_data(start_date, end_date)
+        print("Fetching Spain data...")
         es_data = data_fetcher.get_spain_data(start_date, end_date)
 
         print("Data fetched successfully.")
@@ -31,35 +33,46 @@ def main():
             print(f"{key}:")
             print(f"  Shape: {df.shape}")
             print(f"  Columns: {df.columns.tolist()}")
-            print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
-            print(f"  Sample data:\n{df.head()}\n")
+            if not df.empty:
+                print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
+                print(f"  Sample data:\n{df.head()}\n")
+            else:
+                print("  DataFrame is empty\n")
 
         print("\nSpain data:")
         for key, df in es_data.items():
             print(f"{key}:")
             print(f"  Shape: {df.shape}")
             print(f"  Columns: {df.columns.tolist()}")
-            print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
-            print(f"  Sample data:\n{df.head()}\n")
+            if not df.empty:
+                print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
+                print(f"  Sample data:\n{df.head()}\n")
+            else:
+                print("  DataFrame is empty\n")
 
-        print("\nCalculating electricity mix...")
-        pt_results = calculator.calculate_mix(pt_data, es_data)
-        
-        print("\nAggregating results...")
-        aggregated_results = aggregate_results(pt_results, args.granularity)
+        if all(df.empty for df in pt_data.values()) or all(df.empty for df in es_data.values()):
+            print("Error: All DataFrames are empty. Cannot proceed with calculations.")
+        else:
+            print("\nCalculating electricity mix...")
+            pt_results = calculator.calculate_mix(pt_data, es_data)
+            
+            print("\nAggregating results...")
+            aggregated_results = aggregate_results(pt_results, args.granularity)
 
-        print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
-        print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
-        print(f"Number of periods: {len(aggregated_results)}")
-        print(f"Energy sources: {aggregated_results.columns.tolist()}")
-        print("\nSample of results:")
-        print(aggregated_results.head(10))
-        
-        print("\nSummary statistics:")
-        print(aggregated_results.describe())
+            print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
+            print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
+            print(f"Number of periods: {len(aggregated_results)}")
+            print(f"Energy sources: {aggregated_results.columns.tolist()}")
+            print("\nSample of results:")
+            print(aggregated_results.head(10))
+            
+            print("\nSummary statistics:")
+            print(aggregated_results.describe())
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
