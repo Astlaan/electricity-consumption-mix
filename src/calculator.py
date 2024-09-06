@@ -46,10 +46,10 @@ class ElectricityMixCalculator:
             if source in es_fractions.columns:
                 pt_mix[source] += pt_imports * es_fractions[source]
             else:
-                import logging
-                logging.warning(f"Source {source} not found in Spanish data. Using Portuguese generation data only.")
-                # Use Portuguese generation data only for this source
-                pt_mix[source] = pt_gen[source]
+                # Use the average fraction of known sources for unknown sources
+                known_fractions = es_fractions.mean(axis=1)
+                pt_mix[source] += pt_imports * known_fractions
+                logging.warning(f"Source {source} not found in Spanish data. Using average of known sources.")
         
         # Calculate percentages
         pt_total = pt_mix.sum(axis=1)
