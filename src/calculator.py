@@ -28,6 +28,8 @@ class ElectricityMixCalculator:
             elif 'start' in df.columns:
                 df['start_time'] = pd.to_datetime(df['start'])
                 df = df.rename(columns={'start': 'start_time'})
+            else:
+                raise ValueError(f"DataFrame is missing 'start_time' or 'start' column: {df.columns}")
         
         # Calculate the fraction of each source in France's generation mix
         fr_total = fr_gen.groupby('start_time')['quantity'].sum()
@@ -57,7 +59,13 @@ class ElectricityMixCalculator:
             elif 'start' in df.columns:
                 df['start_time'] = pd.to_datetime(df['start'])
                 df = df.rename(columns={'start': 'start_time'})
+            else:
+                raise ValueError(f"DataFrame '{key}' is missing 'start_time' or 'start' column: {df.columns}")
             pt_data[key] = df
+        
+        # Ensure es_adjusted has 'start_time' column
+        if 'start_time' not in es_adjusted.index.names:
+            raise ValueError(f"es_adjusted DataFrame is missing 'start_time' in index: {es_adjusted.index.names}")
 
         pt_gen = pt_data['generation'].groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
         pt_imports = pt_data['imports'].groupby('start_time')['quantity'].sum()

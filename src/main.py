@@ -41,6 +41,18 @@ def main():
     es_data = data_fetcher.get_spain_data(start_date, end_date)
     fr_data = data_fetcher.get_france_data(start_date, end_date) if args.include_france else None
 
+    # Debug information
+    for key, df in pt_data.items():
+        print(f"Portugal {key} data columns: {df.columns}")
+        print(f"Portugal {key} data shape: {df.shape}")
+    for key, df in es_data.items():
+        print(f"Spain {key} data columns: {df.columns}")
+        print(f"Spain {key} data shape: {df.shape}")
+    if fr_data:
+        for key, df in fr_data.items():
+            print(f"France {key} data columns: {df.columns}")
+            print(f"France {key} data shape: {df.shape}")
+
     pt_results, es_results = calculator.calculate_mix(pt_data, es_data, fr_data, args.include_france)
     aggregated_pt_results = aggregate_results(pt_results, args.granularity)
     aggregated_es_results = aggregate_results(es_results, args.granularity)
