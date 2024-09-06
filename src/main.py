@@ -16,11 +16,7 @@ def main():
     if not validate_inputs(args):
         return
 
-    security_token = os.environ.get('ENTSOE_SECURITY_TOKEN')
-    if not security_token:
-        print("Error: ENTSOE_SECURITY_TOKEN environment variable not set.")
-        return
-
+    security_token = "89fec152-d36b-49c8-b0b6-4e67e57b26ea"
     data_fetcher = ENTSOEDataFetcher(security_token)
     calculator = ElectricityMixCalculator()
 

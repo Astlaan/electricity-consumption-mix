@@ -9,17 +9,41 @@ class TestElectricityMixCalculator(unittest.TestCase):
     def test_calculate_mix(self):
         # Create sample data
         pt_data = {
-            'generation': pd.DataFrame({'solar': [100, 200], 'wind': [300, 400]}),
-            'imports': pd.Series([50, 60]),
-            'exports': pd.Series([10, 20])
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'psr_type': ['B16', 'B16'],
+                'quantity': [100, 200]
+            }),
+            'imports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [50, 60]
+            }),
+            'exports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [10, 20]
+            })
         }
         es_data = {
-            'generation': pd.DataFrame({'solar': [500, 600], 'wind': [700, 800]}),
-            'imports_fr': pd.Series([100, 110]),
-            'exports_fr': pd.Series([30, 40])
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'psr_type': ['B16', 'B16'],
+                'quantity': [500, 600]
+            }),
+            'imports_fr': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [100, 110]
+            }),
+            'exports_fr': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [30, 40]
+            })
         }
         fr_data = {
-            'generation': pd.DataFrame({'solar': [200, 300], 'wind': [400, 500]})
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'psr_type': ['B16', 'B16'],
+                'quantity': [200, 300]
+            })
         }
 
         # Test without French contribution
