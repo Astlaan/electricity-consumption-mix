@@ -41,14 +41,24 @@ def main():
     es_data = data_fetcher.get_spain_data(start_date, end_date)
     fr_data = data_fetcher.get_france_data(start_date, end_date) if args.include_france else None
 
-    results = calculator.calculate_mix(pt_data, es_data, fr_data, args.include_france)
-    aggregated_results = aggregate_results(results, args.granularity)
+    pt_results, es_results = calculator.calculate_mix(pt_data, es_data, fr_data, args.include_france)
+    aggregated_pt_results = aggregate_results(pt_results, args.granularity)
+    aggregated_es_results = aggregate_results(es_results, args.granularity)
 
-    print(aggregated_results)
+    print("Portugal's Electricity Mix:")
+    print(aggregated_pt_results)
+    
+    if args.include_france:
+        print("\nSpain's Adjusted Electricity Mix:")
+        print(aggregated_es_results)
 
     # Save results to CSV
-    output_filename = f"electricity_mix_{args.start_date}_{args.end_date}_{args.granularity}.csv"
-    save_results_to_csv(aggregated_results, output_filename)
+    pt_output_filename = f"portugal_electricity_mix_{args.start_date}_{args.end_date}_{args.granularity}.csv"
+    save_results_to_csv(aggregated_pt_results, pt_output_filename)
+    
+    if args.include_france:
+        es_output_filename = f"spain_adjusted_electricity_mix_{args.start_date}_{args.end_date}_{args.granularity}.csv"
+        save_results_to_csv(aggregated_es_results, es_output_filename)
 
 if __name__ == "__main__":
     main()
