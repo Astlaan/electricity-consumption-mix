@@ -34,7 +34,7 @@ def main():
             print(f"  Shape: {df.shape}")
             print(f"  Columns: {df.columns.tolist()}")
             if not df.empty:
-                print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
+                print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max() + pd.Timedelta(hours=1)}")
                 print(f"  Sample data:\n{df.head()}\n")
             else:
                 print("  DataFrame is empty\n")
