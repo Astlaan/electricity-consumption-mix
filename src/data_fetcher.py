@@ -20,20 +20,42 @@ class ENTSOEDataFetcher:
     def _parse_xml_to_dataframe(self, xml_data):
         root = ET.fromstring(xml_data)
         data = []
-        for time_series in root.findall(".//TimeSeries"):
-            psr_type = time_series.find(".//psrType").text if time_series.find(".//psrType") is not None else "Unknown"
-            for period in time_series.findall(".//Period"):
-                start_time = period.find(".//start").text
-                for point in period.findall(".//Point"):
-                    position = point.find(".//position").text
-                    quantity = point.find(".//quantity").text
-                    data.append({
+        namespace = {'ns': root.tag.split('}')[0].strip('{')}
+        
+        for time_series in root.findall(".//ns:TimeSeries", namespace):
+            psr_type = time_series.find(".//ns:psrType", namespace)
+            psr_type = psr_type.text if psr_type is not None else "Unknown"
+            
+            in_domain = time_series.find(".//ns:in_Domain.mRID", namespace)
+            out_domain = time_series.find(".//ns:out_Domain.mRID", namespace)
+            
+            for period in time_series.findall(".//ns:Period", namespace):
+                start_time = period.find(".//ns:start", namespace).text
+                resolution = period.find(".//ns:resolution", namespace).text
+                
+                for point in period.findall(".//ns:Point", namespace):
+                    position = point.find(".//ns:position", namespace).text
+                    quantity = point.find(".//ns:quantity", namespace).text
+                    
+                    data_point = {
                         'start_time': start_time,
                         'position': int(position),
                         'quantity': float(quantity),
-                        'psr_type': psr_type
-                    })
-        return pd.DataFrame(data)
+                        'psr_type': psr_type,
+                        'resolution': resolution
+                    }
+                    
+                    if in_domain is not None:
+                        data_point['in_domain'] = in_domain.text
+                    if out_domain is not None:
+                        data_point['out_domain'] = out_domain.text
+                    
+                    data.append(data_point)
+        
+        df = pd.DataFrame(data)
+        if not df.empty:
+            df['start_time'] = pd.to_datetime(df['start_time'])
+        return df
 
     def get_generation_data(self, country_code, start_date, end_date):
         params = {

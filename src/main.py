@@ -50,24 +50,34 @@ def main():
             else:
                 print("  DataFrame is empty\n")
 
-        if all(df.empty for df in pt_data.values()) or all(df.empty for df in es_data.values()):
+        if any(df.empty for df in pt_data.values()) or any(df.empty for df in es_data.values()):
+            print("Warning: Some DataFrames are empty. This may affect the calculation results.")
+            for country, data in [("Portugal", pt_data), ("Spain", es_data)]:
+                for key, df in data.items():
+                    if df.empty:
+                        print(f"  {country} {key} DataFrame is empty.")
+        
+        if all(df.empty for df in pt_data.values()) and all(df.empty for df in es_data.values()):
             print("Error: All DataFrames are empty. Cannot proceed with calculations.")
         else:
             print("\nCalculating electricity mix...")
             pt_results = calculator.calculate_mix(pt_data, es_data)
             
-            print("\nAggregating results...")
-            aggregated_results = aggregate_results(pt_results, args.granularity)
+            if pt_results is not None and not pt_results.empty:
+                print("\nAggregating results...")
+                aggregated_results = aggregate_results(pt_results, args.granularity)
 
-            print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
-            print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
-            print(f"Number of periods: {len(aggregated_results)}")
-            print(f"Energy sources: {aggregated_results.columns.tolist()}")
-            print("\nSample of results:")
-            print(aggregated_results.head(10))
-            
-            print("\nSummary statistics:")
-            print(aggregated_results.describe())
+                print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
+                print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
+                print(f"Number of periods: {len(aggregated_results)}")
+                print(f"Energy sources: {aggregated_results.columns.tolist()}")
+                print("\nSample of results:")
+                print(aggregated_results.head(10))
+                
+                print("\nSummary statistics:")
+                print(aggregated_results.describe())
+            else:
+                print("Error: Unable to calculate electricity mix. The result is empty or None.")
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
