@@ -26,23 +26,37 @@ def main():
         es_data = data_fetcher.get_spain_data(start_date, end_date)
 
         print("Data fetched successfully.")
-        print("Portugal data:")
+        print("\nPortugal data:")
         for key, df in pt_data.items():
-            print(f"{key} shape: {df.shape}")
-            print(f"{key} columns: {df.columns}")
-            print(f"{key} head:\n{df.head()}\n")
+            print(f"{key}:")
+            print(f"  Shape: {df.shape}")
+            print(f"  Columns: {df.columns.tolist()}")
+            print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
+            print(f"  Sample data:\n{df.head()}\n")
 
-        print("Spain data:")
+        print("\nSpain data:")
         for key, df in es_data.items():
-            print(f"{key} shape: {df.shape}")
-            print(f"{key} columns: {df.columns}")
-            print(f"{key} head:\n{df.head()}\n")
+            print(f"{key}:")
+            print(f"  Shape: {df.shape}")
+            print(f"  Columns: {df.columns.tolist()}")
+            print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
+            print(f"  Sample data:\n{df.head()}\n")
 
+        print("\nCalculating electricity mix...")
         pt_results = calculator.calculate_mix(pt_data, es_data)
+        
+        print("\nAggregating results...")
         aggregated_results = aggregate_results(pt_results, args.granularity)
 
-        print(f"Portugal's Electricity Mix ({args.granularity} granularity):")
-        print(aggregated_results)
+        print(f"\nPortugal's Electricity Mix ({args.granularity} granularity):")
+        print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
+        print(f"Number of periods: {len(aggregated_results)}")
+        print(f"Energy sources: {aggregated_results.columns.tolist()}")
+        print("\nSample of results:")
+        print(aggregated_results.head(10))
+        
+        print("\nSummary statistics:")
+        print(aggregated_results.describe())
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
