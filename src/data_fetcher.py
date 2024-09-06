@@ -88,4 +88,6 @@ class ENTSOEDataFetcher:
 
     def get_spain_data(self, start_date, end_date):
         generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
+        if not generation.empty:
+            print(f"Spain generation data range: {generation['start_time'].min()} to {generation['start_time'].max()}")
         return {'generation': generation}
