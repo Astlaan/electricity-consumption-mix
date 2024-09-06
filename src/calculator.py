@@ -21,13 +21,21 @@ class ElectricityMixCalculator:
         es_imports_fr = es_data['imports_fr']
         es_exports_fr = es_data['exports_fr']
         
+        # Ensure 'start_time' is in datetime format
+        for df in [es_gen, fr_gen, es_imports_fr, es_exports_fr]:
+            if 'start_time' in df.columns:
+                df['start_time'] = pd.to_datetime(df['start_time'])
+            elif 'start' in df.columns:
+                df['start_time'] = pd.to_datetime(df['start'])
+                df = df.rename(columns={'start': 'start_time'})
+        
         # Calculate the fraction of each source in France's generation mix
         fr_total = fr_gen.groupby('start_time')['quantity'].sum()
         fr_fractions = fr_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack().div(fr_total, axis=0)
         
         # Adjust Spain's mix based on net imports from France
         es_adjusted = es_gen.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
-        net_imports_fr = es_imports_fr['quantity'] - es_exports_fr['quantity']
+        net_imports_fr = es_imports_fr.set_index('start_time')['quantity'] - es_exports_fr.set_index('start_time')['quantity']
         
         for source in es_adjusted.columns:
             if net_imports_fr.sum() > 0:  # Spain is importing from France
@@ -42,6 +50,15 @@ class ElectricityMixCalculator:
         return es_adjusted, es_percentages
 
     def _calculate_portugal_mix(self, pt_data, es_adjusted):
+        # Ensure 'start_time' is in datetime format for all DataFrames
+        for key, df in pt_data.items():
+            if 'start_time' in df.columns:
+                df['start_time'] = pd.to_datetime(df['start_time'])
+            elif 'start' in df.columns:
+                df['start_time'] = pd.to_datetime(df['start'])
+                df = df.rename(columns={'start': 'start_time'})
+            pt_data[key] = df
+
         pt_gen = pt_data['generation'].groupby(['start_time', 'psr_type'])['quantity'].sum().unstack()
         pt_imports = pt_data['imports'].groupby('start_time')['quantity'].sum()
         pt_exports = pt_data['exports'].groupby('start_time')['quantity'].sum()
