@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import logging
 
 class ElectricityMixCalculator:
     def calculate_mix(self, pt_data, es_data, fr_data, include_france):
