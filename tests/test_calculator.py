@@ -71,7 +71,7 @@ class TestElectricityMixCalculator(unittest.TestCase):
         pt_data = {
             'generation': pd.DataFrame({
                 'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
-                'psr_type': ['B01', 'B01'],
+                'psr_type': ['B01', 'B02'],
                 'quantity': [100, 200]
             }),
             'imports': pd.DataFrame({
@@ -86,7 +86,7 @@ class TestElectricityMixCalculator(unittest.TestCase):
         es_data = {
             'generation': pd.DataFrame({
                 'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
-                'psr_type': ['B01', 'B01'],
+                'psr_type': ['B01', 'B02'],
                 'quantity': [500, 600]
             }),
             'imports_fr': pd.DataFrame({
@@ -101,7 +101,7 @@ class TestElectricityMixCalculator(unittest.TestCase):
         fr_data = {
             'generation': pd.DataFrame({
                 'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
-                'psr_type': ['B01', 'B01'],
+                'psr_type': ['B01', 'B02'],
                 'quantity': [200, 300]
             })
         }
