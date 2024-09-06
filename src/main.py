@@ -36,7 +36,7 @@ def main():
             print(f"  Columns: {df.columns.tolist()}")
             if not df.empty:
                 print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max() + pd.Timedelta(hours=1)}")
-                print(f"  Sample data:\n{df.head()}\n")
+                print(f"  Sample data (quantities in MWh):\n{df.head()}\n")
             else:
                 print("  DataFrame is empty\n")
 
@@ -72,11 +72,11 @@ def main():
                 print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max() + pd.Timedelta(hours=1)}")
                 print(f"Number of periods: {len(aggregated_results)}")
                 print(f"Energy sources: {aggregated_results.columns.tolist()}")
-                print("\nSample of results:")
-                print(aggregated_results)
+                print("\nSample of results (percentages):")
+                print(aggregated_results.applymap(lambda x: f"{x:.2f}%"))
                 
-                print("\nSummary statistics:")
-                print(aggregated_results.describe())
+                print("\nSummary statistics (percentages):")
+                print(aggregated_results.describe().applymap(lambda x: f"{x:.2f}%"))
             else:
                 print("Error: Unable to calculate electricity mix. The result is empty or None.")
 
