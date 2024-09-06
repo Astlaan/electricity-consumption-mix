@@ -1,4 +1,5 @@
 import argparse
+import pandas as pd
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
