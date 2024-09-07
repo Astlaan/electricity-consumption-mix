@@ -122,6 +122,7 @@ class TestElectricityMixCalculator(unittest.TestCase):
         result = self.calculator.calculate_mix(pt_data, es_data)
         expected = pd.DataFrame({'B01': [33.33], 'B02': [66.67]}, index=pd.to_datetime(['2023-05-01T00:00:00Z']))
         expected.index.name = None
+        expected.columns.name = None
         pd.testing.assert_frame_equal(result, expected, atol=0.01)
 
     def test_calculate_mix_negative_net_imports(self):
@@ -202,6 +203,7 @@ class TestElectricityMixCalculator(unittest.TestCase):
         result = self.calculator.calculate_mix(pt_data, es_data)
         expected = pd.DataFrame({'B01': [100.0]}, index=pd.to_datetime(['2023-05-01T00:00:00Z']))
         expected.index.name = None
+        expected.columns.name = None
         pd.testing.assert_frame_equal(result, expected)
 
     def test_calculate_mix_multiple_timestamps(self):
