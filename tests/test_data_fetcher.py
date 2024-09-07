@@ -8,10 +8,10 @@ import shutil
 import sys
 from pathlib import Path
 
-# Add the directory containing data_fetcher.py to sys.path
-sys.path.append(str(Path(__file__).parent.parent))
+# Add the src directory to sys.path
+sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
-from data_fetcher import ENTSOEDataFetcher
+from src.data_fetcher import ENTSOEDataFetcher
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
