@@ -186,6 +186,99 @@ class TestElectricityMixCalculator(unittest.TestCase):
         self.assertEqual(result.shape[0], 2)  # Should only have data for 2 timestamps
         self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
 
+class TestIntegration(unittest.TestCase):
+    def setUp(self):
+        self.data_fetcher = ENTSOEDataFetcher("dummy_token")
+        self.calculator = ElectricityMixCalculator()
+
+    @patch('src.data_fetcher.ENTSOEDataFetcher.get_portugal_data')
+    @patch('src.data_fetcher.ENTSOEDataFetcher.get_spain_data')
+    def test_full_pipeline(self, mock_get_spain_data, mock_get_portugal_data):
+        # Mock data
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'psr_type': ['B01', 'B02'],
+                'quantity': [100, 200]
+            }),
+            'imports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [50, 60]
+            }),
+            'exports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'quantity': [10, 20]
+            })
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z'],
+                'psr_type': ['B01', 'B02'],
+                'quantity': [500, 600]
+            })
+        }
+
+        mock_get_portugal_data.return_value = pt_data
+        mock_get_spain_data.return_value = es_data
+
+        # Test the full pipeline
+        start_date = datetime(2023, 5, 1)
+        end_date = datetime(2023, 5, 2)
+        
+        pt_data = self.data_fetcher.get_portugal_data(start_date, end_date)
+        es_data = self.data_fetcher.get_spain_data(start_date, end_date)
+        
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (2, 2))
+        self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
+    @patch('src.data_fetcher.ENTSOEDataFetcher.get_portugal_data')
+    @patch('src.data_fetcher.ENTSOEDataFetcher.get_spain_data')
+    def test_pipeline_with_aggregation(self, mock_get_spain_data, mock_get_portugal_data):
+        # Mock data for a full day
+        dates = pd.date_range(start='2023-05-01', end='2023-05-02', freq='H')
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': dates.repeat(2),
+                'psr_type': ['B01', 'B02'] * len(dates),
+                'quantity': np.random.rand(len(dates) * 2) * 1000
+            }),
+            'imports': pd.DataFrame({
+                'start_time': dates,
+                'quantity': np.random.rand(len(dates)) * 100
+            }),
+            'exports': pd.DataFrame({
+                'start_time': dates,
+                'quantity': np.random.rand(len(dates)) * 100
+            })
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': dates.repeat(2),
+                'psr_type': ['B01', 'B02'] * len(dates),
+                'quantity': np.random.rand(len(dates) * 2) * 1000
+            })
+        }
+
+        mock_get_portugal_data.return_value = pt_data
+        mock_get_spain_data.return_value = es_data
+
+        # Test the full pipeline with daily aggregation
+        start_date = datetime(2023, 5, 1)
+        end_date = datetime(2023, 5, 2)
+        
+        pt_data = self.data_fetcher.get_portugal_data(start_date, end_date)
+        es_data = self.data_fetcher.get_spain_data(start_date, end_date)
+        
+        hourly_result = self.calculator.calculate_mix(pt_data, es_data)
+        daily_result = aggregate_results(hourly_result, 'daily')
+        
+        self.assertIsInstance(daily_result, pd.DataFrame)
+        self.assertEqual(daily_result.shape, (1, 2))  # One day, two energy types
+        self.assertTrue((daily_result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
 if __name__ == '__main__':
     unittest.main()
 import unittest
