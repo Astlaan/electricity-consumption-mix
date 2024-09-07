@@ -5,7 +5,13 @@ import pandas as pd
 import logging
 import os
 import shutil
-from src.data_fetcher import ENTSOEDataFetcher
+import sys
+from pathlib import Path
+
+# Add the directory containing data_fetcher.py to sys.path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from data_fetcher import ENTSOEDataFetcher
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
