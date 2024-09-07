@@ -25,7 +25,7 @@ def main():
         # Calculate and print electricity mix
         calculator = ElectricityMixCalculator()
         results = calculator.calculate_mix(pt_data, es_data)
-        print_results(results, args.granularity)
+        print_results(results)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -34,7 +34,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
     parser.add_argument("--start_date", required=True, type=parse_datetime, help="Start date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
     parser.add_argument("--end_date", required=True, type=parse_datetime, help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
-    parser.add_argument("--granularity", default="hourly", choices=["hourly", "daily", "weekly", "monthly"], help="Time granularity for results")
+    # parser.add_argument("--granularity", default="hourly", choices=["hourly", "daily", "weekly", "monthly"], help="Time granularity for results")
     return parser.parse_args()
 
 def parse_datetime(value):
@@ -65,15 +65,15 @@ def print_data_summary(data, country):
         else:
             print("  DataFrame is empty\n")
 
-def print_results(results, granularity):
+def print_results(results):
     if results is None or results.empty:
         print("No results to display")
         return
 
     print("Aggregating results...")
-    aggregated_results = aggregate_results(results, granularity)
+    aggregated_results = aggregate_results(results)
 
-    print(f"\nPortugal's Electricity Mix ({granularity} granularity):")
+    print(f"\nPortugal's Electricity Mix:")
     print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
     print(f"Number of periods: {len(aggregated_results)}")
     print(f"Energy sources: {aggregated_results.columns.tolist()}")
@@ -102,4 +102,4 @@ if __name__ == "__main__":
     main()
 
 # Example usage:
-# python src\main.py --start_date 2024-01-01 --end_date 2024-03-31 --granularity hourly
+# python src\main.py --start_date 2024-01-01 --end_date 2024-03-31

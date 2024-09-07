@@ -1,3 +1,4 @@
 .aider*
 *.pyc
-venv
+.venv
+*.egg-info
