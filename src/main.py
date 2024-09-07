@@ -82,3 +82,6 @@ def print_results(results, granularity):
 
 if __name__ == "__main__":
     main()
+
+# Example usage:
+# python src\main.py --start_date 2024-01-01 --end_date 2024-03-31 --granularity hourly
