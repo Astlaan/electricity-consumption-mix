@@ -55,8 +55,12 @@ class ENTSOEDataFetcher:
 
     def _make_request(self, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
+        print(f"Making API request with params: {params}")
         try:
             response = requests.get(self.BASE_URL, params=params)
+            print(f"API response status code: {response.status_code}")
+            if response.status_code != 200:
+                print(f"API error response: {response.text}")
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
