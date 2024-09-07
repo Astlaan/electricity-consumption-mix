@@ -171,7 +171,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         with patch('src.data_fetcher.requests.get') as mock_get:
             mock_response = Mock()
             mock_response.text = """
-            <GL_MarketDocument>
+            <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
                 <TimeSeries>
                     <MktPSRType>
                         <psrType>B01</psrType>
@@ -179,6 +179,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
                     <Period>
                         <timeInterval>
                             <start>2022-01-01T00:00Z</start>
+                            <end>2022-01-02T00:00Z</end>
                         </timeInterval>
                         <resolution>PT60M</resolution>
                         <Point>
