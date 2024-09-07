@@ -53,6 +53,8 @@ class ENTSOEDataFetcher:
         try:
             response = requests.get(self.BASE_URL, params=params)
             response.raise_for_status()
+            logger.debug(f"Response status code: {response.status_code}")
+            logger.debug(f"Response content length: {len(response.text)}")
             return response.text
         except requests.RequestException as e:
             logger.error(f"Request failed: {str(e)}")
