@@ -292,6 +292,22 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         print("\nPortugal Generation Data for the first 3 hours of 2023:")
         print(result)
         
+        # Add assertions to check the correctness of the parsed data
+        self.assertEqual(len(result), 3, "Expected 3 data points")
+        self.assertEqual(result['quantity'].tolist(), [1000.0, 1100.0, 1200.0], "Quantities don't match expected values")
+        self.assertEqual(result['start_time'].tolist(), 
+                         [pd.Timestamp('2023-01-01 00:00:00+0000'), 
+                          pd.Timestamp('2023-01-01 01:00:00+0000'), 
+                          pd.Timestamp('2023-01-01 02:00:00+0000')], 
+                         "Start times are incorrect")
+        self.assertEqual(result['end_time'].tolist(), 
+                         [pd.Timestamp('2023-01-01 01:00:00+0000'), 
+                          pd.Timestamp('2023-01-01 02:00:00+0000'), 
+                          pd.Timestamp('2023-01-01 03:00:00+0000')], 
+                         "End times are incorrect")
+        self.assertTrue(all(result['psr_type'] == 'B01'), "PSR type should be B01 for all entries")
+        self.assertTrue(all(result['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
+        
         logger.debug("test_portugal_generation_data completed")
 
 if __name__ == '__main__':

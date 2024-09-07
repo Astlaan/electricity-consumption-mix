@@ -113,11 +113,12 @@ class ENTSOEDataFetcher:
                         print(f"Missing position or quantity for Point in Period starting at {start_time}")
                         continue
                     
-                    end_time = start_time + resolution * int(position.text)
+                    point_start_time = start_time + resolution * (int(position.text) - 1)
+                    point_end_time = point_start_time + resolution
                     
                     data_point = {
-                        'start_time': start_time,
-                        'end_time': end_time,
+                        'start_time': point_start_time,
+                        'end_time': point_end_time,
                         'quantity': float(quantity.text),
                         'psr_type': psr_type,
                         'resolution': resolution
