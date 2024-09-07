@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
     CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".data_cache")
+    STANDARD_GRANULARITY = timedelta(hours=1)  # Set the standard granularity to 1 hour
     
     def __init__(self, security_token: str):
         self.security_token = security_token
@@ -109,7 +110,7 @@ class ENTSOEDataFetcher:
                     'end_time': point_end_time,
                     'psr_type': psr_type,
                     'quantity': float(quantity.text),
-                    'resolution': resolution
+                    'original_resolution': resolution
                 }
                 
                 if in_domain is not None:
@@ -126,21 +127,12 @@ class ENTSOEDataFetcher:
         
         df = pd.DataFrame(data)
         
-        # Determine which columns to use as index
-        index_columns = ['start_time', 'end_time', 'resolution']
-        if 'in_domain' in df.columns:
-            index_columns.append('in_domain')
-        if 'out_domain' in df.columns:
-            index_columns.append('out_domain')
+        # Resample to standard granularity
+        df_resampled = self._resample_to_standard_granularity(df)
         
-        df = df.pivot_table(index=index_columns, 
-                            columns='psr_type', values='quantity', aggfunc='first')
-        df.reset_index(inplace=True)
-        df.columns.name = None
+        print(f"PSR types in final DataFrame: {set(df_resampled.columns) - set(['start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'])}")
         
-        print(f"PSR types in final DataFrame: {set(df.columns) - set(index_columns)}")
-        
-        return df
+        return df_resampled
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
@@ -214,3 +206,41 @@ class ENTSOEDataFetcher:
     def get_spain_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
         generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
         return {'generation': generation}
+    def _resample_to_standard_granularity(self, df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
+
+        df = df.sort_values('start_time').set_index('start_time')
+        
+        # Group by psr_type and resample
+        resampled_data = []
+        for psr_type, group in df.groupby('psr_type'):
+            resampled = group['quantity'].resample(
+                self.STANDARD_GRANULARITY, 
+                offset='0H',  # Start periods at 00 minutes
+                label='left',  # Use the start of the period as the label
+                closed='left'  # Include the left boundary of the interval
+            ).mean()
+            
+            resampled = resampled.reset_index()
+            resampled['psr_type'] = psr_type
+            resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
+            resampled_data.append(resampled)
+        
+        result = pd.concat(resampled_data, ignore_index=True)
+        result['resolution'] = self.STANDARD_GRANULARITY
+        
+        # Debug print
+        print(f"Resampled data (first few rows):")
+        print(result.head())
+        
+        # Pivot the table
+        result = result.pivot_table(
+            index=['start_time', 'end_time', 'resolution'],
+            columns='psr_type',
+            values='quantity',
+            aggfunc='first'
+        ).reset_index()
+        
+        result.columns.name = None
+        return result.sort_values('start_time')
