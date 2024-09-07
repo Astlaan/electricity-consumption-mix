@@ -239,8 +239,8 @@ class TestIntegration(unittest.TestCase):
     @patch('src.data_fetcher.ENTSOEDataFetcher.get_portugal_data')
     @patch('src.data_fetcher.ENTSOEDataFetcher.get_spain_data')
     def test_pipeline_with_aggregation(self, mock_get_spain_data, mock_get_portugal_data):
-        # Mock data for a full day
-        dates = pd.date_range(start='2023-05-01', end='2023-05-02', freq='H')
+        # Mock data for two full days
+        dates = pd.date_range(start='2023-05-01', end='2023-05-03', freq='H')
         pt_data = {
             'generation': pd.DataFrame({
                 'start_time': dates.repeat(2),
@@ -269,7 +269,7 @@ class TestIntegration(unittest.TestCase):
 
         # Test the full pipeline with daily aggregation
         start_date = datetime(2023, 5, 1)
-        end_date = datetime(2023, 5, 2)
+        end_date = datetime(2023, 5, 3)
         
         pt_data = self.data_fetcher.get_portugal_data(start_date, end_date)
         es_data = self.data_fetcher.get_spain_data(start_date, end_date)
@@ -278,7 +278,7 @@ class TestIntegration(unittest.TestCase):
         daily_result = aggregate_results(hourly_result, 'daily')
         
         self.assertIsInstance(daily_result, pd.DataFrame)
-        self.assertEqual(daily_result.shape, (1, 2))  # One day, two energy types
+        self.assertEqual(daily_result.shape, (2, 2))  # Two days, two energy types
         self.assertTrue((daily_result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
 
 if __name__ == '__main__':
