@@ -7,7 +7,7 @@ import json
 import hashlib
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class ENTSOEDataFetcher:
@@ -17,34 +17,39 @@ class ENTSOEDataFetcher:
     def __init__(self, security_token):
         self.security_token = security_token
         os.makedirs(self.CACHE_DIR, exist_ok=True)
+        logger.debug(f"ENTSOEDataFetcher initialized with token: {security_token[:5]}...")
 
     def _get_cache_key(self, params):
         # Create a unique cache key based on the request parameters
         param_str = json.dumps(params, sort_keys=True)
-        return hashlib.md5(param_str.encode()).hexdigest()
+        cache_key = hashlib.md5(param_str.encode()).hexdigest()
+        logger.debug(f"Generated cache key: {cache_key}")
+        return cache_key
 
     def _save_to_cache(self, cache_key, data):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.csv")
         data.to_csv(cache_file, index=False)
-        logger.info(f"Data saved to cache: {cache_file}")
+        logger.debug(f"Data saved to cache: {cache_file}")
 
     def _load_from_cache(self, cache_key):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.csv")
         if os.path.exists(cache_file):
-            logger.info(f"Loading data from cache: {cache_file}")
+            logger.debug(f"Loading data from cache: {cache_file}")
             return pd.read_csv(cache_file, parse_dates=['start_time'])
-        logger.info(f"No cache found for key: {cache_key}")
+        logger.debug(f"No cache found for key: {cache_key}")
         return None
 
     def _make_request(self, params):
         params['securityToken'] = self.security_token
+        logger.debug(f"Making request with params: {params}")
         response = requests.get(self.BASE_URL, params=params)
         response.raise_for_status()
         xml_response = response.text
-        print(f"Raw XML response:\n{xml_response[:1000]}...")  # Print first 1000 characters
+        logger.debug(f"Raw XML response:\n{xml_response[:1000]}...")  # Print first 1000 characters
         return xml_response
 
     def _parse_xml_to_dataframe(self, xml_data):
+        logger.debug("Parsing XML to DataFrame")
         root = ET.fromstring(xml_data)
         data = []
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
@@ -82,9 +87,11 @@ class ENTSOEDataFetcher:
         df = pd.DataFrame(data)
         if not df.empty:
             df['start_time'] = pd.to_datetime(df['start_time'])
+        logger.debug(f"Parsed DataFrame shape: {df.shape}")
         return df
 
     def get_generation_data(self, country_code, start_date, end_date):
+        logger.debug(f"Getting generation data for {country_code} from {start_date} to {end_date}")
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -97,16 +104,17 @@ class ENTSOEDataFetcher:
         cached_data = self._load_from_cache(cache_key)
         
         if cached_data is not None:
-            logger.info("Using cached data")
+            logger.debug("Using cached data")
             return cached_data
         
-        logger.info("Fetching new data")
+        logger.debug("Fetching new data")
         xml_data = self._make_request(params)
         df = self._parse_xml_to_dataframe(xml_data)
         self._save_to_cache(cache_key, df)
         return df
 
     def get_physical_flows(self, in_domain, out_domain, start_date, end_date):
+        logger.debug(f"Getting physical flows from {in_domain} to {out_domain} from {start_date} to {end_date}")
         params = {
             'documentType': 'A11',
             'in_Domain': in_domain,
@@ -118,21 +126,25 @@ class ENTSOEDataFetcher:
         cached_data = self._load_from_cache(cache_key)
         
         if cached_data is not None:
+            logger.debug("Using cached data")
             return cached_data
         
+        logger.debug("Fetching new data")
         xml_data = self._make_request(params)
         df = self._parse_xml_to_dataframe(xml_data)
         self._save_to_cache(cache_key, df)
         return df
 
     def get_portugal_data(self, start_date, end_date):
+        logger.debug(f"Getting Portugal data from {start_date} to {end_date}")
         generation = self.get_generation_data('10YPT-REN------W', start_date, end_date)
         imports = self.get_physical_flows('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
         exports = self.get_physical_flows('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
         return {'generation': generation, 'imports': imports, 'exports': exports}
 
     def get_spain_data(self, start_date, end_date):
+        logger.debug(f"Getting Spain data from {start_date} to {end_date}")
         generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
         if not generation.empty:
-            print(f"Spain generation data range: {generation['start_time'].min()} to {generation['start_time'].max()}")
+            logger.debug(f"Spain generation data range: {generation['start_time'].min()} to {generation['start_time'].max()}")
         return {'generation': generation}
