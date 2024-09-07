@@ -6,6 +6,9 @@ import logging
 import os
 import shutil
 from src.data_fetcher import ENTSOEDataFetcher
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -266,10 +269,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
-        print("\nPortugal Generation Data for the first 4 hours of 2024:")
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
-        print(result.to_string(index=False))
         
         # Check if the result matches the first 4 hours of data in the file
         expected_data = result[result['start_time'] < pd.Timestamp('2024-01-01 03:00:00+0000')]
@@ -281,11 +282,9 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertEqual(len(expected_data), 4, f"Expected 4 data points (4 hours)")
         
         psr_types = set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}
-        print(f"Found PSR types: {psr_types}")
-        print(f"Number of PSR types: {len(psr_types)}")
+
         
         for psr_type in psr_types:
-            print(f"Values for {psr_type}: {expected_data[psr_type].unique()}")
         
         # Check start times and end times
         expected_start_times = [pd.Timestamp('2023-12-31 23:00:00+0000'), 
@@ -310,14 +309,12 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         # Check if any PSR types have all zero values
         zero_psr_types = [psr_type for psr_type in expected_psr_types if (expected_data[psr_type] == 0).all()]
-        if zero_psr_types:
-            print(f"Warning: The following PSR types have all zero values: {zero_psr_types}")
+
         
         logger.debug("test_portugal_generation_data completed")
 
     @patch('src.data_fetcher.requests.get')
     def test_spain_generation_data(self, mock_get):
-        print("\nRunning test_spain_generation_data")
         
         # Load mock response from file
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -335,10 +332,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         fetcher = ENTSOEDataFetcher("dummy_token")
         result = fetcher.get_generation_data('10YES-REE------0', start_date, end_date)
         
-        print("\nSpain Generation Data for the first 2 hours of 2024:")
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
-        print(result.to_string(index=False))
         
         # Assertions
         self.assertFalse(result.empty, "Result DataFrame is empty")
@@ -359,10 +354,6 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         # Check if any PSR types have all zero values
         zero_psr_types = [psr_type for psr_type in expected_psr_types if (result[psr_type] == 0).all()]
-        if zero_psr_types:
-            print(f"Warning: The following PSR types have all zero values: {zero_psr_types}")
-        
-        print("test_spain_generation_data completed")
 
 if __name__ == '__main__':
     unittest.main()
