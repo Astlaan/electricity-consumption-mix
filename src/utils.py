@@ -36,17 +36,10 @@ def validate_inputs(args):
         print("Error: Invalid date format. Use YYYY-MM-DD.")
         return False
 
-def aggregate_results(results, granularity):
+def aggregate_results(results: pd.DataFrame, granularity: str) -> pd.DataFrame:
     if granularity == 'hourly':
-        aggregated = results
-    elif granularity == 'daily':
-        aggregated = results.resample('D').mean()
-    elif granularity == 'weekly':
-        aggregated = results.resample('W').mean()
-    elif granularity == 'monthly':
-        aggregated = results.resample('M').mean()
+        return results
+    elif granularity in ['daily', 'weekly', 'monthly']:
+        return results.resample(granularity[0].upper()).mean()
     else:
         raise ValueError(f"Invalid granularity: {granularity}")
-    
-    aggregated.columns = [PSR_TYPE_MAPPING.get(col, col) for col in aggregated.columns]
-    return aggregated
