@@ -5,3 +5,5 @@ matplotlib==3.4.3
 requests
 pandas
 pytest
+requests
+pandas
