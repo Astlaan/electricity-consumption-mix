@@ -212,6 +212,11 @@ class ENTSOEDataFetcher:
 
         df = df.sort_values('start_time').set_index('start_time')
         
+        # Debug print: Original data
+        print("DEBUG: Original data (first few rows):")
+        print(df.head())
+        print(f"DEBUG: Original data shape: {df.shape}")
+        
         # Group by psr_type and resample
         resampled_data = []
         for psr_type, group in df.groupby('psr_type'):
@@ -230,9 +235,10 @@ class ENTSOEDataFetcher:
         result = pd.concat(resampled_data, ignore_index=True)
         result['resolution'] = self.STANDARD_GRANULARITY
         
-        # Debug print
-        print(f"Resampled data (first few rows):")
+        # Debug print: Resampled data before pivoting
+        print("DEBUG: Resampled data before pivoting (first few rows):")
         print(result.head())
+        print(f"DEBUG: Resampled data shape before pivoting: {result.shape}")
         
         # Pivot the table
         result = result.pivot_table(
@@ -243,4 +249,11 @@ class ENTSOEDataFetcher:
         ).reset_index()
         
         result.columns.name = None
-        return result.sort_values('start_time')
+        result = result.sort_values('start_time')
+        
+        # Debug print: Final resampled data
+        print("DEBUG: Final resampled data (first few rows):")
+        print(result.head())
+        print(f"DEBUG: Final resampled data shape: {result.shape}")
+        
+        return result

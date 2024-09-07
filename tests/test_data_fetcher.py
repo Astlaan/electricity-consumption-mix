@@ -315,5 +315,54 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         logger.debug("test_portugal_generation_data completed")
 
+    @patch('src.data_fetcher.requests.get')
+    def test_spain_generation_data(self, mock_get):
+        print("\nRunning test_spain_generation_data")
+        
+        # Load mock response from file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(current_dir, 'test_data', 'SPAIN_GENERATION_202401010000-202401010200.xml'), 'r') as file:
+            mock_response_text = file.read()
+
+        mock_response = Mock()
+        mock_response.text = mock_response_text
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 2, 0)
+        
+        fetcher = ENTSOEDataFetcher("dummy_token")
+        result = fetcher.get_generation_data('10YES-REE------0', start_date, end_date)
+        
+        print("\nSpain Generation Data for the first 2 hours of 2024:")
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', None)
+        print(result.to_string(index=False))
+        
+        # Assertions
+        self.assertFalse(result.empty, "Result DataFrame is empty")
+        self.assertEqual(len(result), 2, "Expected 2 rows (2 hours) in the result")
+        self.assertTrue(all(result['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
+        
+        # Check start times and end times
+        expected_start_times = [pd.Timestamp('2023-12-31 23:00:00+0000'), pd.Timestamp('2024-01-01 00:00:00+0000')]
+        expected_end_times = [pd.Timestamp('2024-01-01 00:00:00+0000'), pd.Timestamp('2024-01-01 01:00:00+0000')]
+        
+        self.assertEqual(result['start_time'].tolist(), expected_start_times, "Start times are incorrect")
+        self.assertEqual(result['end_time'].tolist(), expected_end_times, "End times are incorrect")
+        
+        # Check if all expected PSR types are present (you may need to adjust this based on the actual data)
+        expected_psr_types = {'B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20'}
+        actual_psr_types = set(result.columns) - {'start_time', 'end_time', 'resolution'}
+        self.assertEqual(actual_psr_types, expected_psr_types, f"Mismatch in PSR types. Expected: {expected_psr_types}, Actual: {actual_psr_types}")
+        
+        # Check if any PSR types have all zero values
+        zero_psr_types = [psr_type for psr_type in expected_psr_types if (result[psr_type] == 0).all()]
+        if zero_psr_types:
+            print(f"Warning: The following PSR types have all zero values: {zero_psr_types}")
+        
+        print("test_spain_generation_data completed")
+
 if __name__ == '__main__':
     unittest.main()
