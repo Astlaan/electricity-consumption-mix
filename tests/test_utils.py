@@ -30,8 +30,8 @@ def test_aggregate_results_hourly():
         'B02': [4, 5, 6]
     }, index=pd.date_range("2023-01-01", periods=3, freq="H"))
     result = aggregate_results(df, 'hourly')
-    assert result.equals(df)
-    assert result.columns.tolist() == ['Biomass', 'Fossil Brown coal/Lignite']
+    expected = df.rename(columns=PSR_TYPE_MAPPING)
+    pd.testing.assert_frame_equal(result, expected)
 
 def test_aggregate_results_daily():
     df = pd.DataFrame({
@@ -47,10 +47,11 @@ def test_aggregate_results_daily():
 
 def test_aggregate_results_invalid_granularity():
     df = pd.DataFrame({'B01': [1, 2, 3]})
-    with pytest.raises(ValueError):
-        aggregate_results(df, 'invalid')
+    with pytest.raises(ValueError, match="Invalid granularity: yearly"):
+        aggregate_results(df, 'yearly')
 
 def test_aggregate_results_empty_dataframe():
     df = pd.DataFrame()
     result = aggregate_results(df, 'daily')
     assert result.empty
+    assert result.columns.tolist() == list(PSR_TYPE_MAPPING.values())
