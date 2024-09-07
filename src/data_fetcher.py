@@ -69,73 +69,64 @@ class ENTSOEDataFetcher:
 
     def _parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
         root = ET.fromstring(xml_data)
-        data = []
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
         
-        time_series_elements = root.findall(".//ns:TimeSeries", namespace)
-        if not time_series_elements:
-            print("No TimeSeries elements found in the XML")
-            return pd.DataFrame(columns=['start_time', 'end_time', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
-        
-        for time_series in time_series_elements:
+        data = []
+        for time_series in root.findall(".//ns:TimeSeries", namespace):
             psr_type = time_series.find(".//ns:psrType", namespace)
             psr_type = psr_type.text if psr_type is not None else "Unknown"
             
             in_domain = time_series.find(".//ns:in_Domain.mRID", namespace)
             out_domain = time_series.find(".//ns:out_Domain.mRID", namespace)
             
-            period_elements = time_series.findall(".//ns:Period", namespace)
-            if not period_elements:
-                print(f"No Period elements found for TimeSeries with psr_type: {psr_type}")
+            period = time_series.find(".//ns:Period", namespace)
+            if period is None:
                 continue
             
-            for period in period_elements:
-                start_time = period.find(".//ns:start", namespace)
-                resolution = period.find(".//ns:resolution", namespace)
+            start_time = period.find(".//ns:start", namespace)
+            resolution = period.find(".//ns:resolution", namespace)
+            
+            if start_time is None or resolution is None:
+                continue
+            
+            start_time = pd.to_datetime(start_time.text)
+            resolution = pd.Timedelta(resolution.text)
+            
+            for point in period.findall(".//ns:Point", namespace):
+                position = point.find("ns:position", namespace)
+                quantity = point.find("ns:quantity", namespace)
                 
-                if start_time is None or resolution is None:
-                    print(f"Missing start_time or resolution for Period in TimeSeries with psr_type: {psr_type}")
+                if position is None or quantity is None:
                     continue
                 
-                start_time = pd.to_datetime(start_time.text)
-                resolution = pd.Timedelta(resolution.text)
+                point_start_time = start_time + resolution * (int(position.text) - 1)
+                point_end_time = point_start_time + resolution
                 
-                point_elements = period.findall(".//ns:Point", namespace)
-                if not point_elements:
-                    print(f"No Point elements found for Period starting at {start_time}")
-                    continue
+                data_point = {
+                    'start_time': point_start_time,
+                    'end_time': point_end_time,
+                    'psr_type': psr_type,
+                    'quantity': float(quantity.text),
+                    'resolution': resolution
+                }
                 
-                for point in point_elements:
-                    position = point.find(".//ns:position", namespace)
-                    quantity = point.find(".//ns:quantity", namespace)
-                    
-                    if position is None or quantity is None:
-                        print(f"Missing position or quantity for Point in Period starting at {start_time}")
-                        continue
-                    
-                    point_start_time = start_time + resolution * (int(position.text) - 1)
-                    point_end_time = point_start_time + resolution
-                    
-                    data_point = {
-                        'start_time': point_start_time,
-                        'end_time': point_end_time,
-                        'quantity': float(quantity.text),
-                        'psr_type': psr_type,
-                        'resolution': resolution
-                    }
-                    
-                    if in_domain is not None:
-                        data_point['in_domain'] = in_domain.text
-                    if out_domain is not None:
-                        data_point['out_domain'] = out_domain.text
-                    
-                    data.append(data_point)
+                if in_domain is not None:
+                    data_point['in_domain'] = in_domain.text
+                if out_domain is not None:
+                    data_point['out_domain'] = out_domain.text
+                
+                data.append(data_point)
         
         if not data:
-            print("No valid data points found in the XML")
-            return pd.DataFrame(columns=['start_time', 'end_time', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
+            return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
         
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        df = df.pivot_table(index=['start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'], 
+                            columns='psr_type', values='quantity', aggfunc='first')
+        df.reset_index(inplace=True)
+        df.columns.name = None
+        
+        return df
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {

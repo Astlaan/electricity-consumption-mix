@@ -274,26 +274,33 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # Check if the result matches the first 3 hours of data in the file
         expected_data = result[result['start_time'] < pd.Timestamp('2024-01-01 03:00:00+0000')]
         
-        # Count unique PSR types
-        unique_psr_types = expected_data['psr_type'].nunique()
+        # Count unique PSR types (now columns, excluding 'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain')
+        unique_psr_types = len(expected_data.columns) - 5
         
         # Add assertions to check the correctness of the parsed data
-        self.assertEqual(len(expected_data), unique_psr_types * 3, f"Expected {unique_psr_types * 3} data points (3 hours * {unique_psr_types} production types)")
+        self.assertEqual(len(expected_data), 3, f"Expected 3 data points (3 hours)")
+        self.assertEqual(unique_psr_types, 10, f"Expected 10 production types")
         
-        print(f"Found PSR types: {set(expected_data['psr_type'])}")
+        print(f"Found PSR types: {set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}}")
         
         # Check start times and end times
         expected_start_times = [pd.Timestamp('2023-12-31 23:00:00+0000'), 
                                 pd.Timestamp('2024-01-01 00:00:00+0000'), 
-                                pd.Timestamp('2024-01-01 01:00:00+0000')] * unique_psr_types
+                                pd.Timestamp('2024-01-01 01:00:00+0000')]
         expected_end_times = [pd.Timestamp('2024-01-01 00:00:00+0000'), 
                               pd.Timestamp('2024-01-01 01:00:00+0000'), 
-                              pd.Timestamp('2024-01-01 02:00:00+0000')] * unique_psr_types
+                              pd.Timestamp('2024-01-01 02:00:00+0000')]
         
         self.assertEqual(expected_data['start_time'].tolist(), expected_start_times, "Start times are incorrect")
         self.assertEqual(expected_data['end_time'].tolist(), expected_end_times, "End times are incorrect")
         
         self.assertTrue(all(expected_data['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
+        
+        # Check if all expected PSR types are present
+        expected_psr_types = {'B01', 'B04', 'B05', 'B10', 'B11', 'B12', 'B20', 'B16', 'B18', 'B19'}
+        self.assertEqual(set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}, 
+                         expected_psr_types, 
+                         "Not all expected PSR types are present in the data")
         
         logger.debug("test_portugal_generation_data completed")
 
