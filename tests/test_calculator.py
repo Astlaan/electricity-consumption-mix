@@ -113,6 +113,79 @@ class TestElectricityMixCalculator(unittest.TestCase):
         self.assertEqual(set(result.columns), {'B01', 'B02', 'B03', 'B04'})
         self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
 
+    def test_calculate_mix_with_zero_generation(self):
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [0]
+            }),
+            'imports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [100]}),
+            'exports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [0]})
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [500]
+            })
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertFalse(result.empty)
+        self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
+    def test_calculate_mix_with_negative_generation(self):
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [-100]  # Negative generation
+            }),
+            'imports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [200]}),
+            'exports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [0]})
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [500]
+            })
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertFalse(result.empty)
+        self.assertTrue((result >= 0).all().all())  # All percentages should be non-negative
+        self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
+    def test_calculate_mix_with_missing_timestamps(self):
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T02:00:00Z'],  # Missing 01:00:00Z
+                'psr_type': ['B01', 'B01'],
+                'quantity': [100, 200]
+            }),
+            'imports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'quantity': [50, 60, 70]
+            }),
+            'exports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'quantity': [10, 20, 30]
+            })
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'psr_type': ['B01', 'B01', 'B01'],
+                'quantity': [500, 600, 700]
+            })
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertEqual(result.shape[0], 2)  # Should only have data for 2 timestamps
+        self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
 if __name__ == '__main__':
     unittest.main()
 import unittest
