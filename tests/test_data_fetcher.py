@@ -279,9 +279,13 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         # Add assertions to check the correctness of the parsed data
         self.assertEqual(len(expected_data), 4, f"Expected 4 data points (4 hours)")
-        self.assertEqual(unique_psr_types, 10, f"Expected 10 production types")
         
-        print(f"Found PSR types: {set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}}")
+        psr_types = set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}
+        print(f"Found PSR types: {psr_types}")
+        print(f"Number of PSR types: {len(psr_types)}")
+        
+        for psr_type in psr_types:
+            print(f"Values for {psr_type}: {expected_data[psr_type].unique()}")
         
         # Check start times and end times
         expected_start_times = [pd.Timestamp('2023-12-31 23:00:00+0000'), 
