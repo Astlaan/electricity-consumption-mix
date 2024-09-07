@@ -158,6 +158,14 @@ class ENTSOEDataFetcher:
             df = cached_data[0]
         else:
             xml_data = self._make_request(params)
+            
+            # DEBUG: Store raw XML data in a file for visual analysis
+            debug_file_path = os.path.join(self.CACHE_DIR, f"debug_raw_xml_{cache_key}.xml")
+            with open(debug_file_path, 'w', encoding='utf-8') as debug_file:
+                debug_file.write(xml_data)
+            print(f"DEBUG: Raw XML data stored in {debug_file_path}")
+            # END DEBUG
+            
             df = self._parse_xml_to_dataframe(xml_data)
             if not df.empty:
                 metadata = {
