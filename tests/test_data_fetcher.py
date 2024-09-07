@@ -165,12 +165,30 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         end_date = datetime(2022, 1, 2)
         
         # Clear cache before test
-        shutil.rmtree(self.fetcher.CACHE_DIR)
+        shutil.rmtree(self.fetcher.CACHE_DIR, ignore_errors=True)
         os.makedirs(self.fetcher.CACHE_DIR)
 
         with patch('src.data_fetcher.requests.get') as mock_get:
             mock_response = Mock()
-            mock_response.text = "<dummy>XML</dummy>"
+            mock_response.text = """
+            <GL_MarketDocument>
+                <TimeSeries>
+                    <MktPSRType>
+                        <psrType>B01</psrType>
+                    </MktPSRType>
+                    <Period>
+                        <timeInterval>
+                            <start>2022-01-01T00:00Z</start>
+                        </timeInterval>
+                        <resolution>PT60M</resolution>
+                        <Point>
+                            <position>1</position>
+                            <quantity>100</quantity>
+                        </Point>
+                    </Period>
+                </TimeSeries>
+            </GL_MarketDocument>
+            """
             mock_response.raise_for_status.return_value = None
             mock_get.return_value = mock_response
 
@@ -178,8 +196,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         # Check if cache files were created
         cache_files = os.listdir(self.fetcher.CACHE_DIR)
-        self.assertTrue(any(file.endswith('.parquet') for file in cache_files))
-        self.assertTrue(any(file.endswith('_metadata.json') for file in cache_files))
+        self.assertTrue(any(file.endswith('.parquet') for file in cache_files), f"No .parquet file found in {cache_files}")
+        self.assertTrue(any(file.endswith('_metadata.json') for file in cache_files), f"No _metadata.json file found in {cache_files}")
 
         logger.debug("test_cache_file_creation completed")
 
