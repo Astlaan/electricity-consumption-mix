@@ -12,8 +12,8 @@ def main():
 
     data_fetcher = ENTSOEDataFetcher("89fec152-d36b-49c8-b0b6-4e67e57b26ea")
 
-    start_date = datetime(2024, 1, 1, 0, 0)
-    end_date = datetime(2024, 1, 1, 1, 0)
+    start_date = args.start_date
+    end_date = args.end_date
 
     try:
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
@@ -34,10 +34,19 @@ def main():
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
-    parser.add_argument("--start_date", required=True, help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end_date", required=True, help="End date (YYYY-MM-DD)")
+    parser.add_argument("--start_date", required=True, type=parse_datetime, help="Start date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
+    parser.add_argument("--end_date", required=True, type=parse_datetime, help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
     parser.add_argument("--granularity", default="hourly", choices=["hourly", "daily", "weekly", "monthly"], help="Time granularity for results")
     return parser.parse_args()
+
+def parse_datetime(value):
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"Invalid date or datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.")
 
 def fetch_data(fetcher, country, start_date, end_date):
     print(f"Fetching {country} data...")
