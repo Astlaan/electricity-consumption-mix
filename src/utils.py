@@ -25,16 +25,10 @@ PSR_TYPE_MAPPING = {
 }
 
 def validate_inputs(args):
-    try:
-        start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-        end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
-        if start_date >= end_date:
-            print("Error: Start date must be before end date.")
-            return False
-        return True
-    except ValueError:
-        print("Error: Invalid date format. Use YYYY-MM-DD.")
+    if args.start_date >= args.end_date:
+        print("Error: Start date must be before end date.")
         return False
+    return True
 
 def aggregate_results(results: pd.DataFrame, granularity: str) -> pd.DataFrame:
     if results.empty:
