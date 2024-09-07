@@ -19,15 +19,13 @@ def main():
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        print("\nPortugal data:")
-        for key, df in pt_data.items():
-            print(f"\n{key.capitalize()}:")
-            print(df.to_string())
+        print_data_summary(pt_data, "Portugal")
+        print_data_summary(es_data, "Spain")
 
-        print("\nSpain data:")
-        for key, df in es_data.items():
-            print(f"\n{key.capitalize()}:")
-            print(df.to_string())
+        # Calculate and print electricity mix
+        calculator = ElectricityMixCalculator()
+        results = calculator.calculate_mix(pt_data, es_data)
+        print_results(results, args.granularity)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
