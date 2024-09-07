@@ -20,6 +20,8 @@ def main():
     start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
 
+    logger.info(f"Processing data from {start_date} to {end_date}")
+
     try:
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
@@ -31,8 +33,11 @@ def main():
             logger.error("All DataFrames are empty. Cannot proceed with calculations.")
             return
 
+        logger.info("Calculating electricity mix")
         pt_results = calculator.calculate_mix(pt_data, es_data)
         if pt_results is not None and not pt_results.empty:
+            logger.info(f"Results shape: {pt_results.shape}")
+            logger.info(f"Results date range: {pt_results.index.min()} to {pt_results.index.max()}")
             print_results(pt_results, args.granularity)
         else:
             logger.error("Unable to calculate electricity mix. The result is empty or None.")

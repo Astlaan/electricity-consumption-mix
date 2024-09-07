@@ -12,6 +12,8 @@ class ElectricityMixCalculator:
         es_gen = es_data.get('generation', pd.DataFrame())
 
         logger.debug(f"Input data shapes: pt_gen={pt_gen.shape}, pt_imports={pt_imports.shape}, pt_exports={pt_exports.shape}, es_gen={es_gen.shape}")
+        logger.debug(f"Input data date ranges: pt_gen={pt_gen['start_time'].min()} to {pt_gen['start_time'].max()}")
+        logger.debug(f"Input data date ranges: es_gen={es_gen['start_time'].min()} to {es_gen['start_time'].max()}")
 
         if pt_gen.empty and es_gen.empty:
             logger.warning("Both Portuguese and Spanish generation data are empty")
@@ -22,22 +24,27 @@ class ElectricityMixCalculator:
         pt_gen_grouped = self._group_generation_data(pt_gen)
         es_gen_grouped = self._group_generation_data(es_gen)
         logger.debug(f"Grouped data shapes: pt_gen_grouped={pt_gen_grouped.shape}, es_gen_grouped={es_gen_grouped.shape}")
+        logger.debug(f"Grouped data date ranges: pt_gen_grouped={pt_gen_grouped.index.min()} to {pt_gen_grouped.index.max()}")
+        logger.debug(f"Grouped data date ranges: es_gen_grouped={es_gen_grouped.index.min()} to {es_gen_grouped.index.max()}")
 
         net_imports = self._calculate_net_imports(pt_imports, pt_exports)
         logger.debug(f"Net imports shape: {net_imports.shape}")
+        logger.debug(f"Net imports date range: {net_imports.index.min()} to {net_imports.index.max()}")
 
         es_percentages = self._calculate_percentages(es_gen_grouped)
         logger.debug(f"Spanish percentages shape: {es_percentages.shape}")
 
         pt_mix = self._adjust_portugal_mix(pt_gen_grouped, net_imports, es_percentages)
         logger.debug(f"Adjusted Portuguese mix shape: {pt_mix.shape}")
+        logger.debug(f"Adjusted Portuguese mix date range: {pt_mix.index.min()} to {pt_mix.index.max()}")
 
         pt_percentages = self._calculate_percentages(pt_mix)
         logger.debug(f"Portuguese percentages shape: {pt_percentages.shape}")
 
         result = self._clean_output(pt_percentages)
         logger.debug(f"Final result shape: {result.shape}")
-        logger.debug(f"Sum of percentages: {result.sum(axis=1)}")
+        logger.debug(f"Final result date range: {result.index.min()} to {result.index.max()}")
+        logger.debug(f"Sum of percentages: {result.sum(axis=1).describe()}")
 
         return result
 
@@ -55,7 +62,9 @@ class ElectricityMixCalculator:
         if df.empty:
             return pd.DataFrame()
         df['hour'] = pd.to_datetime(df['start_time']).dt.floor('H')
-        return df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        logger.debug(f"Grouped generation data shape: {grouped.shape}")
+        return grouped
 
     def _calculate_net_imports(self, imports, exports):
         if imports.empty and exports.empty:
