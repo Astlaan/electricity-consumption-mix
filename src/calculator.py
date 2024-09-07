@@ -49,14 +49,15 @@ class ElectricityMixCalculator:
     def _adjust_portugal_mix(self, pt_mix, net_imports, es_percentages):
         for source in es_percentages.columns:
             if source in pt_mix.columns:
-                pt_mix[source] += net_imports * es_percentages[source]
+                pt_mix[source] += net_imports * es_percentages[source] / 100
             else:
-                pt_mix[source] = net_imports * es_percentages[source]
-        return pt_mix
+                pt_mix[source] = net_imports * es_percentages[source] / 100
+        return pt_mix.fillna(0)  # Fill NaN values with 0
 
     def _clean_output(self, df):
         df[df < 0] = 0
-        df = df.div(df.sum(axis=1), axis=0) * 100
+        row_sums = df.sum(axis=1)
+        df = df.div(row_sums, axis=0).fillna(0) * 100
         df.index.name = None
         df.columns.name = None
         return df.rename(columns={'psr_type': None})
