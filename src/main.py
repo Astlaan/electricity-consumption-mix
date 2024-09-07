@@ -11,38 +11,23 @@ def main():
         return
 
     data_fetcher = ENTSOEDataFetcher("89fec152-d36b-49c8-b0b6-4e67e57b26ea")
-    calculator = ElectricityMixCalculator()
 
-    start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
+    start_date = datetime(2024, 1, 1, 0, 0)
+    end_date = datetime(2024, 1, 1, 1, 0)
 
     try:
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        print_data_summary(pt_data, "Portugal")
-        print_data_summary(es_data, "Spain")
+        print("\nPortugal data:")
+        for key, df in pt_data.items():
+            print(f"\n{key.capitalize()}:")
+            print(df.to_string())
 
-        # Check if we have data for the full date range
-        for country, data in [("Portugal", pt_data), ("Spain", es_data)]:
-            for key, df in data.items():
-                if df.empty:
-                    print(f"{country} {key} data is empty")
-                else:
-                    date_range = pd.date_range(start=start_date, end=end_date, freq='H')
-                    missing_dates = date_range.difference(df['start_time'].dt.floor('H'))
-                    if not missing_dates.empty:
-                        print(f"{country} {key} data is missing dates: {missing_dates}")
-
-        if all(df.empty for df in pt_data.values()) and all(df.empty for df in es_data.values()):
-            print("All DataFrames are empty. Cannot proceed with calculations.")
-            return
-
-        pt_results = calculator.calculate_mix(pt_data, es_data)
-        if pt_results is not None and not pt_results.empty:
-            print_results(pt_results, args.granularity)
-        else:
-            print("Unable to calculate electricity mix. The result is empty or None.")
+        print("\nSpain data:")
+        for key, df in es_data.items():
+            print(f"\n{key.capitalize()}:")
+            print(df.to_string())
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
