@@ -1,12 +1,10 @@
 import unittest
 import pandas as pd
-import sys
-from pathlib import Path
-
-# Add the project root directory to sys.path
-sys.path.append(str(Path(__file__).parent.parent))
-
+import numpy as np
+from datetime import datetime
+import logging
 from src.calculator import ElectricityMixCalculator
+from src.utils import PSR_TYPE_MAPPING
 
 class TestElectricityMixCalculator(unittest.TestCase):
     def setUp(self):
