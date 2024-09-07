@@ -121,6 +121,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import logging
 from src.calculator import ElectricityMixCalculator
 from src.utils import PSR_TYPE_MAPPING
 
