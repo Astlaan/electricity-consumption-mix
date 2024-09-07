@@ -141,7 +141,8 @@ class ENTSOEDataFetcher:
             'in_Domain': country_code,
             'outBiddingZone_Domain': country_code,
             'periodStart': start_date.strftime('%Y%m%d%H%M'),
-            'periodEnd': end_date.strftime('%Y%m%d%H%M')
+            'periodEnd': end_date.strftime('%Y%m%d%H%M'),
+            'psrType': 'B19'  # TODO: Remove this line after debugging
         }
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
