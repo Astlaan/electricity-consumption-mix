@@ -110,7 +110,8 @@ class ENTSOEDataFetcher:
         logger.debug("Fetching new data")
         xml_data = self._make_request(params)
         df = self._parse_xml_to_dataframe(xml_data)
-        self._save_to_cache(cache_key, df)
+        if not df.empty:
+            self._save_to_cache(cache_key, df)
         return df
 
     def get_physical_flows(self, in_domain, out_domain, start_date, end_date):

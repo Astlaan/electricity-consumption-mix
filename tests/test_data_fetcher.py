@@ -3,6 +3,8 @@ from unittest.mock import patch, Mock
 from datetime import datetime
 import pandas as pd
 import logging
+import os
+import shutil
 from src.data_fetcher import ENTSOEDataFetcher
 
 logging.basicConfig(level=logging.DEBUG)
@@ -12,6 +14,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def setUp(self):
         logger.debug("Setting up TestENTSOEDataFetcher")
         self.fetcher = ENTSOEDataFetcher("dummy_token")
+        # Clear the cache before each test
+        if os.path.exists(self.fetcher.CACHE_DIR):
+            shutil.rmtree(self.fetcher.CACHE_DIR)
+        os.makedirs(self.fetcher.CACHE_DIR)
 
     @patch('src.data_fetcher.requests.get')
     def test_make_request(self, mock_get):
