@@ -1,13 +1,9 @@
 import argparse
 import pandas as pd
 from datetime import datetime
-import logging
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def main():
     args = parse_arguments()
@@ -20,8 +16,6 @@ def main():
     start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
 
-    logger.info(f"Processing data from {start_date} to {end_date}")
-
     try:
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
@@ -33,28 +27,25 @@ def main():
         for country, data in [("Portugal", pt_data), ("Spain", es_data)]:
             for key, df in data.items():
                 if df.empty:
-                    logger.warning(f"{country} {key} data is empty")
+                    print(f"{country} {key} data is empty")
                 else:
                     date_range = pd.date_range(start=start_date, end=end_date, freq='H')
                     missing_dates = date_range.difference(df['start_time'].dt.floor('H'))
                     if not missing_dates.empty:
-                        logger.warning(f"{country} {key} data is missing dates: {missing_dates}")
+                        print(f"{country} {key} data is missing dates: {missing_dates}")
 
         if all(df.empty for df in pt_data.values()) and all(df.empty for df in es_data.values()):
-            logger.error("All DataFrames are empty. Cannot proceed with calculations.")
+            print("All DataFrames are empty. Cannot proceed with calculations.")
             return
 
-        logger.info("Calculating electricity mix")
         pt_results = calculator.calculate_mix(pt_data, es_data)
         if pt_results is not None and not pt_results.empty:
-            logger.info(f"Results shape: {pt_results.shape}")
-            logger.info(f"Results date range: {pt_results.index.min()} to {pt_results.index.max()}")
             print_results(pt_results, args.granularity)
         else:
-            logger.error("Unable to calculate electricity mix. The result is empty or None.")
+            print("Unable to calculate electricity mix. The result is empty or None.")
 
     except Exception as e:
-        logger.exception(f"An error occurred: {str(e)}")
+        print(f"An error occurred: {str(e)}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
@@ -64,7 +55,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def fetch_data(fetcher, country, start_date, end_date):
-    logger.info(f"Fetching {country} data...")
+    print(f"Fetching {country} data...")
     if country == "Portugal":
         return fetcher.get_portugal_data(start_date, end_date)
     elif country == "Spain":
@@ -84,10 +75,10 @@ def print_data_summary(data, country):
 
 def print_results(results, granularity):
     if results is None or results.empty:
-        logger.error("No results to display")
+        print("No results to display")
         return
 
-    logger.info("Aggregating results...")
+    print("Aggregating results...")
     aggregated_results = aggregate_results(results, granularity)
 
     print(f"\nPortugal's Electricity Mix ({granularity} granularity):")
