@@ -75,10 +75,10 @@ def print_results(results, granularity):
     print(f"Number of periods: {len(aggregated_results)}")
     print(f"Energy sources: {aggregated_results.columns.tolist()}")
     print("\nSample of results (percentages):")
-    print(aggregated_results.map(lambda x: f"{x:.2f}%"))
+    print(aggregated_results.applymap(lambda x: f"{x:.2f}%"))
     
     print("\nSummary statistics (percentages):")
-    print(aggregated_results.describe().map(lambda x: f"{x:.2f}%"))
+    print(aggregated_results.describe().applymap(lambda x: f"{x:.2f}%"))
 
 if __name__ == "__main__":
     main()
