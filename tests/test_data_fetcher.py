@@ -278,7 +278,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         unique_psr_types = len(expected_data.columns) - 5
         
         # Add assertions to check the correctness of the parsed data
-        self.assertEqual(len(expected_data), 3, f"Expected 3 data points (3 hours)")
+        self.assertEqual(len(expected_data), 4, f"Expected 4 data points (4 hours)")
         self.assertEqual(unique_psr_types, 10, f"Expected 10 production types")
         
         print(f"Found PSR types: {set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}}")
@@ -286,10 +286,12 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # Check start times and end times
         expected_start_times = [pd.Timestamp('2023-12-31 23:00:00+0000'), 
                                 pd.Timestamp('2024-01-01 00:00:00+0000'), 
-                                pd.Timestamp('2024-01-01 01:00:00+0000')]
+                                pd.Timestamp('2024-01-01 01:00:00+0000'),
+                                pd.Timestamp('2024-01-01 02:00:00+0000')]
         expected_end_times = [pd.Timestamp('2024-01-01 00:00:00+0000'), 
                               pd.Timestamp('2024-01-01 01:00:00+0000'), 
-                              pd.Timestamp('2024-01-01 02:00:00+0000')]
+                              pd.Timestamp('2024-01-01 02:00:00+0000'),
+                              pd.Timestamp('2024-01-01 03:00:00+0000')]
         
         self.assertEqual(expected_data['start_time'].tolist(), expected_start_times, "Start times are incorrect")
         self.assertEqual(expected_data['end_time'].tolist(), expected_end_times, "End times are incorrect")
