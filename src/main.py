@@ -10,7 +10,6 @@ def main():
     parser.add_argument("--start_date", required=True, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end_date", required=True, help="End date (YYYY-MM-DD)")
     parser.add_argument("--granularity", default="hourly", choices=["hourly", "daily", "weekly", "monthly"], help="Time granularity for results")
-    parser.add_argument("--french_contribution", action="store_true", help="Include French contribution in calculations")
     args = parser.parse_args()
 
     if not validate_inputs(args):
@@ -28,12 +27,6 @@ def main():
         pt_data = data_fetcher.get_portugal_data(start_date, end_date)
         print("Fetching Spain data...")
         es_data = data_fetcher.get_spain_data(start_date, end_date)
-        
-        if args.french_contribution:
-            print("Fetching France data...")
-            fr_data = data_fetcher.get_france_data(start_date, end_date)
-        else:
-            fr_data = None
 
         print("Data fetched successfully.")
         print("\nPortugal data:")
@@ -69,7 +62,7 @@ def main():
             print("Error: All DataFrames are empty. Cannot proceed with calculations.")
         else:
             print("\nCalculating electricity mix...")
-            pt_results, es_adjusted_mix = calculator.calculate_mix(pt_data, es_data, fr_data, args.french_contribution)
+            pt_results = calculator.calculate_mix(pt_data, es_data)
             
             if pt_results is not None and not pt_results.empty:
                 print("\nAggregating results...")
@@ -84,11 +77,6 @@ def main():
                 
                 print("\nSummary statistics (percentages):")
                 print(aggregated_results.describe().map(lambda x: f"{x:.2f}%"))
-
-                if args.french_contribution and es_adjusted_mix is not None:
-                    print("\nSpain's Adjusted Electricity Mix (intermediate results):")
-                    es_aggregated = aggregate_results(es_adjusted_mix, args.granularity)
-                    print(es_aggregated.map(lambda x: f"{x:.2f}%"))
             else:
                 print("Error: Unable to calculate electricity mix. The result is empty or None.")
 
