@@ -2,6 +2,9 @@ import pytest
 from datetime import datetime
 import pandas as pd
 from src.utils import validate_inputs, aggregate_results, PSR_TYPE_MAPPING
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 class MockArgs:
     def __init__(self, start_date, end_date):

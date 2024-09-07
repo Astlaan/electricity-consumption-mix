@@ -1,0 +1,20 @@
+Documentation: https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
+
+I want to generate graphs with the electricity source shares for the electricity consumed in Portugal.
+The ENTSO-E website, however, doesn't provide doesn't provide consumption values per source. It only provides the generated values per source, per country, ie:
+
+Portugal generation: 
+Solar: 100MWh
+Wind: 200MWh...
+
+However, the portuguese grid is connected to the spanish one and regularly imports a lot of electricity as well (and sometimes exports). So the electricity generation share per source doesn't match the electricity consumption share per source. I'm looking for a way to get the consumption share per source for Portugal.
+
+I think the workaround we will have to use is:
+1) If Portugal is net importing electricity, then its consumption share should be calculated, for each time section, by:
+  - Retrieving the national electricity generation per source
+  - Retrieving the total net imported electricity amount 
+  - For each source type (solar, wind, etc), summing its national generation with (total net import * fraction of generated amount that the given source in Spain)
+2) If Portugal is exporting electricity, then its consumption share should match its generation share.
+
+
+

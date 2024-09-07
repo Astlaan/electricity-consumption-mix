@@ -6,6 +6,10 @@ import os
 import json
 import hashlib
 from typing import Dict, Any, Optional
+import aiohttp
+import asyncio
+from typing import List
+
 
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
@@ -60,8 +64,8 @@ class ENTSOEDataFetcher:
         try:
             response = requests.get(self.BASE_URL, params=params)
             print(f"API response status code: {response.status_code}")
-            if response.status_code != 200:
-                print(f"API error response: {response.text}")
+            # if response.status_code != 200:
+            #     print(f"API error response: {response.text}")
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
@@ -120,7 +124,6 @@ class ENTSOEDataFetcher:
                 
                 data.append(data_point)
         
-        print(f"All PSR types found in XML: {all_psr_types}")
         
         if not data:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
@@ -129,8 +132,6 @@ class ENTSOEDataFetcher:
         
         # Resample to standard granularity
         df_resampled = self._resample_to_standard_granularity(df)
-        
-        print(f"PSR types in final DataFrame: {set(df_resampled.columns) - set(['start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'])}")
         
         return df_resampled
 
@@ -142,42 +143,55 @@ class ENTSOEDataFetcher:
             'outBiddingZone_Domain': country_code,
             'periodStart': start_date.strftime('%Y%m%d%H%M'),
             'periodEnd': end_date.strftime('%Y%m%d%H%M'),
-            'psrType': 'B19'  # TODO: Remove this line after debugging
+            # 'psrType': 'B01'  # TODO: Remove this line after debugging
         }
-        cache_key = self._get_cache_key(params)
-        cached_data = self._load_from_cache(cache_key)
+
+        xml_data = self._make_request(params)
+            
+        # DEBUG: Store raw XML data in a file for visual analysis
+        debug_file_path = os.path.join(self.CACHE_DIR, f"debug_raw_xml_.xml")
+        with open(debug_file_path, 'w', encoding='utf-8') as debug_file:
+            debug_file.write(xml_data)
+        # END DEBUG
         
-        if cached_data is not None:
-            df = cached_data[0]
-        else:
-            xml_data = self._make_request(params)
-            
-            # DEBUG: Store raw XML data in a file for visual analysis
-            debug_file_path = os.path.join(self.CACHE_DIR, f"debug_raw_xml_{cache_key}.xml")
-            with open(debug_file_path, 'w', encoding='utf-8') as debug_file:
-                debug_file.write(xml_data)
-            print(f"DEBUG: Raw XML data stored in {debug_file_path}")
-            # END DEBUG
-            
-            df = self._parse_xml_to_dataframe(xml_data)
-            if not df.empty:
-                metadata = {
-                    'country_code': country_code,
-                    'start_date': start_date.isoformat(),
-                    'end_date': end_date.isoformat(),
-                    'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
-                }
-                self._save_to_cache(cache_key, df, metadata)
+        df = self._parse_xml_to_dataframe(xml_data)
         
         return df
+    
+    async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
+        params['securityToken'] = self.security_token
+        async with session.get(self.BASE_URL, params=params) as response:
+            response.raise_for_status()
+            return await response.text()
+    
+    async def _fetch_data_in_chunks(self, params: Dict[str, Any], start_date: datetime, end_date: datetime) -> List[str]:
+        tasks = []
+        async with aiohttp.ClientSession() as session:
+            while start_date < end_date:
+                chunk_end_date = min(start_date + timedelta(days=365), end_date)
+                chunk_params = params.copy()
+                chunk_params['periodStart'] = start_date.strftime('%Y%m%d%H%M')
+                chunk_params['periodEnd'] = chunk_end_date.strftime('%Y%m%d%H%M')
+                tasks.append(self._make_async_request(session, chunk_params))
+                start_date = chunk_end_date
+            return await asyncio.gather(*tasks)
+    
+    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        params = {
+            'documentType': 'A75',
+            'processType': 'A16',
+            'in_Domain': country_code,
+            'outBiddingZone_Domain': country_code,
+        }
+        xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
+        dataframes = [self._parse_xml_to_dataframe(xml) for xml in xml_chunks]
+        return pd.concat(dataframes, ignore_index=True)
 
-    def get_physical_flows(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
             'documentType': 'A11',
             'in_Domain': in_domain,
             'out_Domain': out_domain,
-            'periodStart': start_date.strftime('%Y%m%d%H%M'),
-            'periodEnd': end_date.strftime('%Y%m%d%H%M')
         }
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
@@ -185,8 +199,10 @@ class ENTSOEDataFetcher:
         if cached_data is not None:
             return cached_data[0]  # Return just the DataFrame, not the metadata
         
-        xml_data = self._make_request(params)
-        df = self._parse_xml_to_dataframe(xml_data)
+        xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
+        dataframes = [self._parse_xml_to_dataframe(xml) for xml in xml_chunks]
+        df = pd.concat(dataframes, ignore_index=True)
+        
         if not df.empty:
             metadata = {
                 'in_domain': in_domain,
@@ -199,24 +215,22 @@ class ENTSOEDataFetcher:
         return df
 
     def get_portugal_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
-        generation = self.get_generation_data('10YPT-REN------W', start_date, end_date)
-        imports = self.get_physical_flows('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
-        exports = self.get_physical_flows('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
+        loop = asyncio.get_event_loop()
+        generation = loop.run_until_complete(self.get_generation_data_async('10YPT-REN------W', start_date, end_date))
+        imports = loop.run_until_complete(self.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date))
+        exports = loop.run_until_complete(self.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date))
         return {'generation': generation, 'imports': imports, 'exports': exports}
 
     def get_spain_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
-        generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
+        loop = asyncio.get_event_loop()
+        generation = loop.run_until_complete(self.get_generation_data_async('10YES-REE------0', start_date, end_date))
         return {'generation': generation}
+    
     def _resample_to_standard_granularity(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty:
             return df
 
         df = df.sort_values('start_time').set_index('start_time')
-        
-        # Debug print: Original data
-        print("DEBUG: Original data (first few rows):")
-        print(df.head())
-        print(f"DEBUG: Original data shape: {df.shape}")
         
         # Group by psr_type and resample
         resampled_data = []
@@ -236,11 +250,6 @@ class ENTSOEDataFetcher:
         result = pd.concat(resampled_data, ignore_index=True)
         result['resolution'] = self.STANDARD_GRANULARITY
         
-        # Debug print: Resampled data before pivoting
-        print("DEBUG: Resampled data before pivoting (first few rows):")
-        print(result.head())
-        print(f"DEBUG: Resampled data shape before pivoting: {result.shape}")
-        
         # Pivot the table
         result = result.pivot_table(
             index=['start_time', 'end_time', 'resolution'],
@@ -252,9 +261,6 @@ class ENTSOEDataFetcher:
         result.columns.name = None
         result = result.sort_values('start_time')
         
-        # Debug print: Final resampled data
-        print("DEBUG: Final resampled data (first few rows):")
-        print(result.head())
-        print(f"DEBUG: Final resampled data shape: {result.shape}")
+
         
         return result

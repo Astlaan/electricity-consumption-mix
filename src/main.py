@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
+from src.api_token import API_TOKEN
 from utils import validate_inputs, aggregate_results
 
 def main():
@@ -10,7 +11,7 @@ def main():
     if not validate_inputs(args):
         return
 
-    data_fetcher = ENTSOEDataFetcher("89fec152-d36b-49c8-b0b6-4e67e57b26ea")
+    data_fetcher = ENTSOEDataFetcher(API_TOKEN)
 
     start_date = args.start_date
     end_date = args.end_date
@@ -19,8 +20,8 @@ def main():
         pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        print_data_summary(pt_data, "Portugal")
-        print_data_summary(es_data, "Spain")
+        # print_data_summary(pt_data, "Portugal")
+        # print_data_summary(es_data, "Spain")
 
         # Calculate and print electricity mix
         calculator = ElectricityMixCalculator()

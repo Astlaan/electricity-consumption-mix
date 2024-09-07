@@ -7,6 +7,9 @@ from unittest.mock import patch
 from src.calculator import ElectricityMixCalculator
 from src.utils import PSR_TYPE_MAPPING, aggregate_results
 from src.data_fetcher import ENTSOEDataFetcher
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 class TestElectricityMixCalculator(unittest.TestCase):
     def setUp(self):
