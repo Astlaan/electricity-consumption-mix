@@ -106,15 +106,10 @@ class TestElectricityMixCalculator(unittest.TestCase):
             })
         }
 
-        # Test without French contribution
-        result_without_france = self.calculator.calculate_mix(pt_data, es_data, None, False)
-        self.assertIsInstance(result_without_france, pd.DataFrame)
-        self.assertEqual(result_without_france.shape, (2, 2))  # Expecting two psr_types in the sample data
-
-        # Test with French contribution
-        result_with_france = self.calculator.calculate_mix(pt_data, es_data, fr_data, True)
-        self.assertIsInstance(result_with_france, pd.DataFrame)
-        self.assertEqual(result_with_france.shape, (2, 2))  # Expecting two psr_types in the sample data
+        # Test the calculation
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (2, 2))  # Expecting two psr_types in the sample data
 
 if __name__ == '__main__':
     unittest.main()
