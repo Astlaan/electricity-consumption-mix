@@ -23,6 +23,11 @@ class ENTSOEDataFetcher:
     def _save_to_cache(self, cache_key: str, data: pd.DataFrame, metadata: Dict[str, Any]):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
         data.to_parquet(cache_file)
+        
+        # Convert Timedelta to string representation
+        if 'resolution' in metadata and isinstance(metadata['resolution'], pd.Timedelta):
+            metadata['resolution'] = str(metadata['resolution'])
+        
         with open(os.path.join(self.CACHE_DIR, f"{cache_key}_metadata.json"), 'w') as f:
             json.dump(metadata, f)
 
@@ -33,6 +38,11 @@ class ENTSOEDataFetcher:
             data = pd.read_parquet(cache_file)
             with open(metadata_file, 'r') as f:
                 metadata = json.load(f)
+            
+            # Convert string representation back to Timedelta if necessary
+            if 'resolution' in metadata and isinstance(metadata['resolution'], str):
+                metadata['resolution'] = pd.Timedelta(metadata['resolution'])
+            
             return data, metadata
         return None
 
