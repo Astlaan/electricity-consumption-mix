@@ -168,6 +168,15 @@ class ENTSOEDataFetcher:
     def get_spain_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
         logger.debug(f"Getting Spain data from {start_date} to {end_date}")
         generation = self.get_generation_data('10YES-REE------0', start_date, end_date)
+        imports_fr = self.get_physical_flows('10YFR-RTE------C', '10YES-REE------0', start_date, end_date)
+        exports_fr = self.get_physical_flows('10YES-REE------0', '10YFR-RTE------C', start_date, end_date)
         if not generation.empty:
             logger.debug(f"Spain generation data range: {generation['start_time'].min()} to {generation['start_time'].max()}")
+        return {'generation': generation, 'imports_fr': imports_fr, 'exports_fr': exports_fr}
+
+    def get_france_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
+        logger.debug(f"Getting France data from {start_date} to {end_date}")
+        generation = self.get_generation_data('10YFR-RTE------C', start_date, end_date)
+        if not generation.empty:
+            logger.debug(f"France generation data range: {generation['start_time'].min()} to {generation['start_time'].max()}")
         return {'generation': generation}
