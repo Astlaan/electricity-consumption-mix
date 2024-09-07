@@ -69,7 +69,7 @@ class ENTSOEDataFetcher:
         time_series_elements = root.findall(".//ns:TimeSeries", namespace)
         if not time_series_elements:
             logger.warning("No TimeSeries elements found in the XML")
-            return pd.DataFrame(columns=['start_time', 'position', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
+            return pd.DataFrame(columns=['start_time', 'end_time', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
         
         for time_series in time_series_elements:
             psr_type = time_series.find(".//ns:psrType", namespace)
@@ -91,8 +91,8 @@ class ENTSOEDataFetcher:
                     logger.warning(f"Missing start_time or resolution for Period in TimeSeries with psr_type: {psr_type}")
                     continue
                 
-                start_time = start_time.text
-                resolution = resolution.text
+                start_time = pd.to_datetime(start_time.text)
+                resolution = pd.Timedelta(resolution.text)
                 
                 point_elements = period.findall(".//ns:Point", namespace)
                 if not point_elements:
@@ -107,9 +107,11 @@ class ENTSOEDataFetcher:
                         logger.warning(f"Missing position or quantity for Point in Period starting at {start_time}")
                         continue
                     
+                    end_time = start_time + resolution * int(position.text)
+                    
                     data_point = {
                         'start_time': start_time,
-                        'position': int(position.text),
+                        'end_time': end_time,
                         'quantity': float(quantity.text),
                         'psr_type': psr_type,
                         'resolution': resolution
@@ -124,11 +126,11 @@ class ENTSOEDataFetcher:
         
         if not data:
             logger.warning("No valid data points found in the XML")
-            return pd.DataFrame(columns=['start_time', 'position', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
+            return pd.DataFrame(columns=['start_time', 'end_time', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
-        df['start_time'] = pd.to_datetime(df['start_time'])
         logger.debug(f"Parsed DataFrame shape: {df.shape}")
+        logger.debug(f"Parsed DataFrame date range: {df['start_time'].min()} to {df['end_time'].max()}")
         return df
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:

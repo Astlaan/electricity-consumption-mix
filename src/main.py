@@ -72,6 +72,10 @@ def print_data_summary(data, country):
             print("  DataFrame is empty\n")
 
 def print_results(results, granularity):
+    if results is None or results.empty:
+        logger.error("No results to display")
+        return
+
     logger.info("Aggregating results...")
     aggregated_results = aggregate_results(results, granularity)
 
@@ -80,10 +84,18 @@ def print_results(results, granularity):
     print(f"Number of periods: {len(aggregated_results)}")
     print(f"Energy sources: {aggregated_results.columns.tolist()}")
     print("\nSample of results (percentages):")
-    print(aggregated_results.applymap(lambda x: f"{x:.2f}%"))
+    print(aggregated_results.head().applymap(lambda x: f"{x:.2f}%"))
     
     print("\nSummary statistics (percentages):")
     print(aggregated_results.describe().applymap(lambda x: f"{x:.2f}%"))
+
+    # Additional data quality checks
+    print("\nData quality checks:")
+    print(f"Any NaN values: {aggregated_results.isna().any().any()}")
+    print(f"Any negative values: {(aggregated_results < 0).any().any()}")
+    print(f"Any values > 100%: {(aggregated_results > 100).any().any()}")
+    print(f"Row sums (should be close to 100%):")
+    print(aggregated_results.sum(axis=1).describe().apply(lambda x: f"{x:.2f}%"))
 
 if __name__ == "__main__":
     main()
