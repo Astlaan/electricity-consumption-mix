@@ -5,6 +5,10 @@ import xml.etree.ElementTree as ET
 import os
 import json
 import hashlib
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
@@ -22,11 +26,14 @@ class ENTSOEDataFetcher:
     def _save_to_cache(self, cache_key, data):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.csv")
         data.to_csv(cache_file, index=False)
+        logger.info(f"Data saved to cache: {cache_file}")
 
     def _load_from_cache(self, cache_key):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.csv")
         if os.path.exists(cache_file):
+            logger.info(f"Loading data from cache: {cache_file}")
             return pd.read_csv(cache_file, parse_dates=['start_time'])
+        logger.info(f"No cache found for key: {cache_key}")
         return None
 
     def _make_request(self, params):
