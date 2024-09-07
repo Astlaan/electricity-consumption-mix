@@ -37,6 +37,12 @@ def validate_inputs(args):
         return False
 
 def aggregate_results(results: pd.DataFrame, granularity: str) -> pd.DataFrame:
+    if results.empty:
+        return results
+    
+    # Map PSR types to their descriptions
+    results = results.rename(columns=PSR_TYPE_MAPPING)
+    
     if granularity == 'hourly':
         return results
     elif granularity in ['daily', 'weekly', 'monthly']:
