@@ -63,8 +63,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_parse.assert_called_once_with("<dummy>XML</dummy>")
 
     @patch('src.data_fetcher.requests.get')
-    @patch('src.data_fetcher.ENTSOEDataFetcher._is_cache_expired')
-    def test_caching(self, mock_is_cache_expired, mock_get):
+    def test_caching(self, mock_get):
         mock_response = Mock()
         mock_response.text = """
         <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
@@ -87,7 +86,6 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         """
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
-        mock_is_cache_expired.return_value = True  # Simulate expired cache
 
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
@@ -97,9 +95,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertIsInstance(result1, pd.DataFrame)
         mock_get.assert_called_once()
 
-        # Reset the mocks
+        # Reset the mock
         mock_get.reset_mock()
-        mock_is_cache_expired.return_value = False  # Simulate valid cache
 
         # Second call with the same parameters should use cached data
         result2 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
