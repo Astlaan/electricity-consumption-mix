@@ -13,12 +13,13 @@ logger = logging.getLogger(__name__)
 
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
-    CACHE_DIR = "data_cache"
+    CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data_cache")
     
     def __init__(self, security_token: str):
         self.security_token = security_token
         os.makedirs(self.CACHE_DIR, exist_ok=True)
         logger.debug(f"ENTSOEDataFetcher initialized with token: {security_token[:5]}...")
+        logger.debug(f"Cache directory: {self.CACHE_DIR}")
 
     def _get_cache_key(self, params: Dict[str, Any]) -> str:
         param_str = json.dumps(params, sort_keys=True)
@@ -32,6 +33,7 @@ class ENTSOEDataFetcher:
         with open(os.path.join(self.CACHE_DIR, f"{cache_key}_metadata.json"), 'w') as f:
             json.dump(metadata, f)
         logger.debug(f"Data saved to cache: {cache_file}")
+        logger.debug(f"Metadata saved to cache: {os.path.join(self.CACHE_DIR, f'{cache_key}_metadata.json')}")
 
     def _load_from_cache(self, cache_key: str) -> Optional[tuple]:
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
