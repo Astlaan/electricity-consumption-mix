@@ -266,19 +266,19 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
-        print("\nPortugal Generation Data for the first 3 hours of 2024:")
+        print("\nPortugal Generation Data for the first 4 hours of 2024:")
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
         print(result.to_string(index=False))
         
-        # Check if the result matches the first 3 hours of data in the file
-        expected_data = result[result['start_time'] < pd.Timestamp('2024-01-01 03:00:00+0000')]
+        # Check if the result matches the first 4 hours of data in the file
+        expected_data = result[result['start_time'] < pd.Timestamp('2024-01-01 04:00:00+0000')]
         
         # Count unique PSR types (now columns, excluding 'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain')
         unique_psr_types = len(expected_data.columns) - 5
         
         # Add assertions to check the correctness of the parsed data
-        self.assertEqual(len(expected_data), 3, f"Expected 3 data points (3 hours)")
+        self.assertEqual(len(expected_data), 4, f"Expected 4 data points (4 hours)")
         self.assertEqual(unique_psr_types, 10, f"Expected 10 production types")
         
         print(f"Found PSR types: {set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}}")
