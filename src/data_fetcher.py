@@ -148,19 +148,23 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             logger.debug("Using cached data")
-            return cached_data[0]  # Return just the DataFrame, not the metadata
+            df = cached_data[0]
+        else:
+            logger.debug("Fetching new data")
+            xml_data = self._make_request(params)
+            df = self._parse_xml_to_dataframe(xml_data)
+            if not df.empty:
+                metadata = {
+                    'country_code': country_code,
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat(),
+                    'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
+                }
+                self._save_to_cache(cache_key, df, metadata)
         
-        logger.debug("Fetching new data")
-        xml_data = self._make_request(params)
-        df = self._parse_xml_to_dataframe(xml_data)
-        if not df.empty:
-            metadata = {
-                'country_code': country_code,
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat(),
-                'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
-            }
-            self._save_to_cache(cache_key, df, metadata)
+        logger.debug(f"Generation data shape: {df.shape}")
+        logger.debug(f"Generation data date range: {df['start_time'].min()} to {df['start_time'].max()}")
+        logger.debug(f"Unique dates in generation data: {df['start_time'].dt.date.nunique()}")
         return df
 
     def get_physical_flows(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:

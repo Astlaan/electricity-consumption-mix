@@ -29,6 +29,17 @@ def main():
         print_data_summary(pt_data, "Portugal")
         print_data_summary(es_data, "Spain")
 
+        # Check if we have data for the full date range
+        for country, data in [("Portugal", pt_data), ("Spain", es_data)]:
+            for key, df in data.items():
+                if df.empty:
+                    logger.warning(f"{country} {key} data is empty")
+                else:
+                    date_range = pd.date_range(start=start_date, end=end_date, freq='H')
+                    missing_dates = date_range.difference(df['start_time'].dt.floor('H'))
+                    if not missing_dates.empty:
+                        logger.warning(f"{country} {key} data is missing dates: {missing_dates}")
+
         if all(df.empty for df in pt_data.values()) and all(df.empty for df in es_data.values()):
             logger.error("All DataFrames are empty. Cannot proceed with calculations.")
             return
