@@ -167,5 +167,68 @@ class TestElectricityMixCalculator(unittest.TestCase):
         self.assertEqual(set(result.columns), {'B01', 'B02', 'B03', 'B04'})
         self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
 
+    def test_calculate_mix_empty_data(self):
+        pt_data = {
+            'generation': pd.DataFrame(),
+            'imports': pd.DataFrame(),
+            'exports': pd.DataFrame()
+        }
+        es_data = {
+            'generation': pd.DataFrame()
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertTrue(result.empty)
+
+    def test_calculate_mix_single_source(self):
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [100]
+            }),
+            'imports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [0]}),
+            'exports': pd.DataFrame({'start_time': ['2023-05-01T00:00:00Z'], 'quantity': [0]})
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z'],
+                'psr_type': ['B01'],
+                'quantity': [500]
+            })
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        expected = pd.DataFrame({'B01': [100.0]}, index=pd.to_datetime(['2023-05-01T00:00:00Z']))
+        pd.testing.assert_frame_equal(result, expected)
+
+    def test_calculate_mix_multiple_timestamps(self):
+        pt_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'psr_type': ['B01', 'B01', 'B01'],
+                'quantity': [100, 150, 200]
+            }),
+            'imports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'quantity': [50, 60, 70]
+            }),
+            'exports': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'quantity': [10, 20, 30]
+            })
+        }
+        es_data = {
+            'generation': pd.DataFrame({
+                'start_time': ['2023-05-01T00:00:00Z', '2023-05-01T01:00:00Z', '2023-05-01T02:00:00Z'],
+                'psr_type': ['B01', 'B01', 'B01'],
+                'quantity': [500, 600, 700]
+            })
+        }
+
+        result = self.calculator.calculate_mix(pt_data, es_data)
+        self.assertEqual(result.shape, (3, 1))
+        self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should be close to 100%
+
 if __name__ == '__main__':
     unittest.main()
