@@ -192,12 +192,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             mock_response.raise_for_status.return_value = None
             mock_get.return_value = mock_response
 
-            self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
+            result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
 
         # Check if cache files were created
         cache_files = os.listdir(self.fetcher.CACHE_DIR)
         self.assertTrue(any(file.endswith('.parquet') for file in cache_files), f"No .parquet file found in {cache_files}")
         self.assertTrue(any(file.endswith('_metadata.json') for file in cache_files), f"No _metadata.json file found in {cache_files}")
+
+        # Check if the result is not empty
+        self.assertFalse(result.empty, "The resulting DataFrame is empty")
 
         logger.debug("test_cache_file_creation completed")
 

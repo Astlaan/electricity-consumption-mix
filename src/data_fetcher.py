@@ -92,9 +92,12 @@ class ENTSOEDataFetcher:
                     
                     data.append(data_point)
         
+        if not data:
+            logger.warning("No data points found in the XML")
+            return pd.DataFrame(columns=['start_time', 'position', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
+        
         df = pd.DataFrame(data)
-        if not df.empty:
-            df['start_time'] = pd.to_datetime(df['start_time'])
+        df['start_time'] = pd.to_datetime(df['start_time'])
         logger.debug(f"Parsed DataFrame shape: {df.shape}")
         return df
 
