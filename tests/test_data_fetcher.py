@@ -136,5 +136,52 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         pd.testing.assert_frame_equal(result1, result2)
         logger.debug("test_caching completed")
 
+    @patch('src.data_fetcher.requests.get')
+    def test_caching_different_params(self, mock_get):
+        logger.debug("Running test_caching_different_params")
+        mock_response = Mock()
+        mock_response.text = "<dummy>XML</dummy>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        start_date1 = datetime(2022, 1, 1)
+        end_date1 = datetime(2022, 1, 2)
+        start_date2 = datetime(2022, 1, 3)
+        end_date2 = datetime(2022, 1, 4)
+
+        # First call
+        self.fetcher.get_generation_data('10YPT-REN------W', start_date1, end_date1)
+        self.assertEqual(mock_get.call_count, 1)
+
+        # Second call with different parameters
+        self.fetcher.get_generation_data('10YPT-REN------W', start_date2, end_date2)
+        self.assertEqual(mock_get.call_count, 2)
+
+        logger.debug("test_caching_different_params completed")
+
+    def test_cache_file_creation(self):
+        logger.debug("Running test_cache_file_creation")
+        start_date = datetime(2022, 1, 1)
+        end_date = datetime(2022, 1, 2)
+        
+        # Clear cache before test
+        shutil.rmtree(self.fetcher.CACHE_DIR)
+        os.makedirs(self.fetcher.CACHE_DIR)
+
+        with patch('src.data_fetcher.requests.get') as mock_get:
+            mock_response = Mock()
+            mock_response.text = "<dummy>XML</dummy>"
+            mock_response.raise_for_status.return_value = None
+            mock_get.return_value = mock_response
+
+            self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
+
+        # Check if cache files were created
+        cache_files = os.listdir(self.fetcher.CACHE_DIR)
+        self.assertTrue(any(file.endswith('.parquet') for file in cache_files))
+        self.assertTrue(any(file.endswith('_metadata.json') for file in cache_files))
+
+        logger.debug("test_cache_file_creation completed")
+
 if __name__ == '__main__':
     unittest.main()
