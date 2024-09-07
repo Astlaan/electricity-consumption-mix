@@ -199,5 +199,53 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         logger.debug("test_cache_file_creation completed")
 
+    @patch('src.data_fetcher.requests.get')
+    def test_edge_case_date_ranges(self, mock_get):
+        logger.debug("Running test_edge_case_date_ranges")
+        
+        # Define mock response for the API call
+        mock_response = Mock()
+        mock_response.text = """
+        <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+          <TimeSeries>
+            <MktPSRType>
+              <psrType>B01</psrType>
+            </MktPSRType>
+            <Period>
+              <timeInterval>
+                <start>2020-01-01T00:00Z</start>
+              </timeInterval>
+              <resolution>PT60M</resolution>
+              <Point>
+                <position>1</position>
+                <quantity>100</quantity>
+              </Point>
+            </Period>
+          </TimeSeries>
+        </GL_MarketDocument>
+        """
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        # Test cases for different date ranges
+        test_cases = [
+            (datetime(2020, 1, 1), datetime(2020, 12, 31)),  # Leap year
+            (datetime(2021, 1, 1), datetime(2021, 12, 31)),  # Non-leap year
+            (datetime(2020, 1, 1), datetime(2020, 1, 1)),    # Same start and end date
+            (datetime(2020, 12, 31), datetime(2021, 1, 1)),  # End of one year to start of next
+            (datetime(2020, 3, 1), datetime(2020, 3, 31)),   # Month with 31 days
+            (datetime(2020, 2, 1), datetime(2020, 2, 29)),   # February in a leap year
+            (datetime(2021, 2, 1), datetime(2021, 2, 28)),   # February in a non-leap year
+        ]
+
+        for start_date, end_date in test_cases:
+            logger.debug(f"Testing date range: {start_date} to {end_date}")
+            result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
+            self.assertIsInstance(result, pd.DataFrame)
+            self.assertGreaterEqual(len(result), 1)  # Ensure the dataset is not empty
+            logger.debug(f"Date range {start_date} to {end_date} passed")
+
+        logger.debug("test_edge_case_date_ranges completed")
+
 if __name__ == '__main__':
     unittest.main()
