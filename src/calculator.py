@@ -58,6 +58,8 @@ class ElectricityMixCalculator:
         df[df < 0] = 0
         row_sums = df.sum(axis=1)
         df = df.div(row_sums, axis=0).fillna(0) * 100
+        df = df.round(6)  # Round to 6 decimal places
+        df = df.div(df.sum(axis=1), axis=0) * 100  # Normalize again to ensure sum is exactly 100
         df.index.name = None
         df.columns.name = None
         return df.rename(columns={'psr_type': None})
