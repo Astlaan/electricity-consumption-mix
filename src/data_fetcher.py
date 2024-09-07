@@ -96,13 +96,22 @@ class ENTSOEDataFetcher:
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
         
-        if cached_data is not None:
+        if cached_data is not None and not self._is_cache_expired(cache_key):
+            logger.info("Using cached data")
             return cached_data
         
+        logger.info("Fetching new data")
         xml_data = self._make_request(params)
         df = self._parse_xml_to_dataframe(xml_data)
         self._save_to_cache(cache_key, df)
         return df
+
+    def _is_cache_expired(self, cache_key):
+        cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.csv")
+        if os.path.exists(cache_file):
+            file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(cache_file))
+            return file_age > timedelta(hours=1)  # Cache expires after 1 hour
+        return True
 
     def get_physical_flows(self, in_domain, out_domain, start_date, end_date):
         params = {
