@@ -62,25 +62,51 @@ class ENTSOEDataFetcher:
         data = []
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
         
-        for time_series in root.findall(".//ns:TimeSeries", namespace):
+        time_series_elements = root.findall(".//ns:TimeSeries", namespace)
+        if not time_series_elements:
+            logger.warning("No TimeSeries elements found in the XML")
+            return pd.DataFrame(columns=['start_time', 'position', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
+        
+        for time_series in time_series_elements:
             psr_type = time_series.find(".//ns:psrType", namespace)
             psr_type = psr_type.text if psr_type is not None else "Unknown"
             
             in_domain = time_series.find(".//ns:in_Domain.mRID", namespace)
             out_domain = time_series.find(".//ns:out_Domain.mRID", namespace)
             
-            for period in time_series.findall(".//ns:Period", namespace):
-                start_time = period.find(".//ns:start", namespace).text
-                resolution = period.find(".//ns:resolution", namespace).text
+            period_elements = time_series.findall(".//ns:Period", namespace)
+            if not period_elements:
+                logger.warning(f"No Period elements found for TimeSeries with psr_type: {psr_type}")
+                continue
+            
+            for period in period_elements:
+                start_time = period.find(".//ns:start", namespace)
+                resolution = period.find(".//ns:resolution", namespace)
                 
-                for point in period.findall(".//ns:Point", namespace):
-                    position = point.find(".//ns:position", namespace).text
-                    quantity = point.find(".//ns:quantity", namespace).text
+                if start_time is None or resolution is None:
+                    logger.warning(f"Missing start_time or resolution for Period in TimeSeries with psr_type: {psr_type}")
+                    continue
+                
+                start_time = start_time.text
+                resolution = resolution.text
+                
+                point_elements = period.findall(".//ns:Point", namespace)
+                if not point_elements:
+                    logger.warning(f"No Point elements found for Period starting at {start_time}")
+                    continue
+                
+                for point in point_elements:
+                    position = point.find(".//ns:position", namespace)
+                    quantity = point.find(".//ns:quantity", namespace)
+                    
+                    if position is None or quantity is None:
+                        logger.warning(f"Missing position or quantity for Point in Period starting at {start_time}")
+                        continue
                     
                     data_point = {
                         'start_time': start_time,
-                        'position': int(position),
-                        'quantity': float(quantity),
+                        'position': int(position.text),
+                        'quantity': float(quantity.text),
                         'psr_type': psr_type,
                         'resolution': resolution
                     }
@@ -93,7 +119,7 @@ class ENTSOEDataFetcher:
                     data.append(data_point)
         
         if not data:
-            logger.warning("No data points found in the XML")
+            logger.warning("No valid data points found in the XML")
             return pd.DataFrame(columns=['start_time', 'position', 'quantity', 'psr_type', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
