@@ -49,13 +49,14 @@ class ElectricityMixCalculator:
                 elif 'start' in df.columns:
                     df['start_time'] = pd.to_datetime(df['start'])
                     df = df.rename(columns={'start': 'start_time'})
+                df['hour'] = df['start_time'].dt.floor('H')
 
     def _group_generation_data(self, df):
-        return df.groupby(['start_time', 'psr_type'])['quantity'].sum().unstack(fill_value=0) if not df.empty else pd.DataFrame()
+        return df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0) if not df.empty else pd.DataFrame()
 
     def _calculate_net_imports(self, imports, exports):
-        imports_grouped = imports.groupby('start_time')['quantity'].sum() if not imports.empty else pd.Series(dtype=float)
-        exports_grouped = exports.groupby('start_time')['quantity'].sum() if not exports.empty else pd.Series(dtype=float)
+        imports_grouped = imports.groupby('hour')['quantity'].sum() if not imports.empty else pd.Series(dtype=float)
+        exports_grouped = exports.groupby('hour')['quantity'].sum() if not exports.empty else pd.Series(dtype=float)
         return imports_grouped - exports_grouped
 
     def _calculate_percentages(self, df):
@@ -65,12 +66,15 @@ class ElectricityMixCalculator:
         return df.div(total, axis=0) * 100
 
     def _adjust_portugal_mix(self, pt_mix, net_imports, es_percentages):
-        for source in es_percentages.columns:
-            if source in pt_mix.columns:
-                pt_mix[source] += net_imports * es_percentages[source] / 100
-            else:
-                pt_mix[source] = net_imports * es_percentages[source] / 100
-        return pt_mix.fillna(0)  # Fill NaN values with 0
+        adjusted_mix = pt_mix.copy()
+        for hour in adjusted_mix.index:
+            if hour in net_imports.index and hour in es_percentages.index:
+                for source in es_percentages.columns:
+                    if source in adjusted_mix.columns:
+                        adjusted_mix.loc[hour, source] += net_imports.loc[hour] * es_percentages.loc[hour, source] / 100
+                    else:
+                        adjusted_mix.loc[hour, source] = net_imports.loc[hour] * es_percentages.loc[hour, source] / 100
+        return adjusted_mix.fillna(0)  # Fill NaN values with 0
 
     def _clean_output(self, df):
         df[df < 0] = 0
@@ -81,4 +85,4 @@ class ElectricityMixCalculator:
         df = df[df.sum(axis=1) > 0]  # Remove rows where sum is 0
         df.index.name = None
         df.columns.name = None
-        return df.rename(columns={'psr_type': None})
+        return df
