@@ -290,7 +290,9 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
         print("\nPortugal Generation Data for the first 3 hours of 2023:")
-        print(result)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', None)
+        print(result.to_string(index=False))
         
         # Add assertions to check the correctness of the parsed data
         self.assertEqual(len(result), 3, "Expected 3 data points")
