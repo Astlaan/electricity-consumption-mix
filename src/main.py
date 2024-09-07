@@ -77,8 +77,11 @@ def print_results(results, granularity):
     print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
     print(f"Number of periods: {len(aggregated_results)}")
     print(f"Energy sources: {aggregated_results.columns.tolist()}")
-    print("\nSample of results (percentages):")
-    print(aggregated_results.head().applymap(lambda x: f"{x:.2f}%"))
+    
+    print("\nFull results (percentages):")
+    pd.set_option('display.max_columns', None)  # Show all columns
+    pd.set_option('display.width', None)  # Don't wrap to multiple lines
+    print(aggregated_results.applymap(lambda x: f"{x:.2f}%"))
     
     print("\nSummary statistics (percentages):")
     print(aggregated_results.describe().applymap(lambda x: f"{x:.2f}%"))
@@ -90,6 +93,10 @@ def print_results(results, granularity):
     print(f"Any values > 100%: {(aggregated_results > 100).any().any()}")
     print(f"Row sums (should be close to 100%):")
     print(aggregated_results.sum(axis=1).describe().apply(lambda x: f"{x:.2f}%"))
+
+    # Debug log
+    print("\nDEBUG: Full aggregated results dataframe:")
+    print(aggregated_results)
 
 if __name__ == "__main__":
     main()
