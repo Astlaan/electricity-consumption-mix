@@ -303,10 +303,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertTrue(all(expected_data['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
         
         # Check if all expected PSR types are present
-        expected_psr_types = {'B01', 'B04', 'B05', 'B10', 'B11', 'B12', 'B20', 'B16', 'B18', 'B19'}
-        self.assertEqual(set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}, 
-                         expected_psr_types, 
-                         "Not all expected PSR types are present in the data")
+        expected_psr_types = {'B01', 'B04', 'B05', 'B10', 'B11', 'B12', 'B16', 'B18', 'B19', 'B20'}
+        actual_psr_types = set(expected_data.columns) - {'start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'}
+        self.assertEqual(actual_psr_types, expected_psr_types, 
+                         f"Mismatch in PSR types. Expected: {expected_psr_types}, Actual: {actual_psr_types}")
+        
+        # Check if any PSR types have all zero values
+        zero_psr_types = [psr_type for psr_type in expected_psr_types if (expected_data[psr_type] == 0).all()]
+        if zero_psr_types:
+            print(f"Warning: The following PSR types have all zero values: {zero_psr_types}")
         
         logger.debug("test_portugal_generation_data completed")
 
