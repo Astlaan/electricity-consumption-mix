@@ -247,5 +247,52 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         logger.debug("test_edge_case_date_ranges completed")
 
+    @patch('src.data_fetcher.requests.get')
+    def test_portugal_generation_data(self, mock_get):
+        logger.debug("Running test_portugal_generation_data")
+        
+        # Define mock response for the API call
+        mock_response = Mock()
+        mock_response.text = """
+        <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+          <TimeSeries>
+            <MktPSRType>
+              <psrType>B01</psrType>
+            </MktPSRType>
+            <Period>
+              <timeInterval>
+                <start>2023-01-01T00:00Z</start>
+                <end>2023-01-01T03:00Z</end>
+              </timeInterval>
+              <resolution>PT60M</resolution>
+              <Point>
+                <position>1</position>
+                <quantity>1000</quantity>
+              </Point>
+              <Point>
+                <position>2</position>
+                <quantity>1100</quantity>
+              </Point>
+              <Point>
+                <position>3</position>
+                <quantity>1200</quantity>
+              </Point>
+            </Period>
+          </TimeSeries>
+        </GL_MarketDocument>
+        """
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        start_date = datetime(2023, 1, 1, 0, 0)
+        end_date = datetime(2023, 1, 1, 3, 0)
+        
+        result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
+        
+        print("\nPortugal Generation Data for the first 3 hours of 2023:")
+        print(result)
+        
+        logger.debug("test_portugal_generation_data completed")
+
 if __name__ == '__main__':
     unittest.main()
