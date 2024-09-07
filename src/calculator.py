@@ -1,27 +1,45 @@
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ElectricityMixCalculator:
     def calculate_mix(self, pt_data: dict, es_data: dict) -> pd.DataFrame:
+        logger.debug("Starting calculate_mix method")
         pt_gen = pt_data.get('generation', pd.DataFrame())
         pt_imports = pt_data.get('imports', pd.DataFrame())
         pt_exports = pt_data.get('exports', pd.DataFrame())
         es_gen = es_data.get('generation', pd.DataFrame())
 
+        logger.debug(f"Input data shapes: pt_gen={pt_gen.shape}, pt_imports={pt_imports.shape}, pt_exports={pt_exports.shape}, es_gen={es_gen.shape}")
+
         if pt_gen.empty and es_gen.empty:
+            logger.warning("Both Portuguese and Spanish generation data are empty")
             return pd.DataFrame()
 
         self._ensure_datetime_format([pt_gen, pt_imports, pt_exports, es_gen])
 
         pt_gen_grouped = self._group_generation_data(pt_gen)
         es_gen_grouped = self._group_generation_data(es_gen)
+        logger.debug(f"Grouped data shapes: pt_gen_grouped={pt_gen_grouped.shape}, es_gen_grouped={es_gen_grouped.shape}")
 
         net_imports = self._calculate_net_imports(pt_imports, pt_exports)
+        logger.debug(f"Net imports shape: {net_imports.shape}")
+
         es_percentages = self._calculate_percentages(es_gen_grouped)
+        logger.debug(f"Spanish percentages shape: {es_percentages.shape}")
 
         pt_mix = self._adjust_portugal_mix(pt_gen_grouped, net_imports, es_percentages)
-        pt_percentages = self._calculate_percentages(pt_mix)
+        logger.debug(f"Adjusted Portuguese mix shape: {pt_mix.shape}")
 
-        return self._clean_output(pt_percentages)
+        pt_percentages = self._calculate_percentages(pt_mix)
+        logger.debug(f"Portuguese percentages shape: {pt_percentages.shape}")
+
+        result = self._clean_output(pt_percentages)
+        logger.debug(f"Final result shape: {result.shape}")
+        logger.debug(f"Sum of percentages: {result.sum(axis=1)}")
+
+        return result
 
     def _ensure_datetime_format(self, dataframes):
         for df in dataframes:

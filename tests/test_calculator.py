@@ -323,6 +323,9 @@ class TestElectricityMixCalculator(unittest.TestCase):
         self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should always be close to 100%
 
     def test_calculate_mix_missing_data(self):
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
         dates = pd.date_range(start='2023-05-01', end='2023-05-03', freq='H')
         pt_data = {
             'generation': pd.DataFrame({
@@ -351,7 +354,13 @@ class TestElectricityMixCalculator(unittest.TestCase):
         pt_data['generation'] = pt_data['generation'].sample(frac=0.8)
         es_data['generation'] = es_data['generation'].sample(frac=0.8)
 
+        logger.debug(f"Input data shapes: pt_gen={pt_data['generation'].shape}, pt_imports={pt_data['imports'].shape}, pt_exports={pt_data['exports'].shape}, es_gen={es_data['generation'].shape}")
+
         result = self.calculator.calculate_mix(pt_data, es_data)
+        
+        logger.debug(f"Result shape: {result.shape}")
+        logger.debug(f"Result sum: {result.sum(axis=1)}")
+        logger.debug(f"Max difference from 100: {(result.sum(axis=1) - 100).abs().max()}")
         
         self.assertLessEqual(len(result), len(dates))  # Should have fewer rows due to missing data
         self.assertTrue((result.sum(axis=1) - 100).abs().max() < 1e-6)  # Sum should always be close to 100%
