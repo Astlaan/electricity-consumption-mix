@@ -52,12 +52,19 @@ class ElectricityMixCalculator:
                 df['hour'] = df['start_time'].dt.floor('H')
 
     def _group_generation_data(self, df):
-        return df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0) if not df.empty else pd.DataFrame()
+        if df.empty:
+            return pd.DataFrame()
+        df['hour'] = pd.to_datetime(df['start_time']).dt.floor('H')
+        return df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
 
     def _calculate_net_imports(self, imports, exports):
-        imports_grouped = imports.groupby('hour')['quantity'].sum() if not imports.empty else pd.Series(dtype=float)
-        exports_grouped = exports.groupby('hour')['quantity'].sum() if not exports.empty else pd.Series(dtype=float)
-        return imports_grouped - exports_grouped
+        if imports.empty and exports.empty:
+            return pd.Series(dtype=float)
+        imports['hour'] = pd.to_datetime(imports['start_time']).dt.floor('H')
+        exports['hour'] = pd.to_datetime(exports['start_time']).dt.floor('H')
+        imports_grouped = imports.groupby('hour')['quantity'].sum()
+        exports_grouped = exports.groupby('hour')['quantity'].sum()
+        return imports_grouped.sub(exports_grouped, fill_value=0)
 
     def _calculate_percentages(self, df):
         if df.empty:
@@ -67,13 +74,14 @@ class ElectricityMixCalculator:
 
     def _adjust_portugal_mix(self, pt_mix, net_imports, es_percentages):
         adjusted_mix = pt_mix.copy()
-        for hour in adjusted_mix.index:
-            if hour in net_imports.index and hour in es_percentages.index:
-                for source in es_percentages.columns:
-                    if source in adjusted_mix.columns:
-                        adjusted_mix.loc[hour, source] += net_imports.loc[hour] * es_percentages.loc[hour, source] / 100
-                    else:
-                        adjusted_mix.loc[hour, source] = net_imports.loc[hour] * es_percentages.loc[hour, source] / 100
+        common_hours = adjusted_mix.index.intersection(net_imports.index).intersection(es_percentages.index)
+        
+        for source in es_percentages.columns:
+            if source in adjusted_mix.columns:
+                adjusted_mix.loc[common_hours, source] += net_imports.loc[common_hours] * es_percentages.loc[common_hours, source] / 100
+            else:
+                adjusted_mix.loc[common_hours, source] = net_imports.loc[common_hours] * es_percentages.loc[common_hours, source] / 100
+        
         return adjusted_mix.fillna(0)  # Fill NaN values with 0
 
     def _clean_output(self, df):
