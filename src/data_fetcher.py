@@ -36,14 +36,21 @@ class ENTSOEDataFetcher:
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_key}_metadata.json")
         if os.path.exists(cache_file) and os.path.exists(metadata_file):
             data = pd.read_parquet(cache_file)
-            with open(metadata_file, 'r') as f:
-                metadata = json.load(f)
-            
-            # Convert string representation back to Timedelta if necessary
-            if 'resolution' in metadata and isinstance(metadata['resolution'], str):
-                metadata['resolution'] = pd.Timedelta(metadata['resolution'])
-            
-            return data, metadata
+            try:
+                with open(metadata_file, 'r') as f:
+                    metadata = json.load(f)
+                
+                # Convert string representation back to Timedelta if necessary
+                if 'resolution' in metadata and isinstance(metadata['resolution'], str):
+                    metadata['resolution'] = pd.Timedelta(metadata['resolution'])
+                
+                return data, metadata
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON from cache: {str(e)}")
+                # Remove the corrupted cache files
+                os.remove(cache_file)
+                os.remove(metadata_file)
+                return None
         return None
 
     def _make_request(self, params: Dict[str, Any]) -> str:
