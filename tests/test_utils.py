@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 import pandas as pd
-from src.utils import validate_inputs, aggregate_results, PSR_TYPE_MAPPING
+from utils import validate_inputs, aggregate_results, PSR_TYPE_MAPPING
 
 class MockArgs:
     def __init__(self, start_date, end_date):

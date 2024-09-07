@@ -5,7 +5,7 @@ import pandas as pd
 import logging
 import os
 import shutil
-from src.data_fetcher import ENTSOEDataFetcher
+from data_fetcher import ENTSOEDataFetcher
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
