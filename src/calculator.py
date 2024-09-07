@@ -59,4 +59,6 @@ class ElectricityMixCalculator:
         else:
             pt_percentages = pd.DataFrame()
 
+        # Reset the index name to None
+        pt_percentages.index.name = None
         return pt_percentages
