@@ -121,7 +121,15 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
-        df = df.pivot_table(index=['start_time', 'end_time', 'resolution', 'in_domain', 'out_domain'], 
+        
+        # Determine which columns to use as index
+        index_columns = ['start_time', 'end_time', 'resolution']
+        if 'in_domain' in df.columns:
+            index_columns.append('in_domain')
+        if 'out_domain' in df.columns:
+            index_columns.append('out_domain')
+        
+        df = df.pivot_table(index=index_columns, 
                             columns='psr_type', values='quantity', aggfunc='first')
         df.reset_index(inplace=True)
         df.columns.name = None
