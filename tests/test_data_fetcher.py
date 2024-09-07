@@ -251,64 +251,44 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_portugal_generation_data(self, mock_get):
         logger.debug("Running test_portugal_generation_data")
         
-        # Define mock response for the API call
+        # Load mock response from file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(current_dir, 'test_data', 'AGGREGATED_GENERATION_PER_TYPE_202401010000-202401020000.xml'), 'r') as file:
+            mock_response_text = file.read()
+
         mock_response = Mock()
-        mock_response.text = """
-        <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
-          <TimeSeries>
-            <MktPSRType>
-              <psrType>B01</psrType>
-            </MktPSRType>
-            <Period>
-              <timeInterval>
-                <start>2023-01-01T00:00Z</start>
-                <end>2023-01-01T03:00Z</end>
-              </timeInterval>
-              <resolution>PT60M</resolution>
-              <Point>
-                <position>1</position>
-                <quantity>1000</quantity>
-              </Point>
-              <Point>
-                <position>2</position>
-                <quantity>1100</quantity>
-              </Point>
-              <Point>
-                <position>3</position>
-                <quantity>1200</quantity>
-              </Point>
-            </Period>
-          </TimeSeries>
-        </GL_MarketDocument>
-        """
+        mock_response.text = mock_response_text
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        start_date = datetime(2023, 1, 1, 0, 0)
-        end_date = datetime(2023, 1, 1, 3, 0)
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 3, 0)
         
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
-        print("\nPortugal Generation Data for the first 3 hours of 2023:")
+        print("\nPortugal Generation Data for the first 3 hours of 2024:")
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
         print(result.to_string(index=False))
         
+        # Check if the result matches the first 3 hours of data in the file
+        expected_data = result[result['start_time'] < pd.Timestamp('2024-01-01 03:00:00+0000')]
+        
         # Add assertions to check the correctness of the parsed data
-        self.assertEqual(len(result), 3, "Expected 3 data points")
-        self.assertEqual(result['quantity'].tolist(), [1000.0, 1100.0, 1200.0], "Quantities don't match expected values")
-        self.assertEqual(result['start_time'].tolist(), 
-                         [pd.Timestamp('2023-01-01 00:00:00+0000'), 
-                          pd.Timestamp('2023-01-01 01:00:00+0000'), 
-                          pd.Timestamp('2023-01-01 02:00:00+0000')], 
+        self.assertEqual(len(expected_data), 15, "Expected 15 data points (3 hours * 5 production types)")
+        self.assertEqual(set(expected_data['psr_type']), {'B01', 'B04', 'B10', 'B11', 'B12'}, "Expected five production types")
+        self.assertEqual(expected_data['quantity'].tolist(), [362.0, 364.0, 366.0, 191.0, 193.0, 190.0, 1455.0, 1065.0, 484.0, 778.0, 634.0, 500.0, 125.0, 141.0, 143.0], "Quantities don't match expected values")
+        self.assertEqual(expected_data['start_time'].tolist(), 
+                         [pd.Timestamp('2023-12-31 23:00:00+0000'), 
+                          pd.Timestamp('2024-01-01 00:00:00+0000'), 
+                          pd.Timestamp('2024-01-01 01:00:00+0000')] * 5, 
                          "Start times are incorrect")
-        self.assertEqual(result['end_time'].tolist(), 
-                         [pd.Timestamp('2023-01-01 01:00:00+0000'), 
-                          pd.Timestamp('2023-01-01 02:00:00+0000'), 
-                          pd.Timestamp('2023-01-01 03:00:00+0000')], 
+        self.assertEqual(expected_data['end_time'].tolist(), 
+                         [pd.Timestamp('2024-01-01 00:00:00+0000'), 
+                          pd.Timestamp('2024-01-01 01:00:00+0000'), 
+                          pd.Timestamp('2024-01-01 02:00:00+0000')] * 5, 
                          "End times are incorrect")
-        self.assertTrue(all(result['psr_type'] == 'B01'), "PSR type should be B01 for all entries")
-        self.assertTrue(all(result['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
+        self.assertTrue(all(expected_data['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
         
         logger.debug("test_portugal_generation_data completed")
 
