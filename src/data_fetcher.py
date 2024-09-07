@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 class ENTSOEDataFetcher:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
-    CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data_cache")
+    CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".data_cache")
     
     def __init__(self, security_token: str):
         self.security_token = security_token
