@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import logging
+from unittest.mock import patch
 from src.calculator import ElectricityMixCalculator
-from src.utils import PSR_TYPE_MAPPING
+from src.utils import PSR_TYPE_MAPPING, aggregate_results
+from src.data_fetcher import ENTSOEDataFetcher
 
 class TestElectricityMixCalculator(unittest.TestCase):
     def setUp(self):
