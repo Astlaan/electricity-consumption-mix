@@ -1,0 +1,53 @@
+ENTSO-E Transparency Platform RESTful API Summary:
+
+General Characteristics:
+- RESTful API
+- Uses HTTP GET method
+- Returns XML documents
+- Requires security token for authentication
+- Base URL: https://transparency.entsoe.eu/api
+
+Parameters:
+- securityToken: mandatory for all queries
+- documentType: specifies type of information requested
+- processType: specifies market time unit
+- in_Domain / out_Domain: EIC codes for areas
+- periodStart / periodEnd: UTC time in format YYYYMMDDHHMM
+
+Time Series:
+- Each time series has a unique ID
+- Contains period with start and end time, resolution, and point elements
+
+Domains:
+- Use EIC codes to identify areas
+- Some queries require in_Domain and out_Domain
+
+Transmission Domain:
+1. Physical Flows:
+   - DocumentType: A11
+   - Shows power flow between two areas
+   - Parameters: in_Domain, out_Domain, periodStart, periodEnd
+
+2. Net Transfer Capacity:
+   - DocumentType: A61
+   - Day-ahead NTC between two areas
+   - Parameters: in_Domain, out_Domain, periodStart, periodEnd
+
+Generation Domain:
+Actual Generation per Type:
+   - DocumentType: A75
+   - Shows actual power generation per production type
+   - Parameters: in_Domain, periodStart, periodEnd
+
+Error Handling:
+- Returns HTTP status codes for errors
+- Provides Reason element in response for more details
+
+Rate Limiting:
+- Limit of 400 requests per user per minute
+- 429 Too Many Requests error if exceeded
+
+Best Practices:
+- Use appropriate time ranges to avoid timeouts
+- Cache data to reduce API calls
+- Handle rate limiting and implement retries
