@@ -25,13 +25,28 @@ Domains:
 Transmission Domain:
 1. Physical Flows:
    - DocumentType: A11
-   - Shows power flow between two areas
+   - Represents the actual electricity flow between two areas
+   - Measured at the physical interconnections between areas
+   - Can be bidirectional (power can flow in both directions)
+   - Reflects real-time grid conditions and follows path of least resistance
+   - May differ from commercial exchanges due to loop flows or unplanned flows
    - Parameters: in_Domain, out_Domain, periodStart, periodEnd
 
-2. Net Transfer Capacity:
+2. Netted Exchanges (Netted Flows):
+   - DocumentType: A13
+   - Represents commercial or contractual exchanges of electricity between areas
+   - Based on scheduled or planned transfers agreed upon by market participants
+   - Calculated as difference between all scheduled commercial exchanges in both directions
+   - Always unidirectional (from one area to another)
+   - Does not necessarily reflect the actual physical flow of electricity
+   - Parameters: in_Domain, out_Domain, periodStart, periodEnd
+
+3. Net Transfer Capacity:
    - DocumentType: A61
    - Day-ahead NTC between two areas
    - Parameters: in_Domain, out_Domain, periodStart, periodEnd
+
+Note: In the European power grid, physical flows can significantly differ from netted exchanges due to the complex nature of electricity grids and market operations.
 
 Generation Domain:
 Actual Generation per Type:
