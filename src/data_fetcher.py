@@ -166,26 +166,33 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            if 'end_date' in metadata and pd.to_datetime(metadata['end_date'], utc=True) >= end_date:
+            cached_end_date = pd.to_datetime(metadata['end_date'], utc=True)
+            if cached_end_date >= end_date:
                 return df[df['start_time'].between(start_date, end_date)]
+            elif cached_end_date > start_date:
+                start_date = cached_end_date
         
         xml_data = self._make_request(params)
-        df = self._parse_xml_to_dataframe(xml_data)
+        new_df = self._parse_xml_to_dataframe(xml_data)
         
         if cached_data is not None:
-            df = pd.concat([cached_data[0], df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+            df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+        else:
+            df = new_df
         
-        if df.empty:
-            return df
-
-        metadata = {
-            'country_code': country_code,
-            'start_date': df['start_time'].min().isoformat(),
-            'end_date': df['start_time'].max().isoformat(),
-        }
-        self._save_to_cache(cache_key, df, metadata)
+        if not df.empty:
+            metadata = {
+                'country_code': country_code,
+                'start_date': df['start_time'].min().isoformat(),
+                'end_date': df['start_time'].max().isoformat(),
+            }
+            self._save_to_cache(cache_key, df, metadata)
         
-        return df[df['start_time'].between(start_date, end_date)]
+        result = df[df['start_time'].between(start_date, end_date)]
+        if result.empty:
+            print(f"Warning: No data found for {country_code} between {start_date} and {end_date}")
+        
+        return result
     
     async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
