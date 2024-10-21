@@ -10,9 +10,6 @@ import aiohttp
 import asyncio
 import logging
 
-# Set Pandas to use naive datetimes by default
-pd.options.mode.datetime_legacy = True
-
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
