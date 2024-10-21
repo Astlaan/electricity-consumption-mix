@@ -191,11 +191,7 @@ class ENTSOEDataFetcher:
             }
             self._save_to_cache(cache_key, df, metadata)
         
-        result = df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
-        if result.empty:
-            print(f"Warning: No data found for {country_code} between {start_date} and {end_date}")
-        
-        return self._resample_to_standard_granularity(result)
+        return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
     
     async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
@@ -341,16 +337,5 @@ class ENTSOEDataFetcher:
 
         result = pd.concat(resampled_data, ignore_index=True)
         result['resolution'] = self.STANDARD_GRANULARITY
-        
-        # Pivot the table
-        result = result.pivot_table(
-            index=['start_time', 'end_time', 'resolution'],
-            columns='psr_type',
-            values='quantity',
-            aggfunc='first'
-        ).reset_index()
-        
-        result.columns.name = None
-        result = result.sort_values('start_time')
         
         return result
