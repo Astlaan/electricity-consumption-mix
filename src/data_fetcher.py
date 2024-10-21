@@ -25,20 +25,12 @@ class ENTSOEDataFetcher:
         self.security_token = security_token
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
-    def _ensure_naive_datetime(self, dt):
-        if dt is not None:
-            return pd.to_datetime(dt).tz_localize(None)
-        return dt
-
     def _get_cache_key(self, params: Dict[str, Any]) -> str:
         param_str = json.dumps(params, sort_keys=True)
         cache_key = hashlib.md5(param_str.encode()).hexdigest()
         return cache_key
 
     def _save_to_cache(self, cache_key: str, data: pd.DataFrame, metadata: Dict[str, Any]):
-        for col in data.select_dtypes(include=['datetime64']).columns:
-            data[col] = data[col].apply(self._ensure_naive_datetime)
-        
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
         data.to_parquet(cache_file)
         
@@ -129,7 +121,7 @@ class ENTSOEDataFetcher:
             if start_time is None or resolution is None:
                 continue
             
-            start_time = self._ensure_naive_datetime(start_time.text)
+            start_time = pd.to_datetime(start_time.text)
             resolution = pd.Timedelta(resolution.text)
             
             for point in period.findall(".//ns:Point", namespace):
@@ -173,8 +165,6 @@ class ENTSOEDataFetcher:
             'outBiddingZone_Domain': country_code,
         }
         cache_key = self._get_cache_key(params)
-        start_date = self._ensure_naive_datetime(start_date)
-        end_date = self._ensure_naive_datetime(end_date)
 
         cached_data = self._load_from_cache(cache_key)
         
@@ -357,7 +347,6 @@ class ENTSOEDataFetcher:
         if df.empty:
             return df
 
-        df['start_time'] = df['start_time'].apply(self._ensure_naive_datetime)
         df = df.sort_values('start_time').set_index('start_time')
         
         # Group by psr_type and resample

@@ -94,8 +94,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             </MktPSRType>
             <Period>
               <timeInterval>
-                <start>2022-01-01T00:00Z</start>
-                <end>2022-01-02T00:00Z</end>
+                <start>2022-01-01T00:00:00</start>
+                <end>2022-01-02T00:00:00</end>
               </timeInterval>
               <resolution>PT60M</resolution>
               <Point>
