@@ -1,3 +1,4 @@
+import asyncio
 import argparse
 import pandas as pd
 from datetime import datetime
@@ -6,7 +7,20 @@ from calculator import ElectricityMixCalculator
 from src.api_token import API_TOKEN
 from utils import validate_inputs, aggregate_results
 
-def main():
+async def fetch_data(fetcher, country, start_date, end_date):
+    print(f"Fetching {country} data...")
+    if country == "Portugal":
+        generation = await fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
+        imports = await fetcher.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
+        exports = await fetcher.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
+        return {'generation': generation, 'imports': imports, 'exports': exports}
+    elif country == "Spain":
+        generation = await fetcher.get_generation_data_async('10YES-REE------0', start_date, end_date)
+        return {'generation': generation}
+    else:
+        raise ValueError(f"Unsupported country: {country}")
+
+async def main():
     args = parse_arguments()
     if not validate_inputs(args):
         return
@@ -16,20 +30,20 @@ def main():
     start_date = args.start_date
     end_date = args.end_date
 
-    # try:
-    pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
-    es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
+    try:
+        pt_data = await fetch_data(data_fetcher, "Portugal", start_date, end_date)
+        es_data = await fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-    # print_data_summary(pt_data, "Portugal")
-    # print_data_summary(es_data, "Spain")
+        print_data_summary(pt_data, "Portugal")
+        print_data_summary(es_data, "Spain")
 
-    # Calculate and print electricity mix
-    calculator = ElectricityMixCalculator()
-    results = calculator.calculate_mix(pt_data, es_data)
-    print_results(results)
+        # Calculate and print electricity mix
+        calculator = ElectricityMixCalculator()
+        results = calculator.calculate_mix(pt_data, es_data)
+        print_results(results)
 
-    # except Exception as e:
-    #     print(f"An error occurred: {str(e)}")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
@@ -46,15 +60,6 @@ def parse_datetime(value):
             return datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
             raise argparse.ArgumentTypeError(f"Invalid date or datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.")
-
-def fetch_data(fetcher, country, start_date, end_date):
-    print(f"Fetching {country} data...")
-    if country == "Portugal":
-        return fetcher.get_portugal_data(start_date, end_date)
-    elif country == "Spain":
-        return fetcher.get_spain_data(start_date, end_date)
-    else:
-        raise ValueError(f"Unsupported country: {country}")
 
 def print_data_summary(data, country):
     print(f"\n{country} data:")
@@ -102,7 +107,7 @@ def print_results(results):
     print(aggregated_results)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 # Example usage:
-# python src\main.py --start_date 2024-01-01 --end_date 2024-03-31
+# python src\main.py --start_date 2015-01-01 --end_date 2015-12-31
