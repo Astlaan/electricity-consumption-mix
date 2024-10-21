@@ -196,29 +196,31 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
     @patch('src.data_fetcher.requests.get')
     def test_edge_case_date_ranges(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = """
-        <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
-          <TimeSeries>
-            <MktPSRType>
-              <psrType>B01</psrType>
-            </MktPSRType>
-            <Period>
-              <timeInterval>
-                <start>2020-01-01T00:00Z</start>
-                <end>2021-12-31T23:00Z</end>
-              </timeInterval>
-              <resolution>PT60M</resolution>
-              <Point>
-                <position>1</position>
-                <quantity>100</quantity>
-              </Point>
-            </Period>
-          </TimeSeries>
-        </GL_MarketDocument>
-        """
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        def mock_response(start_date, end_date):
+            return f"""
+            <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+              <TimeSeries>
+                <MktPSRType>
+                  <psrType>B01</psrType>
+                </MktPSRType>
+                <Period>
+                  <timeInterval>
+                    <start>{start_date.strftime('%Y-%m-%dT%H:%MZ')}</start>
+                    <end>{end_date.strftime('%Y-%m-%dT%H:%MZ')}</end>
+                  </timeInterval>
+                  <resolution>PT60M</resolution>
+                  <Point>
+                    <position>1</position>
+                    <quantity>100</quantity>
+                  </Point>
+                </Period>
+              </TimeSeries>
+            </GL_MarketDocument>
+            """
+
+        mock_response_obj = Mock()
+        mock_response_obj.raise_for_status.return_value = None
+        mock_get.return_value = mock_response_obj
 
         # Test cases for different date ranges
         test_cases = [
@@ -232,6 +234,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         ]
 
         for start_date, end_date in test_cases:
+            mock_response_obj.text = mock_response(start_date, end_date)
             result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
             self.assertIsInstance(result, pd.DataFrame)
             self.assertFalse(result.empty, f"Empty result for date range: {start_date} to {end_date}")
