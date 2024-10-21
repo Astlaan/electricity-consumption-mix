@@ -144,6 +144,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_response = Mock()
         mock_response.text = "<dummy>XML</dummy>"
         mock_response.raise_for_status.return_value = None
+        
         mock_get.return_value = mock_response
 
         start_date1 = datetime(2022, 1, 1)
