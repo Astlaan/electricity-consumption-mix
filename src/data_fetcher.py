@@ -191,7 +191,7 @@ class ENTSOEDataFetcher:
             }
             self._save_to_cache(cache_key, df, metadata)
         
-        return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
+        return self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
     
     async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
