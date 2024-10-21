@@ -131,6 +131,14 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # Check if the results are the same
         pd.testing.assert_frame_equal(result1, result2)
 
+        # Third call with a different date range that overlaps should make a new request
+        new_start_date = datetime(2022, 1, 1, 12, tzinfo=pytz.UTC)
+        new_end_date = datetime(2022, 1, 2, 12, tzinfo=pytz.UTC)
+        result3 = self.fetcher.get_generation_data('10YPT-REN------W', new_start_date, new_end_date)
+        self.assertIsInstance(result3, pd.DataFrame)
+        self.assertFalse(result3.empty)
+        mock_get.assert_called_once()  # The mock should be called for the third request
+
     @patch('src.data_fetcher.requests.get')
     def test_caching_different_params(self, mock_get):
         mock_response = Mock()

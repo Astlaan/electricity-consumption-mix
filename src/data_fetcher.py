@@ -158,8 +158,6 @@ class ENTSOEDataFetcher:
             'processType': 'A16',
             'in_Domain': country_code,
             'outBiddingZone_Domain': country_code,
-            'periodStart': start_date.strftime('%Y%m%d%H%M'),
-            'periodEnd': end_date.strftime('%Y%m%d%H%M'),
         }
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
@@ -172,24 +170,31 @@ class ENTSOEDataFetcher:
             if cached_start <= start_date and cached_end >= end_date:
                 return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
             
+            # If there's overlap, adjust the request range
             if cached_end > start_date:
                 start_date = cached_end
+            elif cached_start < end_date:
+                end_date = cached_start
 
-        xml_data = self._make_request(params)
-        new_df = self._parse_xml_to_dataframe(xml_data)
-        
-        if cached_data is not None:
-            df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
-        else:
-            df = new_df
-        
-        if not df.empty:
-            metadata = {
-                'country_code': country_code,
-                'start_date': df['start_time'].min().isoformat(),
-                'end_date': df['start_time'].max().isoformat(),
-            }
-            self._save_to_cache(cache_key, df, metadata)
+        # If we need to fetch new data
+        if cached_data is None or start_date < end_date:
+            params['periodStart'] = start_date.strftime('%Y%m%d%H%M')
+            params['periodEnd'] = end_date.strftime('%Y%m%d%H%M')
+            xml_data = self._make_request(params)
+            new_df = self._parse_xml_to_dataframe(xml_data)
+            
+            if cached_data is not None:
+                df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+            else:
+                df = new_df
+            
+            if not df.empty:
+                metadata = {
+                    'country_code': country_code,
+                    'start_date': df['start_time'].min().isoformat(),
+                    'end_date': df['start_time'].max().isoformat(),
+                }
+                self._save_to_cache(cache_key, df, metadata)
         
         return self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
     
