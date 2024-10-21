@@ -10,8 +10,13 @@ import aiohttp
 import asyncio
 import logging
 
+# Set Pandas to use naive datetimes by default
+pd.options.mode.datetime_legacy = True
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Note: All datetimes are assumed to be in UTC, even though they're stored as naive datetimes
 
 
 class ENTSOEDataFetcher:
@@ -163,14 +168,17 @@ class ENTSOEDataFetcher:
             'outBiddingZone_Domain': country_code,
         }
         cache_key = self._get_cache_key(params)
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
+
         cached_data = self._load_from_cache(cache_key)
         
         logger.debug(f"Requested date range: {start_date} to {end_date}")
         
         if cached_data is not None:
             df, metadata = cached_data
-            cached_start = pd.to_datetime(metadata['start_date'], utc=True)
-            cached_end = pd.to_datetime(metadata['end_date'], utc=True)
+            cached_start = pd.to_datetime(metadata['start_date'])
+            cached_end = pd.to_datetime(metadata['end_date'])
             
             logger.debug(f"Cached data range: {cached_start} to {cached_end}")
             
@@ -344,6 +352,7 @@ class ENTSOEDataFetcher:
         if df.empty:
             return df
 
+        df['start_time'] = pd.to_datetime(df['start_time'])
         df = df.sort_values('start_time').set_index('start_time')
         
         # Group by psr_type and resample
