@@ -195,7 +195,7 @@ class ENTSOEDataFetcher:
         if result.empty:
             print(f"Warning: No data found for {country_code} between {start_date} and {end_date}")
         
-        return result
+        return self._resample_to_standard_granularity(result)
     
     async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
