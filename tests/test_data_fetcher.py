@@ -9,6 +9,8 @@ from src.api_token import API_TOKEN
 from src.data_fetcher import ENTSOEDataFetcher
 import sys
 import os
+import asyncio
+import aiohttp
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 logging.basicConfig(level=logging.DEBUG)
@@ -16,23 +18,33 @@ logger = logging.getLogger(__name__)
 
 class TestENTSOEDataFetcher(unittest.TestCase):
     def setUp(self):
-        self.fetcher = ENTSOEDataFetcher("dummy_token")
+        self.fetcher = ENTSOEDataFetcher()
         # Clear the cache before each test
         if os.path.exists(self.fetcher.CACHE_DIR):
             shutil.rmtree(self.fetcher.CACHE_DIR)
         os.makedirs(self.fetcher.CACHE_DIR)
 
-    @patch('src.data_fetcher.requests.get')
-    def test_make_request(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = "<dummy>XML</dummy>"
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+    def test_get_data_before_records(self):
+        self.fetcher = ENTSOEDataFetcher()
 
-        result = self.fetcher._make_request({'param': 'value'})
-        
-        self.assertEqual(result, "<dummy>XML</dummy>")
-        mock_get.assert_called_once()
+        params = {
+            'documentType': 'A75',
+            'processType': 'A16',
+            'in_Domain': "10YES-REE------0",
+            'outBiddingZone_Domain': "10YES-REE------0",
+            "periodStart": "200001010000",
+            "periodEnd": "200101010000",
+        }
+
+        async def run_async():
+            async with aiohttp.ClientSession() as session:
+                return await self.fetcher._make_async_request(session, params)
+
+        loop = asyncio.get_event_loop()
+        xml_data = loop.run_until_complete(run_async())
+        print(xml_data)
+        df = self.fetcher._parse_xml_to_dataframe(xml_data)
+        print("df.empty: ", df.empty)
 
     def test_parse_xml_to_dataframe(self):
         xml_data = """

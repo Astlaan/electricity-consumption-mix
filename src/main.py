@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
-from src.api_token import API_TOKEN
 from utils import validate_inputs, aggregate_results
 
 async def fetch_data(fetcher, country, start_date, end_date):
@@ -25,7 +24,7 @@ async def main():
     if not validate_inputs(args):
         return
 
-    data_fetcher = ENTSOEDataFetcher(API_TOKEN)
+    data_fetcher = ENTSOEDataFetcher()
 
     start_date = args.start_date
     end_date = args.end_date
