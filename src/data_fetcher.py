@@ -95,6 +95,10 @@ class ENTSOEDataFetcher:
             raise
 
     def _parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
+        if not xml_data or "<GL_MarketDocument" not in xml_data:
+            logger.warning("Empty or invalid XML data received")
+            return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution'])
+
         root = ET.fromstring(xml_data)
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
         
@@ -179,11 +183,11 @@ class ENTSOEDataFetcher:
                 logger.debug("Using cached data")
                 return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
             
-            # If there's overlap, adjust the request range
+            # If there's partial overlap, adjust the request range
             if cached_end > start_date:
                 start_date = cached_end
                 logger.debug(f"Adjusted start_date to {start_date}")
-            elif cached_start < end_date:
+            if cached_start < end_date:
                 end_date = cached_start
                 logger.debug(f"Adjusted end_date to {end_date}")
 
