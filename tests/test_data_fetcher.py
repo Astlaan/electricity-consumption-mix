@@ -197,6 +197,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     @patch('src.data_fetcher.requests.get')
     def test_edge_case_date_ranges(self, mock_get):
         def mock_response(start_date, end_date):
+            # If start_date and end_date are the same, use end_date + 1 hour
+            if start_date == end_date:
+                end_date = start_date + timedelta(hours=1)
+            
             return f"""
             <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
               <TimeSeries>
