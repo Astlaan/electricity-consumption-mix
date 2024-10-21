@@ -166,12 +166,15 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            cached_end_date = pd.to_datetime(metadata['end_date'], utc=True)
-            if cached_end_date >= end_date:
-                return df[df['start_time'].between(start_date, end_date - timedelta(seconds=1))]
-            elif cached_end_date > start_date:
-                start_date = cached_end_date
-        
+            cached_start = pd.to_datetime(metadata['start_date'], utc=True)
+            cached_end = pd.to_datetime(metadata['end_date'], utc=True)
+            
+            if cached_start <= start_date and cached_end >= end_date:
+                return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
+            
+            if cached_end > start_date:
+                start_date = cached_end
+
         xml_data = self._make_request(params)
         new_df = self._parse_xml_to_dataframe(xml_data)
         
@@ -188,7 +191,7 @@ class ENTSOEDataFetcher:
             }
             self._save_to_cache(cache_key, df, metadata)
         
-        result = df[df['start_time'].between(start_date, end_date - timedelta(seconds=1))]
+        result = df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
         if result.empty:
             print(f"Warning: No data found for {country_code} between {start_date} and {end_date}")
         
