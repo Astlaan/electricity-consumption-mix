@@ -8,6 +8,7 @@ import hashlib
 from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
+import pytz
 
 
 class ENTSOEDataFetcher:
@@ -143,9 +144,15 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
+        df['start_time'] = pd.to_datetime(df['start_time'], utc=True)
+        df['end_time'] = pd.to_datetime(df['end_time'], utc=True)
         return df
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        # Ensure start_date and end_date are timezone-aware
+        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
+        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
+
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -159,7 +166,7 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            if pd.to_datetime(metadata['end_date']) >= end_date:
+            if pd.to_datetime(metadata['end_date'], utc=True) >= end_date:
                 return df[df['start_time'].between(start_date, end_date)]
         
         xml_data = self._make_request(params)
@@ -168,6 +175,9 @@ class ENTSOEDataFetcher:
         if cached_data is not None:
             df = pd.concat([cached_data[0], df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
         
+        if df.empty:
+            return df
+
         metadata = {
             'country_code': country_code,
             'start_date': df['start_time'].min().isoformat(),
@@ -200,6 +210,10 @@ class ENTSOEDataFetcher:
             return await asyncio.gather(*tasks)
     
     async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        # Ensure start_date and end_date are timezone-aware
+        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
+        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
+
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -224,6 +238,9 @@ class ENTSOEDataFetcher:
         else:
             df = new_df
         
+        if df.empty:
+            return df
+
         metadata = {
             'country_code': country_code,
             'start_date': df['start_time'].min().isoformat(),
@@ -235,6 +252,10 @@ class ENTSOEDataFetcher:
         return self._resample_to_standard_granularity(df[df['start_time'].between(start_date, end_date)])
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        # Ensure start_date and end_date are timezone-aware
+        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
+        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
+
         params = {
             'documentType': 'A11',
             'in_Domain': in_domain,
@@ -258,6 +279,9 @@ class ENTSOEDataFetcher:
         else:
             df = new_df
         
+        if df.empty:
+            return df
+
         metadata = {
             'in_domain': in_domain,
             'out_domain': out_domain,
@@ -302,6 +326,9 @@ class ENTSOEDataFetcher:
             resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
             resampled_data.append(resampled)
         
+        if not resampled_data:
+            return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution'])
+
         result = pd.concat(resampled_data, ignore_index=True)
         result['resolution'] = self.STANDARD_GRANULARITY
         
@@ -315,7 +342,5 @@ class ENTSOEDataFetcher:
         
         result.columns.name = None
         result = result.sort_values('start_time')
-        
-
         
         return result
