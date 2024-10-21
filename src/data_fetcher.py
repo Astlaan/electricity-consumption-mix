@@ -232,7 +232,7 @@ class ENTSOEDataFetcher:
         }
         self._save_to_cache(cache_key, df, metadata)
         
-        return df[df['start_time'].between(start_date, end_date)]
+        return self._resample_to_standard_granularity(df[df['start_time'].between(start_date, end_date)])
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
