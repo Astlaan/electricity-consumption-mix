@@ -5,10 +5,9 @@ import xml.etree.ElementTree as ET
 import os
 import json
 import hashlib
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
-from typing import List
 
 
 class ENTSOEDataFetcher:
@@ -27,9 +26,14 @@ class ENTSOEDataFetcher:
 
     def _save_to_cache(self, cache_key: str, data: pd.DataFrame, metadata: Dict[str, Any]):
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
+        
+        # If cache file exists, read it and concatenate with new data
+        if os.path.exists(cache_file):
+            existing_data = pd.read_parquet(cache_file)
+            data = pd.concat([existing_data, data]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+        
         data.to_parquet(cache_file)
         
-        # Convert Timedelta to string representation
         if 'resolution' in metadata and isinstance(metadata['resolution'], pd.Timedelta):
             metadata['resolution'] = str(metadata['resolution'])
         
@@ -56,6 +60,15 @@ class ENTSOEDataFetcher:
                 os.remove(cache_file)
                 os.remove(metadata_file)
                 return None
+        return None
+
+    def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
+        cache_key = self._get_cache_key(params)
+        cached_data = self._load_from_cache(cache_key)
+        if cached_data is not None:
+            df, metadata = cached_data
+            if not df.empty and 'start_time' in df.columns:
+                return df['start_time'].max()
         return None
 
     def _make_request(self, params: Dict[str, Any]) -> str:
@@ -163,6 +176,10 @@ class ENTSOEDataFetcher:
             return await response.text()
     
     async def _fetch_data_in_chunks(self, params: Dict[str, Any], start_date: datetime, end_date: datetime) -> List[str]:
+        latest_cache_date = self._get_latest_cache_date(params)
+        if latest_cache_date is not None:
+            start_date = max(start_date, latest_cache_date)
+
         tasks = []
         async with aiohttp.ClientSession() as session:
             while start_date < end_date:
@@ -181,9 +198,33 @@ class ENTSOEDataFetcher:
             'in_Domain': country_code,
             'outBiddingZone_Domain': country_code,
         }
+        cache_key = self._get_cache_key(params)
+        cached_data = self._load_from_cache(cache_key)
+        
+        if cached_data is not None:
+            df, metadata = cached_data
+            latest_cache_date = df['start_time'].max()
+            if latest_cache_date >= end_date:
+                return df[df['start_time'].between(start_date, end_date)]
+            start_date = latest_cache_date
+        
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
-        dataframes = [self._parse_xml_to_dataframe(xml) for xml in xml_chunks]
-        return pd.concat(dataframes, ignore_index=True)
+        new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
+        
+        if cached_data is not None:
+            df = pd.concat([df, new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+        else:
+            df = new_df
+        
+        metadata = {
+            'country_code': country_code,
+            'start_date': df['start_time'].min().isoformat(),
+            'end_date': df['start_time'].max().isoformat(),
+            'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
+        }
+        self._save_to_cache(cache_key, df, metadata)
+        
+        return df[df['start_time'].between(start_date, end_date)]
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
@@ -195,22 +236,30 @@ class ENTSOEDataFetcher:
         cached_data = self._load_from_cache(cache_key)
         
         if cached_data is not None:
-            return cached_data[0]  # Return just the DataFrame, not the metadata
+            df, metadata = cached_data
+            latest_cache_date = df['start_time'].max()
+            if latest_cache_date >= end_date:
+                return df[df['start_time'].between(start_date, end_date)]
+            start_date = latest_cache_date
         
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
-        dataframes = [self._parse_xml_to_dataframe(xml) for xml in xml_chunks]
-        df = pd.concat(dataframes, ignore_index=True)
+        new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
         
-        if not df.empty:
-            metadata = {
-                'in_domain': in_domain,
-                'out_domain': out_domain,
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat(),
-                'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
-            }
-            self._save_to_cache(cache_key, df, metadata)
-        return df
+        if cached_data is not None:
+            df = pd.concat([df, new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+        else:
+            df = new_df
+        
+        metadata = {
+            'in_domain': in_domain,
+            'out_domain': out_domain,
+            'start_date': df['start_time'].min().isoformat(),
+            'end_date': df['start_time'].max().isoformat(),
+            'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
+        }
+        self._save_to_cache(cache_key, df, metadata)
+        
+        return df[df['start_time'].between(start_date, end_date)]
 
     def get_portugal_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
         loop = asyncio.get_event_loop()
