@@ -16,20 +16,20 @@ def main():
     start_date = args.start_date
     end_date = args.end_date
 
-    try:
-        pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
-        es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
+    # try:
+    pt_data = fetch_data(data_fetcher, "Portugal", start_date, end_date)
+    es_data = fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        # print_data_summary(pt_data, "Portugal")
-        # print_data_summary(es_data, "Spain")
+    # print_data_summary(pt_data, "Portugal")
+    # print_data_summary(es_data, "Spain")
 
-        # Calculate and print electricity mix
-        calculator = ElectricityMixCalculator()
-        results = calculator.calculate_mix(pt_data, es_data)
-        print_results(results)
+    # Calculate and print electricity mix
+    calculator = ElectricityMixCalculator()
+    results = calculator.calculate_mix(pt_data, es_data)
+    print_results(results)
 
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+    # except Exception as e:
+    #     print(f"An error occurred: {str(e)}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
@@ -53,6 +53,8 @@ def fetch_data(fetcher, country, start_date, end_date):
         return fetcher.get_portugal_data(start_date, end_date)
     elif country == "Spain":
         return fetcher.get_spain_data(start_date, end_date)
+    else:
+        raise ValueError(f"Unsupported country: {country}")
 
 def print_data_summary(data, country):
     print(f"\n{country} data:")
