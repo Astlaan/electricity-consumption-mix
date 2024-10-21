@@ -66,6 +66,15 @@ class ENTSOEDataFetcher:
                 return df['start_time'].max()
         return None
 
+    def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
+        cache_key = self._get_cache_key(params)
+        cached_data = self._load_from_cache(cache_key)
+        if cached_data is not None:
+            df, metadata = cached_data
+            if not df.empty and 'start_time' in df.columns:
+                return df['start_time'].max()
+        return None
+
     def _make_request(self, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
         print(f"Making API request with params: {params}")
