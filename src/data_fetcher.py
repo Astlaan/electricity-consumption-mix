@@ -166,7 +166,7 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            if pd.to_datetime(metadata['end_date'], utc=True) >= end_date:
+            if 'end_date' in metadata and pd.to_datetime(metadata['end_date'], utc=True) >= end_date:
                 return df[df['start_time'].between(start_date, end_date)]
         
         xml_data = self._make_request(params)
