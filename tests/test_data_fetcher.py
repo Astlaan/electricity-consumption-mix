@@ -5,7 +5,6 @@ import pandas as pd
 import logging
 import os
 import shutil
-import pytz
 from src.api_token import API_TOKEN
 from src.data_fetcher import ENTSOEDataFetcher
 import sys
@@ -75,8 +74,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             'resolution': [pd.Timedelta('1 hour')]
         })
 
-        start_date = datetime(2022, 1, 1, tzinfo=pytz.UTC)
-        end_date = datetime(2022, 1, 2, tzinfo=pytz.UTC)
+        start_date = datetime(2022, 1, 1)
+        end_date = datetime(2022, 1, 2)
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
 
         self.assertIsInstance(result, pd.DataFrame)
@@ -110,8 +109,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        start_date = datetime(2022, 1, 1, tzinfo=pytz.UTC)
-        end_date = datetime(2022, 1, 2, tzinfo=pytz.UTC)
+        start_date = datetime(2022, 1, 1)
+        end_date = datetime(2022, 1, 2)
 
         # First call should make a request and cache the result
         result1 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
@@ -159,8 +158,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             print("Cache file not found")
 
         # Third call with a different date range that overlaps should make a new request
-        new_start_date = datetime(2022, 1, 1, 12, tzinfo=pytz.UTC)
-        new_end_date = datetime(2022, 1, 2, 12, tzinfo=pytz.UTC)
+        new_start_date = datetime(2022, 1, 1, 12)
+        new_end_date = datetime(2022, 1, 2, 12)
         result3 = self.fetcher.get_generation_data('10YPT-REN------W', new_start_date, new_end_date)
         self.assertIsInstance(result3, pd.DataFrame)
         self.assertFalse(result3.empty)
@@ -263,13 +262,13 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         # Test cases for different date ranges
         test_cases = [
-            (datetime(2020, 1, 1, tzinfo=pytz.UTC), datetime(2020, 12, 31, tzinfo=pytz.UTC)),  # Leap year
-            (datetime(2021, 1, 1, tzinfo=pytz.UTC), datetime(2021, 12, 31, tzinfo=pytz.UTC)),  # Non-leap year
-            (datetime(2020, 1, 1, tzinfo=pytz.UTC), datetime(2020, 1, 1, tzinfo=pytz.UTC)),    # Same start and end date
-            (datetime(2020, 12, 31, tzinfo=pytz.UTC), datetime(2021, 1, 1, tzinfo=pytz.UTC)),  # End of one year to start of next
-            (datetime(2020, 3, 1, tzinfo=pytz.UTC), datetime(2020, 3, 31, tzinfo=pytz.UTC)),   # Month with 31 days
-            (datetime(2020, 2, 1, tzinfo=pytz.UTC), datetime(2020, 2, 29, tzinfo=pytz.UTC)),   # February in a leap year
-            (datetime(2021, 2, 1, tzinfo=pytz.UTC), datetime(2021, 2, 28, tzinfo=pytz.UTC)),   # February in a non-leap year
+            (datetime(2020, 1, 1), datetime(2020, 12, 31)),  # Leap year
+            (datetime(2021, 1, 1), datetime(2021, 12, 31)),  # Non-leap year
+            (datetime(2020, 1, 1), datetime(2020, 1, 1)),    # Same start and end date
+            (datetime(2020, 12, 31), datetime(2021, 1, 1)),  # End of one year to start of next
+            (datetime(2020, 3, 1), datetime(2020, 3, 31)),   # Month with 31 days
+            (datetime(2020, 2, 1), datetime(2020, 2, 29)),   # February in a leap year
+            (datetime(2021, 2, 1), datetime(2021, 2, 28)),   # February in a non-leap year
         ]
 
         for start_date, end_date in test_cases:
@@ -291,8 +290,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        start_date = datetime(2024, 1, 1, 0, 0, tzinfo=pytz.UTC)
-        end_date = datetime(2024, 1, 1, 3, 0, tzinfo=pytz.UTC)
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 3, 0)
         
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         

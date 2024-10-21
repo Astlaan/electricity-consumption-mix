@@ -42,10 +42,12 @@ class ElectricityMixCalculator:
         if df.empty:
             return pd.DataFrame()
         df['hour'] = df['start_time'].dt.floor('H')
-        if 'psr_type' not in df.columns:
-            print("Warning: 'psr_type' column not found in the dataframe. Returning empty DataFrame.")
-            return pd.DataFrame()
-        grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        print(df)
+        try:
+            grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        except:
+            print("Failed grouping by psr")
+            print(df)
         return grouped
 
     def _calculate_net_imports(self, imports, exports):

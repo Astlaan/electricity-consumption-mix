@@ -8,7 +8,6 @@ import hashlib
 from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
-import pytz
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -152,15 +151,11 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
-        df['start_time'] = pd.to_datetime(df['start_time'], utc=True)
-        df['end_time'] = pd.to_datetime(df['end_time'], utc=True)
+        df['start_time'] = pd.to_datetime(df['start_time'])
+        df['end_time'] = pd.to_datetime(df['end_time'])
         return df
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        # Ensure start_date and end_date are timezone-aware
-        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
-        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
-
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -244,9 +239,6 @@ class ENTSOEDataFetcher:
             return await asyncio.gather(*tasks)
     
     async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        # Ensure start_date and end_date are timezone-aware
-        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
-        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
 
         params = {
             'documentType': 'A75',
@@ -299,10 +291,6 @@ class ENTSOEDataFetcher:
         return result
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        # Ensure start_date and end_date are timezone-aware
-        start_date = start_date.replace(tzinfo=pytz.UTC) if start_date.tzinfo is None else start_date.astimezone(pytz.UTC)
-        end_date = end_date.replace(tzinfo=pytz.UTC) if end_date.tzinfo is None else end_date.astimezone(pytz.UTC)
-
         params = {
             'documentType': 'A11',
             'in_Domain': in_domain,

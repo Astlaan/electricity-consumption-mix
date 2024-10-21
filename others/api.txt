@@ -22,6 +22,19 @@ Domains:
 - Use EIC codes to identify areas
 - Some queries require in_Domain and out_Domain
 
+Query Response:
+Also in the response, time is always expressed in UTC. System returns both partially and exactly matching data. Amount of returned data depends on regulation article. For example, a query for one day of a weekly forecast will always return a whole week. Likewise, if the requested time interval in a query for a day-ahead forecast covers the last hours of one day and the first hours of the following day, the response will contain complete data for both days.
+
+For the following regulation articles the query response will contain data for a whole day (or a multiple of days, depending on the length of the requested time interval): 6.1.b, 12.1.b, 12.1.d, 12.1.f, 14.1.c and 14.1.d. For the following regulation articles, the query response will contain data for the requested MTU or BTU period(s): 6.1.a, 12.1.g, 16.1.a, 16.1.b&c, 17.1.d-h and 17.1.j.
+
+When querying for daily, weekly, monthly or yearly data, the time interval in the response corresponds to the day in the timezone for which the transparency platform publishes the data. For example: A query for article 6.1.b Day-ahead load forecast for April 6 2016 in Czech republic will yield a response with a time interval starting at 2016-04-05T22:00Z and ending at 2016-04-06T22:00Z. In general, this is the timezone in which the area or border is physically located, however for articles 12.1.d Day-ahead Prices and 12.1.e Net Positions there are exceptions to this rule due to regional arrangements for capacity allocations.
+
+Minimum Time Unit (MTU):
+Portugal: 1 h
+Spain/France: 15 mins
+Data is returned with the time resolutions stated above
+In the case of Transmission between different countries, the biggest common timeframe is used. For example: in the case of Portugal <-> Spain flows, 1h resolution is used, but 15mins in the Spain-France case. 
+
 Transmission Domain:
 1. Physical Flows:
    - DocumentType: A11
@@ -43,12 +56,6 @@ Transmission Domain:
    - Parameters: in_Domain, out_Domain, periodStart, periodEnd
    - Maximum time range: 1 day
 
-3. Net Transfer Capacity:
-   - DocumentType: A61
-   - Day-ahead NTC between two areas
-   - Parameters: in_Domain, out_Domain, periodStart, periodEnd
-   - Maximum time range: 1 year
-
 Note: In the European power grid, physical flows can significantly differ from netted exchanges due to the complex nature of electricity grids and market operations.
 
 Generation Domain:
@@ -56,7 +63,7 @@ Actual Generation per Type:
    - DocumentType: A75
    - Shows actual power generation per production type
    - Parameters: in_Domain, periodStart, periodEnd
-   - Maximum time range: 1 day
+   - Maximum time range: 1 year
 
 Error Handling:
 - Returns HTTP status codes for errors
@@ -70,3 +77,6 @@ Best Practices:
 - Use appropriate time ranges to avoid timeouts
 - Cache data to reduce API calls
 - Handle rate limiting and implement retries
+
+Other aspects:
+- The data tables are transmitted in XML. Some columns can be omitted if no data was registered. For example: for the aggregated generation by time, in the Portuguese case, the column with the coal-based electrical generation values may be not present for certain date ranges, since recently all the coal stations were decommissioned.
