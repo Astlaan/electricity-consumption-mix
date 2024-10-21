@@ -103,6 +103,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
                 <position>1</position>
                 <quantity>100</quantity>
               </Point>
+              <Point>
+                <position>2</position>
+                <quantity>200</quantity>
+              </Point>
             </Period>
           </TimeSeries>
         </GL_MarketDocument>
