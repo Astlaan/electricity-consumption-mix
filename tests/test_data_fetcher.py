@@ -119,17 +119,44 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertFalse(result1.empty)
         mock_get.assert_called_once()
 
+        # Print debug information
+        print("Result 1:")
+        print(result1)
+        print("Cache contents after first call:")
+        print(os.listdir(self.fetcher.CACHE_DIR))
+
         # Reset the mock
         mock_get.reset_mock()
 
         # Second call with the same parameters should use cached data
         result2 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         self.assertIsInstance(result2, pd.DataFrame)
+        
+        # Print debug information
+        print("Result 2:")
+        print(result2)
+        
         self.assertFalse(result2.empty)
         mock_get.assert_not_called()  # The mock should not be called for the second request
 
         # Check if the results are the same
         pd.testing.assert_frame_equal(result1, result2)
+
+        # Print cache key and contents
+        params = {
+            'documentType': 'A75',
+            'processType': 'A16',
+            'in_Domain': '10YPT-REN------W',
+            'outBiddingZone_Domain': '10YPT-REN------W',
+        }
+        cache_key = self.fetcher._get_cache_key(params)
+        print(f"Cache key: {cache_key}")
+        print("Cache file contents:")
+        cache_file = os.path.join(self.fetcher.CACHE_DIR, f"{cache_key}.parquet")
+        if os.path.exists(cache_file):
+            print(pd.read_parquet(cache_file))
+        else:
+            print("Cache file not found")
 
         # Third call with a different date range that overlaps should make a new request
         new_start_date = datetime(2022, 1, 1, 12, tzinfo=pytz.UTC)
