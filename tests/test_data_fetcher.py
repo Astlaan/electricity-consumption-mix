@@ -235,6 +235,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
             self.assertIsInstance(result, pd.DataFrame)
             self.assertFalse(result.empty, f"Empty result for date range: {start_date} to {end_date}")
+            self.assertTrue(all(result['start_time'].between(start_date, end_date - timedelta(seconds=1))))
 
     @patch('src.data_fetcher.requests.get')
     def test_portugal_generation_data(self, mock_get):
