@@ -253,33 +253,46 @@ class ENTSOEDataFetcher:
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
         
+        logger.debug(f"Requested date range: {start_date} to {end_date}")
+        
         if cached_data is not None:
             df, metadata = cached_data
-            latest_cache_date = df['start_time'].max()
-            if latest_cache_date >= end_date:
-                return df[df['start_time'].between(start_date, end_date)]
-            start_date = latest_cache_date
+            cached_start = pd.to_datetime(metadata['start_date'], utc=True)
+            cached_end = pd.to_datetime(metadata['end_date'], utc=True)
+            
+            logger.debug(f"Cached data range: {cached_start} to {cached_end}")
+            
+            if cached_start <= start_date and cached_end >= end_date:
+                logger.debug("Using cached data")
+                return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
+            
+            # If there's overlap, adjust the request range
+            if cached_end > start_date:
+                start_date = cached_end
+                logger.debug(f"Adjusted start_date to {start_date}")
         
+        # If we need to fetch new data
+        logger.debug("Fetching new data")
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
         new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
         
         if cached_data is not None:
-            df = pd.concat([df, new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+            df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
         else:
             df = new_df
         
-        if df.empty:
-            return df
-
-        metadata = {
-            'country_code': country_code,
-            'start_date': df['start_time'].min().isoformat(),
-            'end_date': df['start_time'].max().isoformat(),
-            'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
-        }
-        self._save_to_cache(cache_key, df, metadata)
+        if not df.empty:
+            metadata = {
+                'country_code': country_code,
+                'start_date': df['start_time'].min().isoformat(),
+                'end_date': df['start_time'].max().isoformat(),
+            }
+            self._save_to_cache(cache_key, df, metadata)
+            logger.debug(f"Saved to cache: {metadata}")
         
-        return self._resample_to_standard_granularity(df[df['start_time'].between(start_date, end_date)])
+        result = self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
+        logger.debug(f"Returning result with shape: {result.shape}")
+        return result
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         # Ensure start_date and end_date are timezone-aware
