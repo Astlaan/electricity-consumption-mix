@@ -77,11 +77,9 @@ class ENTSOEDataFetcher:
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
         
         data = []
-        all_psr_types = set()
         for time_series in root.findall(".//ns:TimeSeries", namespace):
             psr_type = time_series.find(".//ns:psrType", namespace)
             psr_type = psr_type.text if psr_type is not None else "Unknown"
-            all_psr_types.add(psr_type)
             
             in_domain = time_series.find(".//ns:in_Domain.mRID", namespace)
             out_domain = time_series.find(".//ns:out_Domain.mRID", namespace)
