@@ -9,6 +9,10 @@ from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
 import pytz
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class ENTSOEDataFetcher:
@@ -162,28 +166,37 @@ class ENTSOEDataFetcher:
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
         
+        logger.debug(f"Requested date range: {start_date} to {end_date}")
+        
         if cached_data is not None:
             df, metadata = cached_data
             cached_start = pd.to_datetime(metadata['start_date'], utc=True)
             cached_end = pd.to_datetime(metadata['end_date'], utc=True)
             
+            logger.debug(f"Cached data range: {cached_start} to {cached_end}")
+            
             if cached_start <= start_date and cached_end >= end_date:
+                logger.debug("Using cached data")
                 return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
             
             # If there's overlap, adjust the request range
             if cached_end > start_date:
                 start_date = cached_end
+                logger.debug(f"Adjusted start_date to {start_date}")
             elif cached_start < end_date:
                 end_date = cached_start
+                logger.debug(f"Adjusted end_date to {end_date}")
 
         # If we need to fetch new data
         if cached_data is None or start_date < end_date:
+            logger.debug("Fetching new data")
             params['periodStart'] = start_date.strftime('%Y%m%d%H%M')
             params['periodEnd'] = end_date.strftime('%Y%m%d%H%M')
             xml_data = self._make_request(params)
             new_df = self._parse_xml_to_dataframe(xml_data)
             
             if cached_data is not None:
+                logger.debug("Merging new data with cached data")
                 df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
             else:
                 df = new_df
@@ -195,8 +208,14 @@ class ENTSOEDataFetcher:
                     'end_date': df['start_time'].max().isoformat(),
                 }
                 self._save_to_cache(cache_key, df, metadata)
+                logger.debug(f"Saved to cache: {metadata}")
+        else:
+            logger.debug("Using existing cached data")
+            df = cached_data[0]
         
-        return self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
+        result = self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
+        logger.debug(f"Returning result with shape: {result.shape}")
+        return result
     
     async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
