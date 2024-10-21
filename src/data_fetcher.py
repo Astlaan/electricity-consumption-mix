@@ -54,6 +54,10 @@ class ENTSOEDataFetcher:
                 if 'resolution' in metadata and isinstance(metadata['resolution'], str):
                     metadata['resolution'] = pd.Timedelta(metadata['resolution'])
                 
+                # Convert cached dates to naive datetime objects
+                metadata['start_date'] = pd.to_datetime(metadata['start_date']).tz_localize(None)
+                metadata['end_date'] = pd.to_datetime(metadata['end_date']).tz_localize(None)
+                
                 return data, metadata
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON from cache: {str(e)}")
@@ -121,7 +125,8 @@ class ENTSOEDataFetcher:
             if start_time is None or resolution is None:
                 continue
             
-            start_time = pd.to_datetime(start_time.text)
+            # Parse the start_time as UTC, then convert to naive datetime
+            start_time = pd.to_datetime(start_time.text).tz_localize(None)
             resolution = pd.Timedelta(resolution.text)
             
             for point in period.findall(".//ns:Point", namespace):
@@ -153,11 +158,13 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution', 'in_domain', 'out_domain'])
         
         df = pd.DataFrame(data)
-        df['start_time'] = pd.to_datetime(df['start_time'])
-        df['end_time'] = pd.to_datetime(df['end_time'])
         return df
 
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        # Ensure input dates are naive UTC
+        start_date = start_date.replace(tzinfo=None)
+        end_date = end_date.replace(tzinfo=None)
+
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -242,6 +249,9 @@ class ENTSOEDataFetcher:
             return await asyncio.gather(*tasks)
     
     async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        # Ensure input dates are naive UTC
+        start_date = start_date.replace(tzinfo=None)
+        end_date = end_date.replace(tzinfo=None)
 
         params = {
             'documentType': 'A75',
@@ -256,8 +266,8 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            cached_start = pd.to_datetime(metadata['start_date'], utc=True)
-            cached_end = pd.to_datetime(metadata['end_date'], utc=True)
+            cached_start = pd.to_datetime(metadata['start_date'])
+            cached_end = pd.to_datetime(metadata['end_date'])
             
             logger.debug(f"Cached data range: {cached_start} to {cached_end}")
             
