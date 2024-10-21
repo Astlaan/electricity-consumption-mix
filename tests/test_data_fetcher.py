@@ -103,10 +103,6 @@ class TestENTSOEDataFetcher(unittest.TestCase):
                 <position>1</position>
                 <quantity>100</quantity>
               </Point>
-              <Point>
-                <position>2</position>
-                <quantity>200</quantity>
-              </Point>
             </Period>
           </TimeSeries>
         </GL_MarketDocument>
@@ -148,7 +144,6 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_response = Mock()
         mock_response.text = "<dummy>XML</dummy>"
         mock_response.raise_for_status.return_value = None
-        
         mock_get.return_value = mock_response
 
         start_date1 = datetime(2022, 1, 1)
@@ -210,6 +205,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     @patch('src.data_fetcher.requests.get')
     def test_edge_case_date_ranges(self, mock_get):
         def mock_response(start_date, end_date):
+            # If start_date and end_date are the same, use end_date + 1 hour
+            if start_date == end_date:
+                end_date = start_date + timedelta(hours=1)
+            
             return f"""
             <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
               <TimeSeries>
@@ -239,7 +238,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         test_cases = [
             (datetime(2020, 1, 1, tzinfo=pytz.UTC), datetime(2020, 12, 31, tzinfo=pytz.UTC)),  # Leap year
             (datetime(2021, 1, 1, tzinfo=pytz.UTC), datetime(2021, 12, 31, tzinfo=pytz.UTC)),  # Non-leap year
-            (datetime(2020, 1, 1, tzinfo=pytz.UTC), datetime(2020, 1, 2, tzinfo=pytz.UTC)),    # One day
+            (datetime(2020, 1, 1, tzinfo=pytz.UTC), datetime(2020, 1, 1, tzinfo=pytz.UTC)),    # Same start and end date
             (datetime(2020, 12, 31, tzinfo=pytz.UTC), datetime(2021, 1, 1, tzinfo=pytz.UTC)),  # End of one year to start of next
             (datetime(2020, 3, 1, tzinfo=pytz.UTC), datetime(2020, 3, 31, tzinfo=pytz.UTC)),   # Month with 31 days
             (datetime(2020, 2, 1, tzinfo=pytz.UTC), datetime(2020, 2, 29, tzinfo=pytz.UTC)),   # February in a leap year
