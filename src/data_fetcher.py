@@ -147,11 +147,19 @@ class ENTSOEDataFetcher:
         df = pd.DataFrame(data)
         return df
     
-    async def _make_async_request(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
+    async def _make_request_async(self, session: aiohttp.ClientSession, params: Dict[str, Any]) -> str:
         params['securityToken'] = self.security_token
         async with session.get(self.BASE_URL, params=params) as response:
             response.raise_for_status()
             return await response.text()
+
+    async def _make_request(self, params: Dict[str, Any]) -> str:            
+        async def run_async():
+                async with aiohttp.ClientSession() as session:
+                    return await self._make_request_async(session, params)
+        loop = asyncio.get_event_loop()
+        xml_data = loop.run_until_complete(run_async())
+        return xml_data
     
     async def _fetch_data_in_chunks(self, params: Dict[str, Any], start_date: datetime, end_date: datetime) -> List[str]:
         latest_cache_date = self._get_latest_cache_date(params)
@@ -165,7 +173,7 @@ class ENTSOEDataFetcher:
                 chunk_params = params.copy()
                 chunk_params['periodStart'] = start_date.strftime('%Y%m%d%H%M')
                 chunk_params['periodEnd'] = chunk_end_date.strftime('%Y%m%d%H%M')
-                tasks.append(self._make_async_request(session, chunk_params))
+                tasks.append(self._make_request_async(session, chunk_params))
                 start_date = chunk_end_date
             return await asyncio.gather(*tasks)
     
