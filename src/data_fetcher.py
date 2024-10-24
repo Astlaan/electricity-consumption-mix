@@ -169,7 +169,7 @@ class ENTSOEDataFetcher:
                 start_date = chunk_end_date
             return await asyncio.gather(*tasks)
     
-    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime, initialize_db: bool) -> pd.DataFrame:
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -197,7 +197,8 @@ class ENTSOEDataFetcher:
                 start_date = cached_end
                 logger.debug(f"Adjusted start_date to {start_date}")
         else:
-            start_date = datetime(2010, 1, 1, 0, 0)
+            if initialize_db:
+                start_date = datetime(2010, 1, 1, 0, 0)
         
         # If we need to fetch new data
         logger.debug("Fetching new data")
@@ -221,6 +222,11 @@ class ENTSOEDataFetcher:
         result = self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
         logger.debug(f"Returning result with shape: {result.shape}")
         return result
+    
+    def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        loop = asyncio.get_event_loop()
+        generation = loop.run_until_complete(self.get_generation_data_async(country_code, start_date, end_date, False))
+        return generation
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
