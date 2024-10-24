@@ -169,13 +169,25 @@ class ENTSOEDataFetcher:
                 start_date = chunk_end_date
             return await asyncio.gather(*tasks)
     
-    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime, initialize_db: bool) -> pd.DataFrame:
-        params = {
-            'documentType': 'A75',
-            'processType': 'A16',
-            'in_Domain': country_code,
-            'outBiddingZone_Domain': country_code,
-        }
+    async def _fetch_and_cache_data(
+        self,
+        params: Dict[str, Any],
+        start_date: datetime,
+        end_date: datetime,
+        initialize_db: bool = False
+    ) -> pd.DataFrame:
+        """
+        Common logic for fetching and caching data from ENTSO-E API.
+        
+        Args:
+            params: API request parameters
+            start_date: Start of requested period
+            end_date: End of requested period
+            initialize_db: If True, fetch all historical data from 2010
+        
+        Returns:
+            DataFrame with requested data
+        """
         cache_key = self._get_cache_key(params)
         cached_data = self._load_from_cache(cache_key)
         
@@ -200,7 +212,7 @@ class ENTSOEDataFetcher:
             if initialize_db:
                 start_date = datetime(2010, 1, 1, 0, 0)
         
-        # If we need to fetch new data
+        # Fetch new data
         logger.debug("Fetching new data")
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
         new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
@@ -212,14 +224,24 @@ class ENTSOEDataFetcher:
         
         if not df.empty:
             metadata = {
-                'country_code': country_code,
                 'start_date': df['start_time'].min().isoformat(),
                 'end_date': df['start_time'].max().isoformat(),
             }
             self._save_to_cache(cache_key, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")
         
-        result = self._resample_to_standard_granularity(df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)])
+        return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
+
+    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime, initialize_db: bool = False) -> pd.DataFrame:
+        params = {
+            'documentType': 'A75',
+            'processType': 'A16',
+            'in_Domain': country_code,
+            'outBiddingZone_Domain': country_code,
+        }
+        
+        df = await self._fetch_and_cache_data(params, start_date, end_date, initialize_db)
+        result = self._resample_to_standard_granularity(df)
         logger.debug(f"Returning result with shape: {result.shape}")
         return result
     
@@ -234,37 +256,9 @@ class ENTSOEDataFetcher:
             'in_Domain': in_domain,
             'out_Domain': out_domain,
         }
-        cache_key = self._get_cache_key(params)
-        cached_data = self._load_from_cache(cache_key)
         
-        if cached_data is not None:
-            df, metadata = cached_data
-            latest_cache_date = df['start_time'].max()
-            if latest_cache_date >= end_date:
-                return df[df['start_time'].between(start_date, end_date)]
-            start_date = latest_cache_date
-        
-        xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
-        new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
-        
-        if cached_data is not None:
-            df = pd.concat([df, new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
-        else:
-            df = new_df
-        
-        if df.empty:
-            return df
-
-        metadata = {
-            'in_domain': in_domain,
-            'out_domain': out_domain,
-            'start_date': df['start_time'].min().isoformat(),
-            'end_date': df['start_time'].max().isoformat(),
-            'resolution': df['resolution'].iloc[0] if 'resolution' in df.columns else None
-        }
-        self._save_to_cache(cache_key, df, metadata)
-        
-        return df[df['start_time'].between(start_date, end_date)]
+        df = await self._fetch_and_cache_data(params, start_date, end_date)
+        return self._resample_to_standard_granularity(df)
 
     def get_portugal_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
         loop = asyncio.get_event_loop()
