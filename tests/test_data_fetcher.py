@@ -5,7 +5,6 @@ import pandas as pd
 import logging
 import os
 import shutil
-from src.api_token import API_TOKEN
 from src.data_fetcher import ENTSOEDataFetcher
 import sys
 import os
@@ -36,15 +35,25 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             "periodEnd": "200101010000",
         }
 
-        async def run_async():
-            async with aiohttp.ClientSession() as session:
-                return await self.fetcher._make_async_request(session, params)
-
-        loop = asyncio.get_event_loop()
-        xml_data = loop.run_until_complete(run_async())
-        print(xml_data)
+        xml_data = self.fetcher._make_request(params)
         df = self.fetcher._parse_xml_to_dataframe(xml_data)
-        print("df.empty: ", df.empty)
+        assert(df.empty == True)
+
+    def test_get_data(self):
+      self.fetcher = ENTSOEDataFetcher()
+
+      params = {
+          'documentType': 'A75',
+          'processType': 'A16',
+          'in_Domain': "10YES-REE------0",
+          'outBiddingZone_Domain': "10YES-REE------0",
+          "periodStart": "201801010000",
+          "periodEnd": "201801010200",
+      }
+
+      xml_data = self.fetcher._make_request(params)
+      df = self.fetcher._parse_xml_to_dataframe(xml_data)
+      assert(df.empty == False)
 
     def test_parse_xml_to_dataframe(self):
         xml_data = """
@@ -88,7 +97,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
-        result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
+        result = self.fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
 
         self.assertIsInstance(result, pd.DataFrame)
         self.assertFalse(result.empty)
@@ -325,7 +334,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         start_date = datetime(2024, 1, 1, 0, 0)
         end_date = datetime(2024, 1, 1, 2, 0)
         
-        fetcher = ENTSOEDataFetcher(API_TOKEN)
+        fetcher = ENTSOEDataFetcher()
         result = fetcher.get_generation_data('10YES-REE------0', start_date, end_date)
 
         values = [5632, 5664, 5672, 5656, 5608, 5612, 5544, 5448]
