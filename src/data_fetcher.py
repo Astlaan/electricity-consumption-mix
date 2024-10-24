@@ -191,6 +191,8 @@ class ENTSOEDataFetcher:
         end_date: datetime,
         initialize_db: bool = False
     ) -> pd.DataFrame:
+        if start_date >= end_date:
+            raise ValueError("end_date must be greater than start_date")
         """
         Common logic for fetching and caching data from ENTSO-E API.
         

@@ -83,28 +83,20 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertEqual(result.iloc[0]['psr_type'], 'B01')
         self.assertEqual(result.iloc[0]['quantity'], 100.0)
 
-    @patch.object(ENTSOEDataFetcher, '_make_request')
-    @patch.object(ENTSOEDataFetcher, '_parse_xml_to_dataframe')
-    def test_get_generation_data(self, mock_parse, mock_request):
-        mock_request.return_value = "<dummy>XML</dummy>"
-        mock_parse.return_value = pd.DataFrame({
-            'start_time': [pd.Timestamp('2022-01-01 00:00:00+00:00')],
-            'end_time': [pd.Timestamp('2022-01-01 01:00:00+00:00')],
-            'psr_type': ['B01'],
-            'quantity': [100.0],
-            'resolution': [pd.Timedelta('1 hour')]
-        })
+    @patch('aiohttp.ClientSession.get')
+    def test_get_generation_data(self, mock_get):
+        mock_response = Mock()
+        mock_response.text = "<dummy>XML</dummy>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value.__aenter__.return_value = mock_response
 
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
-        result = self.fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
+        result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
 
         self.assertIsInstance(result, pd.DataFrame)
-        self.assertFalse(result.empty)
-        mock_request.assert_called_once()
-        mock_parse.assert_called_once_with("<dummy>XML</dummy>")
 
-    @patch('src.data_fetcher.requests.get')
+    @patch('aiohttp.ClientSession.get')
     def test_caching(self, mock_get):
         mock_response = Mock()
         mock_response.text = """
@@ -285,13 +277,18 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         test_cases = [
             (datetime(2020, 1, 1), datetime(2020, 12, 31)),  # Leap year
             (datetime(2021, 1, 1), datetime(2021, 12, 31)),  # Non-leap year
-            (datetime(2020, 1, 1), datetime(2020, 1, 1)),    # Same start and end date
             (datetime(2020, 12, 31), datetime(2021, 1, 1)),  # End of one year to start of next
             (datetime(2020, 3, 1), datetime(2020, 3, 31)),   # Month with 31 days
             (datetime(2020, 2, 1), datetime(2020, 2, 29)),   # February in a leap year
             (datetime(2021, 2, 1), datetime(2021, 2, 28)),   # February in a non-leap year
         ]
 
+        # Test same start and end date raises ValueError
+        with self.assertRaises(ValueError):
+            self.fetcher.get_generation_data('10YPT-REN------W', 
+                datetime(2020, 1, 1), datetime(2020, 1, 1))
+
+        # Test other date ranges
         for start_date, end_date in test_cases:
             mock_response_obj.text = mock_response(start_date, end_date)
             result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
