@@ -153,13 +153,20 @@ class ENTSOEDataFetcher:
             response.raise_for_status()
             return await response.text()
 
-    async def _make_request(self, params: Dict[str, Any]) -> str:            
+    def _make_request(self, params: Dict[str, Any]) -> str:
         async def run_async():
-                async with aiohttp.ClientSession() as session:
-                    return await self._make_request_async(session, params)
-        loop = asyncio.get_event_loop()
-        xml_data = loop.run_until_complete(run_async())
-        return xml_data
+            async with aiohttp.ClientSession() as session:
+                return await self._make_request_async(session, params)
+        
+        # Get or create an event loop
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Run the coroutine and return its result
+        return loop.run_until_complete(run_async())
     
     async def _fetch_data_in_chunks(self, params: Dict[str, Any], start_date: datetime, end_date: datetime) -> List[str]:
         latest_cache_date = self._get_latest_cache_date(params)
