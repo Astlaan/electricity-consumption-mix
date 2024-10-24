@@ -100,7 +100,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_caching(self, mock_get):
         # Create a mock response that acts as an async context manager
         mock_response = AsyncMock()
-        mock_response.text.return_value = """
+        mock_response.text = AsyncMock(return_value="""
     <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
         <TimeSeries>
             <MktPSRType>
@@ -119,7 +119,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             </Period>
         </TimeSeries>
     </GL_MarketDocument>
-    """
+    """)
         mock_response.raise_for_status = AsyncMock()
         mock_get.return_value = AsyncMock().__aenter__.return_value = mock_response
 
@@ -245,7 +245,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     @patch('aiohttp.ClientSession.get')
     def test_edge_case_date_ranges(self, mock_get):
         mock_response = AsyncMock()
-        mock_response.text.return_value = """
+        mock_response.text = AsyncMock(return_value="""
     <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
         <TimeSeries>
             <MktPSRType>
@@ -264,7 +264,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             </Period>
         </TimeSeries>
     </GL_MarketDocument>
-    """
+    """)
         mock_response.raise_for_status = AsyncMock()
         mock_get.return_value = AsyncMock().__aenter__.return_value = mock_response
 
