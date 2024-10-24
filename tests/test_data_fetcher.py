@@ -223,15 +223,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        start_date = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
-        end_date = datetime(2024, 1, 1, 3, 0, tzinfo=timezone.utc)
+        start_date = datetime(2024, 1, 1)
+        end_date = datetime(2024, 1, 1, 3, 0)
         
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
         # Check if the result matches the expected data in the file
         self.assertFalse(result.empty, "Expected non-empty result")
-        self.assertEqual(result['start_time'].min(), pd.Timestamp('2024-01-01 00:00:00+00:00'))
-        self.assertLess(result['start_time'].max(), pd.Timestamp('2024-01-01 03:00:00+00:00'))
+        self.assertEqual(result['start_time'].min(), pd.Timestamp('2024-01-01 00:00:00'))
+        self.assertLess(result['start_time'].max(), pd.Timestamp('2024-01-01 03:00:00'))
         
         # Check if all expected PSR types are present
         expected_psr_types = {'B01', 'B04', 'B05', 'B10', 'B11', 'B12', 'B16', 'B18', 'B19', 'B20'}
