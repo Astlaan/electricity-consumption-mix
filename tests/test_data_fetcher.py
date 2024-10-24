@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 from datetime import datetime, timedelta
 import pandas as pd
 import logging
@@ -85,15 +85,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
     @patch('aiohttp.ClientSession.get')
     def test_get_generation_data(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = "<dummy>XML</dummy>"
+        # Create a mock response that acts as an async context manager
+        mock_response = AsyncMock()
+        mock_response.text.return_value = "<dummy>XML</dummy>"
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value.__aenter__.return_value = mock_response
+        mock_get.return_value = mock_response
 
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
-
         self.assertIsInstance(result, pd.DataFrame)
 
     @patch('aiohttp.ClientSession.get')
@@ -178,10 +178,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertFalse(result3.empty)
         mock_get.assert_called_once()  # The mock should be called for the third request
 
-    @patch('src.data_fetcher.requests.get')
+    @patch('aiohttp.ClientSession.get')
     def test_caching_different_params(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = "<dummy>XML</dummy>"
+        mock_response = AsyncMock()
+        mock_response.text.return_value = "<dummy>XML</dummy>"
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
@@ -241,37 +241,28 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # Check if the result is not empty
         self.assertFalse(result.empty, "The resulting DataFrame is empty")
 
-    @patch('src.data_fetcher.requests.get')
+    @patch('aiohttp.ClientSession.get')
     def test_edge_case_date_ranges(self, mock_get):
-        def mock_response(start_date, end_date):
-            # If start_date and end_date are the same, use end_date + 1 hour
-            if start_date == end_date:
-                end_date = start_date + timedelta(hours=1)
-            
-            return f"""
-            <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
-              <TimeSeries>
-                <MktPSRType>
-                  <psrType>B01</psrType>
-                </MktPSRType>
-                <Period>
-                  <timeInterval>
-                    <start>{start_date.strftime('%Y-%m-%dT%H:%MZ')}</start>
-                    <end>{end_date.strftime('%Y-%m-%dT%H:%MZ')}</end>
-                  </timeInterval>
-                  <resolution>PT60M</resolution>
-                  <Point>
+        mock_response = AsyncMock()
+        mock_response.text.return_value = """
+    <GL_MarketDocument>
+        <TimeSeries>
+            <Period>
+                <timeInterval>
+                    <start>2020-12-31T00:00Z</start>
+                    <end>2021-01-01T00:00Z</end>
+                </timeInterval>
+                <resolution>PT60M</resolution>
+                <Point>
                     <position>1</position>
                     <quantity>100</quantity>
-                  </Point>
-                </Period>
-              </TimeSeries>
-            </GL_MarketDocument>
-            """
-
-        mock_response_obj = Mock()
-        mock_response_obj.raise_for_status.return_value = None
-        mock_get.return_value = mock_response_obj
+                </Point>
+            </Period>
+        </TimeSeries>
+    </GL_MarketDocument>
+    """
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
 
         # Test cases for different date ranges
         test_cases = [
