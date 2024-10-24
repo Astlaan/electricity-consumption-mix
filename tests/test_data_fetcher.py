@@ -112,18 +112,11 @@ class TestENTSOEDataFetcher(unittest.TestCase):
                 <end>2022-01-02T00:00Z</end>
             </timeInterval>
             <resolution>PT60M</resolution>
+            """ + "\n".join([f"""
             <Point>
-                <position>1</position>
+                <position>{i}</position>
                 <quantity>100</quantity>
-            </Point>
-            <Point>
-                <position>2</position>
-                <quantity>200</quantity>
-            </Point>
-            <Point>
-                <position>3</position>
-                <quantity>300</quantity>
-            </Point>
+            </Point>""" for i in range(1, 25)]) + """
         </Period>
     </TimeSeries>
 </GL_MarketDocument>
@@ -137,7 +130,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # First call should make a request and cache the result
         result1 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         
-        # Reset mock before second call
+        # Clear the mock's call history
         mock_get.reset_mock()
         
         # Second call with the same parameters should use cached data
@@ -211,8 +204,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
     @patch('aiohttp.ClientSession.get')
     def test_edge_case_date_ranges(self, mock_get):
-        mock_response = AsyncMock()
-        mock_response.text = AsyncMock(return_value="""
+        def create_mock_response(start_date, end_date):
+            return f"""
 <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
     <TimeSeries>
         <MktPSRType>
@@ -220,26 +213,20 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         </MktPSRType>
         <Period>
             <timeInterval>
-                <start>2020-01-01T00:00Z</start>
-                <end>2021-12-31T23:59Z</end>
+                <start>{start_date.strftime('%Y-%m-%dT%H:%M')}Z</start>
+                <end>{end_date.strftime('%Y-%m-%dT%H:%M')}Z</end>
             </timeInterval>
             <resolution>PT60M</resolution>
             <Point>
                 <position>1</position>
                 <quantity>100</quantity>
             </Point>
-            <Point>
-                <position>2</position>
-                <quantity>200</quantity>
-            </Point>
-            <Point>
-                <position>3</position>
-                <quantity>300</quantity>
-            </Point>
         </Period>
     </TimeSeries>
 </GL_MarketDocument>
-""")
+"""
+
+        mock_response = AsyncMock()
         mock_response.raise_for_status = AsyncMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
@@ -254,6 +241,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         ]
 
         for start_date, end_date in test_cases:
+            mock_response.text = AsyncMock(return_value=create_mock_response(start_date, end_date))
             result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
             self.assertFalse(result.empty, f"Empty result for date range: {start_date} to {end_date}")
 
