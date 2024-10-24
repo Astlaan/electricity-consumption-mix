@@ -98,29 +98,30 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
     @patch('aiohttp.ClientSession.get')
     def test_caching(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = """
-        <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
-          <TimeSeries>
+        # Create a mock response that acts as an async context manager
+        mock_response = AsyncMock()
+        mock_response.text.return_value = """
+    <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+        <TimeSeries>
             <MktPSRType>
-              <psrType>B01</psrType>
+                <psrType>B01</psrType>
             </MktPSRType>
             <Period>
-              <timeInterval>
-                <start>2022-01-01T00:00:00</start>
-                <end>2022-01-02T00:00:00</end>
-              </timeInterval>
-              <resolution>PT60M</resolution>
-              <Point>
-                <position>1</position>
-                <quantity>100</quantity>
-              </Point>
+                <timeInterval>
+                    <start>2022-01-01T00:00Z</start>
+                    <end>2022-01-02T00:00Z</end>
+                </timeInterval>
+                <resolution>PT60M</resolution>
+                <Point>
+                    <position>1</position>
+                    <quantity>100</quantity>
+                </Point>
             </Period>
-          </TimeSeries>
-        </GL_MarketDocument>
-        """
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        </TimeSeries>
+    </GL_MarketDocument>
+    """
+        mock_response.raise_for_status = AsyncMock()
+        mock_get.return_value = AsyncMock().__aenter__.return_value = mock_response
 
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
@@ -245,8 +246,11 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_edge_case_date_ranges(self, mock_get):
         mock_response = AsyncMock()
         mock_response.text.return_value = """
-    <GL_MarketDocument>
+    <GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
         <TimeSeries>
+            <MktPSRType>
+                <psrType>B01</psrType>
+            </MktPSRType>
             <Period>
                 <timeInterval>
                     <start>2020-12-31T00:00Z</start>
@@ -261,8 +265,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         </TimeSeries>
     </GL_MarketDocument>
     """
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        mock_response.raise_for_status = AsyncMock()
+        mock_get.return_value = AsyncMock().__aenter__.return_value = mock_response
 
         # Test cases for different date ranges
         test_cases = [
