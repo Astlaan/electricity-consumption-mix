@@ -281,7 +281,6 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         # Test other date ranges
         for start_date, end_date in test_cases:
-            mock_response_obj.text = mock_response(start_date, end_date)
             result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
             self.assertIsInstance(result, pd.DataFrame)
             self.assertFalse(result.empty, f"Empty result for date range: {start_date} to {end_date}")
