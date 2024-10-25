@@ -215,10 +215,10 @@ class ENTSOEDataFetcher:
             cached_start = pd.to_datetime(metadata['start_date'])
             cached_end = pd.to_datetime(metadata['end_date'])
             
-            logger.debug(f"Cached data range: {cached_start} to {cached_end}")
+            logger.debug(f"Cached data range found: {cached_start} to {cached_end}")
             
             if cached_start <= start_date and cached_end >= end_date:
-                logger.debug("Using cached data")
+                logger.debug("Using fully cached data")
                 return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
             
             # If there's overlap, adjust the request range
@@ -242,7 +242,7 @@ class ENTSOEDataFetcher:
         if not df.empty:
             metadata = {
                 'start_date': df['start_time'].min().isoformat(),
-                'end_date': df['start_time'].max().isoformat(),
+                'end_date': df['end_time'].max().isoformat(),
             }
             self._save_to_cache(cache_key, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")

@@ -10,6 +10,7 @@ import sys
 import os
 import asyncio
 import aiohttp
+from .test_data import test_data
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 logging.basicConfig(level=logging.DEBUG)
@@ -32,7 +33,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             'in_Domain': "10YES-REE------0",
             'outBiddingZone_Domain': "10YES-REE------0",
             "periodStart": "200001010000",
-            "periodEnd": "200101010000",
+            "periodEnd": "200001020000",
         }
 
         xml_data = self.fetcher._make_request(params)
@@ -45,14 +46,17 @@ class TestENTSOEDataFetcher(unittest.TestCase):
       params = {
           'documentType': 'A75',
           'processType': 'A16',
-          'in_Domain': "10YES-REE------0",
-          'outBiddingZone_Domain': "10YES-REE------0",
+          'in_Domain': "10YPT-REN------W",
+          'outBiddingZone_Domain': "10YPT-REN------W",
           "periodStart": "201801010000",
-          "periodEnd": "201801010200",
+          "periodEnd": "201801010100", # 1 day
       }
+
+      # params['documentType'] = ""
 
       xml_data = self.fetcher._make_request(params)
       df = self.fetcher._parse_xml_to_dataframe(xml_data)
+      print(df)
       assert(df.empty == False)
 
     def test_parse_xml_to_dataframe(self):
@@ -96,31 +100,25 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
         self.assertIsInstance(result, pd.DataFrame)
 
-    @patch.object(ENTSOEDataFetcher, 'get_generation_data')
-    def test_caching(self, mock_get_generation_data):
-        # Create sample DataFrame that would be returned
-        df = pd.DataFrame({
-            'start_time': [datetime(2022, 1, 1), datetime(2022, 1, 1, 1)],
-            'end_time': [datetime(2022, 1, 1, 1), datetime(2022, 1, 1, 2)],
-            'psr_type': ['B01', 'B01'],
-            'quantity': [100.0, 100.0],
-            'resolution': [timedelta(hours=1), timedelta(hours=1)]
-        })
-        mock_get_generation_data.return_value = df
+    @patch.object(ENTSOEDataFetcher, '_make_request_async')
+    def test_caching(self, mock_make_request_async):
+        # Setup mock response using AsyncMock
+        mock_make_request_async.return_value = test_data.data_first_two_hours
 
-        start_date = datetime(2022, 1, 1)
-        end_date = datetime(2022, 1, 2)
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 2, 0)
 
         # First call
         result1 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
-        
-        # Reset mock
-        mock_get_generation_data.reset_mock()
-        
+        print(result1)
+
+        # Reset mock to verify it's not called again
+        mock_make_request_async.reset_mock()
+
         # Second call
         result2 = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
-        
-        mock_get_generation_data.assert_not_called()
+
+        mock_make_request_async.assert_not_called()
         pd.testing.assert_frame_equal(result1, result2)
 
     @patch('aiohttp.ClientSession.get')
