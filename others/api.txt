@@ -13,6 +13,7 @@ Parameters:
 - processType: specifies market time unit
 - in_Domain / out_Domain: EIC codes for areas
 - periodStart / periodEnd: UTC time in format YYYYMMDDHHMM
+(periodStart is inclusive, periodEnd is exclusive)
 
 Time Series:
 - Each time series has a unique ID

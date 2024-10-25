@@ -79,9 +79,9 @@ class TestENTSOEDataFetcher(unittest.TestCase):
           </TimeSeries>
         </GL_MarketDocument>
         """
-        
+
         result = self.fetcher._parse_xml_to_dataframe(xml_data)
-        
+
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(len(result), 1)
         self.assertEqual(result.iloc[0]['psr_type'], 'B01')
@@ -101,7 +101,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertIsInstance(result, pd.DataFrame)
 
     @patch.object(ENTSOEDataFetcher, '_make_request_async')
-    def test_caching(self, mock_make_request_async):
+    def test_caching_full_hit(self, mock_make_request_async):
         # Setup mock response using AsyncMock
         mock_make_request_async.return_value = test_data.data_first_two_hours
 
@@ -120,6 +120,36 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         mock_make_request_async.assert_not_called()
         pd.testing.assert_frame_equal(result1, result2)
+
+    @patch.object(ENTSOEDataFetcher, '_make_request_async')
+    def test_caching_partial_hit(self, mock_make_request_async):
+        # Setup mock response using AsyncMock
+        mock_make_request_async.return_value = test_data.data_first_two_hours
+
+        country_code = '10YPT-REN------W'
+        start_date_1 = datetime(2024, 1, 1, 0, 0)
+        end_date_1 = datetime(2024, 1, 1, 2, 0)
+        start_date_2 = datetime(2024, 1, 1, 1, 0)
+        end_date_2 = datetime(2024, 1, 1, 3, 0)
+
+        # First call
+        result1 = self.fetcher.get_generation_data(country_code, start_date_1, end_date_1)
+        self.assertEqual(mock_make_request_async.call_count, 1)
+
+        # Second call
+        result2 = self.fetcher.get_generation_data(country_code, start_date_2, end_date_2)
+        self.assertEqual(mock_make_request_async.call_count, 2)
+        # Get the arguments from the second call
+        second_call_params = mock_make_request_async.call_args_list[1][0][1]
+        expected_params = {
+            'documentType': 'A75',
+            'processType': 'A16',
+            'in_Domain': country_code,
+            'outBiddingZone_Domain': country_code,
+            'periodStart': '202401010200',
+            'periodEnd': '202401010300'
+        }
+        self.assertEqual(second_call_params, expected_params)
 
     @patch('aiohttp.ClientSession.get')
     def test_caching_different_params(self, mock_get):
@@ -144,7 +174,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_cache_file_creation(self):
         start_date = datetime(2022, 1, 1)
         end_date = datetime(2022, 1, 2)
-        
+
         # Clear cache before test
         shutil.rmtree(self.fetcher.CACHE_DIR, ignore_errors=True)
         os.makedirs(self.fetcher.CACHE_DIR)
@@ -223,37 +253,122 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         start_date = datetime(2024, 1, 1)
         end_date = datetime(2024, 1, 1, 3, 0)
-        
+
         result = self.fetcher.get_generation_data('10YPT-REN------W', start_date, end_date)
-        
+
         # Check if the result matches the expected data in the file
         self.assertFalse(result.empty, "Expected non-empty result")
         self.assertEqual(result['start_time'].min(), pd.Timestamp('2024-01-01 00:00:00'))
         self.assertLess(result['start_time'].max(), pd.Timestamp('2024-01-01 03:00:00'))
-        
+
         # Check if all expected PSR types are present
         expected_psr_types = {'B01', 'B04', 'B05', 'B10', 'B11', 'B12', 'B16', 'B18', 'B19', 'B20'}
         actual_psr_types = set(result['psr_type'].unique())
-        self.assertEqual(actual_psr_types, expected_psr_types, 
+        self.assertEqual(actual_psr_types, expected_psr_types,
                          f"Mismatch in PSR types. Expected: {expected_psr_types}, Actual: {actual_psr_types}")
-        
+
         # Check if the resolution is correct
         self.assertTrue(all(result['resolution'] == pd.Timedelta('1 hour')), "Resolution should be 1 hour for all entries")
 
     def test_spain_generation_data(self):
         start_date = datetime(2024, 1, 1, 0, 0)
         end_date = datetime(2024, 1, 1, 2, 0)
-        
+
         fetcher = ENTSOEDataFetcher()
         result = fetcher.get_generation_data('10YES-REE------0', start_date, end_date)
 
         values = [5632, 5664, 5672, 5656, 5608, 5612, 5544, 5448]
         averages = [sum(values[i:i+4]) / 4 for i in range(0, len(values), 4)]
-        
+
         print("Averages for each set of 4 values:", averages)
 
         print(result)
+
+    # These tests for data gaps need to be verified
+    def test_check_data_gaps(self):
+        # Create test data with known gaps
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 5, 0)
         
+        # Create data with gaps from 2:00-3:00 and 4:00-5:00
+        data = pd.DataFrame({
+            'start_time': [
+                datetime(2024, 1, 1, 0, 0),
+                datetime(2024, 1, 1, 1, 0),
+                datetime(2024, 1, 1, 3, 0)
+            ],
+            'end_time': [
+                datetime(2024, 1, 1, 1, 0),
+                datetime(2024, 1, 1, 2, 0),
+                datetime(2024, 1, 1, 4, 0)
+            ],
+            'psr_type': ['B01', 'B01', 'B01'],
+            'quantity': [100.0, 200.0, 300.0],
+            'resolution': [timedelta(hours=1)] * 3
+        })
+    
+        gaps = self.fetcher.check_data_gaps(data, start_date, end_date)
+        
+        # Verify results
+        self.assertTrue(gaps['has_gaps'])
+        self.assertEqual(gaps['total_gaps'], 2)  # Two missing hours
+        self.assertEqual(len(gaps['gap_periods']), 2)
+        self.assertAlmostEqual(gaps['coverage_percentage'], 60.0)  # 3 out of 5 hours present
+        
+        # Check first gap period
+        self.assertEqual(gaps['gap_periods'][0]['start'], datetime(2024, 1, 1, 2, 0))
+        self.assertEqual(gaps['gap_periods'][0]['end'], datetime(2024, 1, 1, 3, 0))
+        
+        # Check second gap period
+        self.assertEqual(gaps['gap_periods'][1]['start'], datetime(2024, 1, 1, 4, 0))
+        self.assertEqual(gaps['gap_periods'][1]['end'], datetime(2024, 1, 1, 5, 0))
+
+    def test_check_data_gaps_empty_data(self):
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 5, 0)
+        
+        empty_df = pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution'])
+        gaps = self.fetcher.check_data_gaps(empty_df, start_date, end_date)
+        
+        self.assertTrue(gaps['has_gaps'])
+        self.assertEqual(gaps['total_gaps'], 5)  # All 5 hours missing
+        self.assertEqual(len(gaps['gap_periods']), 1)  # One continuous gap
+        self.assertEqual(gaps['coverage_percentage'], 0.0)
+        
+        # Check gap period
+        self.assertEqual(gaps['gap_periods'][0]['start'], start_date)
+        self.assertEqual(gaps['gap_periods'][0]['end'], end_date)
+
+    def test_check_data_gaps_complete_data(self):
+        start_date = datetime(2024, 1, 1, 0, 0)
+        end_date = datetime(2024, 1, 1, 3, 0)
+        
+        complete_data = pd.DataFrame({
+            'start_time': [
+                datetime(2024, 1, 1, 0, 0),
+                datetime(2024, 1, 1, 1, 0),
+                datetime(2024, 1, 1, 2, 0)
+            ],
+            'end_time': [
+                datetime(2024, 1, 1, 1, 0),
+                datetime(2024, 1, 1, 2, 0),
+                datetime(2024, 1, 1, 3, 0)
+            ],
+            'psr_type': ['B01', 'B01', 'B01'],
+            'quantity': [100.0, 200.0, 300.0],
+            'resolution': [timedelta(hours=1)] * 3
+        })
+        
+        gaps = self.fetcher.check_data_gaps(complete_data, start_date, end_date)
+        
+        self.assertFalse(gaps['has_gaps'])
+        self.assertEqual(gaps['total_gaps'], 0)
+        self.assertEqual(len(gaps['gap_periods']), 0)
+        self.assertEqual(gaps['coverage_percentage'], 100.0)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
+
