@@ -56,8 +56,8 @@ class ENTSOEDataFetcher:
                     metadata['resolution'] = pd.Timedelta(metadata['resolution'])
                 
                 # Convert cached dates to naive datetime objects
-                metadata['start_date'] = pd.to_datetime(metadata['start_date']).tz_localize(None)
-                metadata['end_date'] = pd.to_datetime(metadata['end_date']).tz_localize(None)
+                metadata['start_date_inclusive'] = pd.to_datetime(metadata['start_date_inclusive']).tz_localize(None)
+                metadata['end_date_exclusive'] = pd.to_datetime(metadata['end_date_exclusive']).tz_localize(None)
                 
                 return data, metadata
             except json.JSONDecodeError as e:
@@ -66,15 +66,6 @@ class ENTSOEDataFetcher:
                 os.remove(cache_file)
                 os.remove(metadata_file)
                 return None
-        return None
-
-    def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
-        cache_key = self._get_cache_key(params)
-        cached_data = self._load_from_cache(cache_key)
-        if cached_data is not None:
-            df, metadata = cached_data
-            if not df.empty and 'start_time' in df.columns:
-                return df['start_time'].max()
         return None
 
     def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
@@ -198,8 +189,8 @@ class ENTSOEDataFetcher:
         
         Args:
             params: API request parameters
-            start_date: Start of requested period
-            end_date: End of requested period
+            start_date: Start of requested period (inclusive)
+            end_date: End of requested period (exclusive)
             initialize_db: If True, fetch all historical data from 2010
         
         Returns:
@@ -212,13 +203,15 @@ class ENTSOEDataFetcher:
         
         if cached_data is not None:
             df, metadata = cached_data
-            cached_start = pd.to_datetime(metadata['start_date'])
-            cached_end = pd.to_datetime(metadata['end_date'])
+            cached_start = pd.to_datetime(metadata['start_date_inclusive'])
+            cached_end = pd.to_datetime(metadata['end_date_exclusive'])
             
-            logger.debug(f"Cached data range found: {cached_start} to {cached_end}")
+            logger.debug(f"Cached data range: {cached_start} to {cached_end}")
             
-            if cached_start <= start_date and cached_end >= end_date:
-                logger.debug("Using fully cached data")
+            # Note: end_date is exclusive, so cached_end should be >= end_date
+            if cached_start <= start_date and cached_end > end_date:
+                logger.debug("Using cached data")
+                # Note: end_time < end_date because end_date is exclusive
                 return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
             
             # If there's overlap, adjust the request range
@@ -241,8 +234,8 @@ class ENTSOEDataFetcher:
         
         if not df.empty:
             metadata = {
-                'start_date': df['start_time'].min().isoformat(),
-                'end_date': df['end_time'].max().isoformat(),
+                'start_date_inclusive': df['start_time'].min().isoformat(),
+                'end_date_exclusive': df['end_time'].max().isoformat(),
             }
             self._save_to_cache(cache_key, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")
@@ -263,6 +256,13 @@ class ENTSOEDataFetcher:
         return result
     
     def get_generation_data(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Get generation data for a country in a given time range.
+        
+        Args:
+            country_code: The country code
+            start_date: Start of period (inclusive)
+            end_date: End of period (exclusive)
+        """
         loop = asyncio.get_event_loop()
         generation = loop.run_until_complete(self.get_generation_data_async(country_code, start_date, end_date, False))
         return generation
