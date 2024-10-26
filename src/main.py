@@ -59,7 +59,7 @@ def parse_arguments():
                        help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
     parser.add_argument("--visualization", choices=['none', 'simple', 'detailed', 'nested'],
                        default='none', help="Type of visualization to generate")
-    parser.add_argument("--reset_cache", action='store_true', help="Reset the data cache")
+    parser.add_argument("--reset-cache", action='store_true', help="Reset the data cache")  # Changed from reset_cache to reset-cache
     return parser.parse_args()
 
 def parse_datetime(value):
