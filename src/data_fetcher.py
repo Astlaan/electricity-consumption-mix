@@ -11,6 +11,7 @@ import asyncio
 import logging
 from src.api_token import API_TOKEN
 
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ENTSOEDataFetcher:
     
     def __init__(self):
         self.security_token = API_TOKEN
+        self.is_initialized = False
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
     def _get_cache_key(self, params: Dict[str, Any]) -> str:
@@ -180,7 +182,6 @@ class ENTSOEDataFetcher:
         params: Dict[str, Any],
         start_date: datetime,
         end_date: datetime,
-        initialize_db: bool = False
     ) -> pd.DataFrame:
         if start_date >= end_date:
             raise ValueError("end_date must be greater than start_date")
@@ -219,8 +220,14 @@ class ENTSOEDataFetcher:
                 start_date = cached_end
                 logger.debug(f"Adjusted start_date to {start_date}")
         else:
-            if initialize_db:
+            is_testing = os.getenv('ENTSOE_TESTING', '').lower() == 'true'
+            if not is_testing:
+                if self.is_initialized:
+                    raise ValueError("ERROR: Database attempted a 2nd initialization!")
                 start_date = datetime(2010, 1, 1, 0, 0)
+                self.is_initialized = True
+                logger.info("Initializing database with historical data since 2010...")
+                
         
         # Fetch new data
         logger.debug("Fetching new data")
@@ -242,7 +249,7 @@ class ENTSOEDataFetcher:
         
         return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
 
-    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime, initialize_db: bool = False) -> pd.DataFrame:
+    async def get_generation_data_async(self, country_code: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         params = {
             'documentType': 'A75',
             'processType': 'A16',
@@ -250,7 +257,7 @@ class ENTSOEDataFetcher:
             'outBiddingZone_Domain': country_code,
         }
         
-        df = await self._fetch_and_cache_data(params, start_date, end_date, initialize_db)
+        df = await self._fetch_and_cache_data(params, start_date, end_date)
         result = self._resample_to_standard_granularity(df)
         logger.debug(f"Returning result with shape: {result.shape}")
         return result
@@ -264,7 +271,7 @@ class ENTSOEDataFetcher:
             end_date: End of period (exclusive)
         """
         loop = asyncio.get_event_loop()
-        generation = loop.run_until_complete(self.get_generation_data_async(country_code, start_date, end_date, False))
+        generation = loop.run_until_complete(self.get_generation_data_async(country_code, start_date, end_date))
         return generation
 
     async def get_physical_flows_async(self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
@@ -292,6 +299,14 @@ class ENTSOEDataFetcher:
     def _resample_to_standard_granularity(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty:
             return df
+        
+        max_resolution = df['resolution'].max()
+        if max_resolution > timedelta(hours=1):
+            raise ValueError(
+                "Resolution must be 1 hour or less. "
+                f"Found data with granularity {max_resolution} which is larger than "
+                "the standard 1 hour granularity."
+            )
 
         df = df.sort_values('start_time').set_index('start_time')
         

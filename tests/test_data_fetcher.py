@@ -23,6 +23,10 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         if os.path.exists(self.fetcher.CACHE_DIR):
             shutil.rmtree(self.fetcher.CACHE_DIR)
         os.makedirs(self.fetcher.CACHE_DIR)
+        os.environ['ENTSOE_TESTING'] = 'true'
+
+    def tearDown(self):
+        os.environ.pop('ENTSOE_TESTING', None)
 
     def test_get_data_before_records(self):
         self.fetcher = ENTSOEDataFetcher()
@@ -365,6 +369,50 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         self.assertEqual(gaps['total_gaps'], 0)
         self.assertEqual(len(gaps['gap_periods']), 0)
         self.assertEqual(gaps['coverage_percentage'], 100.0)
+
+    def test_resampling_from_finer_granularity(self):
+        # Create test data with 15-minute granularity
+        start_date = datetime(2024, 1, 1, 0, 0)
+        df = pd.DataFrame({
+            'start_time': [
+                start_date + timedelta(minutes=15*i) for i in range(8)
+            ],
+            'end_time': [
+                start_date + timedelta(minutes=15*(i+1)) for i in range(8)
+            ],
+            'psr_type': ['B01'] * 8,
+            'quantity': [100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0],
+            'resolution': [timedelta(minutes=15)] * 8
+        })
+        
+
+        print(df)
+        result = self.fetcher._resample_to_standard_granularity(df)
+        print(result)
+
+        # Check that result has hourly granularity
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result.iloc[0]['quantity'], 250.0)  # Average of all values
+        self.assertEqual(result.iloc[1]['quantity'], 650.0)  # Average of all values
+        self.assertEqual(result.iloc[0]['resolution'], timedelta(hours=1))
+        self.assertEqual(result.iloc[1]['resolution'], timedelta(hours=1))
+
+    def test_resampling_from_coarser_granularity(self):
+        # Create test data with 2-hour granularity
+        start_date = datetime(2024, 1, 1, 0, 0)
+        df = pd.DataFrame({
+            'start_time': [start_date],
+            'end_time': [start_date + timedelta(hours=2)],
+            'psr_type': ['B01'],
+            'quantity': [200.0],
+            'resolution': [timedelta(hours=2)]
+        })
+
+        with self.assertRaises(ValueError) as context:
+            self.fetcher._resample_to_standard_granularity(df)
+        
+        self.assertTrue('Resolution must be 1 hour or less' in str(context.exception))
+
 
 
 
