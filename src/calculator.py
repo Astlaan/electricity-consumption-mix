@@ -45,10 +45,13 @@ class ElectricityMixCalculator:
         print(df)
         try:
             grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
-        except:
+            return grouped
+        except Exception as e:
             print("Failed grouping by psr")
             print(df)
-        return grouped
+            print(f"Error: {e}")
+            # Return empty DataFrame with same structure instead of undefined grouped variable
+            return pd.DataFrame(columns=['hour'] + [col for col in df.columns if col != 'hour'])
 
     def _calculate_net_imports(self, imports, exports):
         if imports.empty and exports.empty:
