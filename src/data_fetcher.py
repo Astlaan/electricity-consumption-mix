@@ -29,29 +29,23 @@ class ENTSOEDataFetcher:
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
     def _get_cache_filename(self, params: Dict[str, Any]) -> str:
-        """Generate a descriptive cache filename based on request parameters."""
+        """Generate cache filename based on data type and countries."""
         document_type = params.get('documentType')
-        
-        # Safely extract country codes from domain
-        def get_country_code(domain):
-            if not domain:
-                return ''
-            # Handle different domain code formats
-            if '-' in domain:
-                parts = domain.split('-')
-                if len(parts) >= 2:
-                    return parts[1].lower()
-            return domain.lower()
-
-        in_domain = get_country_code(params.get('in_Domain', ''))
-        out_domain = get_country_code(params.get('out_Domain', ''))
+        in_domain = params.get('in_Domain', '')
+        out_domain = params.get('out_Domain', '')
 
         if document_type == 'A75':  # Generation data
-            return f"generation_{in_domain}"
+            if 'PT' in in_domain:
+                return "generation_pt"
+            elif 'ES' in in_domain:
+                return "generation_es"
         elif document_type == 'A11':  # Flow data
-            return f"flow_{in_domain}_to_{out_domain}"
-        else:
-            raise ValueError(f"Unsupported document type: {document_type}")
+            if 'ES' in in_domain and 'PT' in out_domain:
+                return "flow_es_to_pt"
+            elif 'PT' in in_domain and 'ES' in out_domain:
+                return "flow_pt_to_es"
+        
+        raise ValueError(f"Unsupported combination of document type and domains")
 
     def _save_to_cache(self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]):
         cache_name = self._get_cache_filename(params)
