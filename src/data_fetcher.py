@@ -31,8 +31,20 @@ class ENTSOEDataFetcher:
     def _get_cache_filename(self, params: Dict[str, Any]) -> str:
         """Generate a descriptive cache filename based on request parameters."""
         document_type = params.get('documentType')
-        in_domain = params.get('in_Domain', '').split('-')[1].lower()
-        out_domain = params.get('out_Domain', '').split('-')[1].lower()
+        
+        # Safely extract country codes from domain
+        def get_country_code(domain):
+            if not domain:
+                return ''
+            # Handle different domain code formats
+            if '-' in domain:
+                parts = domain.split('-')
+                if len(parts) >= 2:
+                    return parts[1].lower()
+            return domain.lower()
+
+        in_domain = get_country_code(params.get('in_Domain', ''))
+        out_domain = get_country_code(params.get('out_Domain', ''))
 
         if document_type == 'A75':  # Generation data
             return f"generation_{in_domain}"
