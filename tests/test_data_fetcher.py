@@ -28,7 +28,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def tearDown(self):
         os.environ.pop('ENTSOE_TESTING', None)
 
-    def test_get_data_before_records(self):
+    def test_request_before_records(self):
         self.fetcher = ENTSOEDataFetcher()
 
         params = {
@@ -44,7 +44,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         df = self.fetcher._parse_xml_to_dataframe(xml_data)
         assert(df.empty == True)
 
-    def test_get_data(self):
+    def test_request_generation_pt(self):
       self.fetcher = ENTSOEDataFetcher()
 
       params = {
@@ -59,6 +59,39 @@ class TestENTSOEDataFetcher(unittest.TestCase):
       # params['documentType'] = ""
 
       xml_data = self.fetcher._make_request(params)
+      df = self.fetcher._parse_xml_to_dataframe(xml_data)
+      print(df)
+      assert(df.empty == False)
+
+    def test_request_flow_pt_to_es(self):
+      self.fetcher = ENTSOEDataFetcher()
+
+      params = {
+          'documentType': 'A11',
+          'out_Domain': "10YPT-REN------W",
+          'in_Domain': "10YES-REE------0",
+          "periodStart": "201801010000",
+          "periodEnd":   "201801010100", # 1 day
+      }
+
+      xml_data = self.fetcher._make_request(params)
+      df = self.fetcher._parse_xml_to_dataframe(xml_data)
+      print(df)
+      assert(df.empty == False)
+
+    def test_request_flow_es_to_pt(self):
+      self.fetcher = ENTSOEDataFetcher()
+
+      params = {
+          'documentType': 'A11',
+          'out_Domain': "10YES-REE------0",
+          'in_Domain': "10YPT-REN------W",
+          "periodStart": "201801010000",
+          "periodEnd":   "201801010100", # 1 day
+      }
+
+      xml_data = self.fetcher._make_request(params)
+      print(xml_data)
       df = self.fetcher._parse_xml_to_dataframe(xml_data)
       print(df)
       assert(df.empty == False)
