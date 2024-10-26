@@ -40,10 +40,10 @@ class ENTSOEDataFetcher:
             elif 'ES' in in_domain:
                 return "generation_es"
         elif document_type == 'A11':  # Flow data
-            if 'ES' in in_domain and 'PT' in out_domain:
-                return "flow_es_to_pt"
-            elif 'PT' in in_domain and 'ES' in out_domain:
+            if 'PT' in out_domain and 'ES' in in_domain:
                 return "flow_pt_to_es"
+            elif 'ES' in out_domain and 'PT' in in_domain:
+                return "flow_es_to_pt"
         
         raise ValueError(f"Unsupported combination of document type and domains")
 

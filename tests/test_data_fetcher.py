@@ -52,8 +52,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
           'processType': 'A16',
           'in_Domain': "10YPT-REN------W",
           'outBiddingZone_Domain': "10YPT-REN------W",
-          "periodStart": "201801010000",
-          "periodEnd": "201801010100", # 1 day
+          "periodStart": "202401010000",
+          "periodEnd":   "202401010100", # 1 day
       }
 
       # params['documentType'] = ""
@@ -70,8 +70,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
           'documentType': 'A11',
           'out_Domain': "10YPT-REN------W",
           'in_Domain': "10YES-REE------0",
-          "periodStart": "201801010000",
-          "periodEnd":   "201801010100", # 1 day
+          "periodStart": "202401010000",
+          "periodEnd":   "202401010100", # 1 day
       }
 
       xml_data = self.fetcher._make_request(params)
@@ -86,8 +86,8 @@ class TestENTSOEDataFetcher(unittest.TestCase):
           'documentType': 'A11',
           'out_Domain': "10YES-REE------0",
           'in_Domain': "10YPT-REN------W",
-          "periodStart": "201801010000",
-          "periodEnd":   "201801010100", # 1 day
+          "periodStart": "202401010000",
+          "periodEnd":   "202401020000", # 1 day
       }
 
       xml_data = self.fetcher._make_request(params)
