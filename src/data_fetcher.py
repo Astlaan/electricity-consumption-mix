@@ -107,10 +107,11 @@ class ENTSOEDataFetcher:
             document_type = root.find(".//ns:documentType", namespace)
             is_flow_data = document_type is not None and document_type.text == 'A11'
 
-            # For generation data, get PSR type
+            # For generation data only, get PSR type
+            psr_type = None
             if not is_flow_data:
-                psr_type = time_series.find(".//ns:psrType", namespace)
-                psr_type = psr_type.text if psr_type is not None else "Unknown"
+                psr_type_elem = time_series.find(".//ns:psrType", namespace)
+                psr_type = psr_type_elem.text if psr_type_elem is not None else "Unknown"
 
             period = time_series.find(".//ns:Period", namespace)
             if period is None:
@@ -143,7 +144,7 @@ class ENTSOEDataFetcher:
                 }
 
                 # Only include psr_type for generation data
-                if not is_flow_data:
+                if not is_flow_data and psr_type is not None:
                     data_point['psr_type'] = psr_type
 
                 data.append(data_point)
