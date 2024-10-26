@@ -5,6 +5,7 @@ from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
+from visualizer import ElectricityMixVisualizer
 
 async def fetch_data(fetcher, country, start_date, end_date):
     print(f"Fetching {country} data...")
@@ -39,16 +40,19 @@ async def main():
         # Calculate and print electricity mix
         calculator = ElectricityMixCalculator()
         results = calculator.calculate_mix(pt_data, es_data)
-        print_results(results)
+        print_results(results, args)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Electricity Consumption Share Calculator for Portugal")
-    parser.add_argument("--start_date", required=True, type=parse_datetime, help="Start date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
-    parser.add_argument("--end_date", required=True, type=parse_datetime, help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
-    # parser.add_argument("--granularity", default="hourly", choices=["hourly", "daily", "weekly", "monthly"], help="Time granularity for results")
+    parser.add_argument("--start_date", required=True, type=parse_datetime, 
+                       help="Start date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
+    parser.add_argument("--end_date", required=True, type=parse_datetime, 
+                       help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
+    parser.add_argument("--visualization", choices=['none', 'simple', 'detailed', 'nested'],
+                       default='none', help="Type of visualization to generate")
     return parser.parse_args()
 
 def parse_datetime(value):
@@ -72,7 +76,7 @@ def print_data_summary(data, country):
         else:
             print("  DataFrame is empty\n")
 
-def print_results(results):
+def print_results(results, args):
     if results is None or results.empty:
         print("No results to display")
         return
@@ -105,8 +109,17 @@ def print_results(results):
     print("\nDEBUG: Full aggregated results dataframe:")
     print(aggregated_results)
 
+    if args.visualization != 'none':
+        visualizer = ElectricityMixVisualizer()
+        if args.visualization == 'simple':
+            visualizer.plot_simple_pie(aggregated_results)
+        elif args.visualization == 'detailed':
+            visualizer.plot_source_country_pie(aggregated_results)
+        elif args.visualization == 'nested':
+            visualizer.plot_nested_pie(aggregated_results)
+
 if __name__ == "__main__":
     asyncio.run(main())
 
 # Example usage:
-# python src\main.py --start_date 2015-01-01 --end_date 2015-12-31
+# python src\main.py --start_date 2015-01-01 --end_date 2015-12-31 --visualization simple
