@@ -156,6 +156,10 @@ class ENTSOEDataFetcher:
 
         # Pivot the DataFrame if it's generation data
         if not df.empty and 'psr_type' in df.columns:
+            # First aggregate any duplicate entries by taking the mean
+            df = df.groupby(['start_time', 'end_time', 'resolution', 'psr_type'])['quantity'].mean().reset_index()
+            
+            # Then pivot
             df = df.pivot(
                 index=['start_time', 'end_time', 'resolution'],
                 columns='psr_type',
