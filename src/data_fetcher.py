@@ -28,28 +28,38 @@ class ENTSOEDataFetcher:
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
-    def _get_cache_key(self, params: Dict[str, Any]) -> str:
-        param_str = json.dumps(params, sort_keys=True)
-        cache_key = hashlib.md5(param_str.encode()).hexdigest()
-        return cache_key
+    def _get_cache_filename(self, params: Dict[str, Any]) -> str:
+        """Generate a descriptive cache filename based on request parameters."""
+        document_type = params.get('documentType')
+        in_domain = params.get('in_Domain', '').split('-')[1].lower()
+        out_domain = params.get('out_Domain', '').split('-')[1].lower()
 
-    def _save_to_cache(self, cache_key: str, data: pd.DataFrame, metadata: Dict[str, Any]):
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
+        if document_type == 'A75':  # Generation data
+            return f"generation_{in_domain}"
+        elif document_type == 'A11':  # Flow data
+            return f"flow_{in_domain}_to_{out_domain}"
+        else:
+            raise ValueError(f"Unsupported document type: {document_type}")
+
+    def _save_to_cache(self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]):
+        cache_name = self._get_cache_filename(params)
+        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
         print(f"Attempting to save cache file: {cache_file}")
         data.to_parquet(cache_file)
         
         if 'resolution' in metadata and isinstance(metadata['resolution'], pd.Timedelta):
             metadata['resolution'] = str(metadata['resolution'])
 
-        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_key}_metadata.json")
+        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         logger.debug(f"Attempting to save metadata file: {metadata_file}")
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f)
         logger.debug("Successfully saved cache files")
 
-    def _load_from_cache(self, cache_key: str) -> Optional[tuple]:
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_key}.parquet")
-        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_key}_metadata.json")
+    def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
+        cache_name = self._get_cache_filename(params)
+        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
+        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         if os.path.exists(cache_file) and os.path.exists(metadata_file):
             data = pd.read_parquet(cache_file)
             try:
@@ -74,8 +84,7 @@ class ENTSOEDataFetcher:
         return None
 
     def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
-        cache_key = self._get_cache_key(params)
-        cached_data = self._load_from_cache(cache_key)
+        cached_data = self._load_from_cache(params)
         if cached_data is not None:
             df, metadata = cached_data
             if not df.empty and 'start_time' in df.columns:
@@ -205,8 +214,7 @@ class ENTSOEDataFetcher:
             DataFrame with requested data
         """
 
-        cache_key = self._get_cache_key(params)
-        cached_data = self._load_from_cache(cache_key)
+        cached_data = self._load_from_cache(params)
 
         logger.debug(f"Requested date range: {start_date} to {end_date}")
 
@@ -254,7 +262,7 @@ class ENTSOEDataFetcher:
                 'end_date_exclusive': df['end_time'].max().isoformat(),
             }
             metadata.update(params)
-            self._save_to_cache(cache_key, df, metadata)
+            self._save_to_cache(params, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")
 
         return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
