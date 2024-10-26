@@ -15,7 +15,7 @@ class ElectricityMixVisualizer:
             'Biomass': '#228B22',
             'Geothermal': '#8B4513',
             'Other': '#A9A9A9',
-            'unknown': '#A9A9A9' #Added to handle unknown source types gracefully
+            'unknown': '#A9A9A9'
         }
         
         # Define country colors for multi-level charts
@@ -24,20 +24,34 @@ class ElectricityMixVisualizer:
             'Spain': '#FF0000'      # Red
         }
 
+    def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove columns with all zeros and handle NaN values."""
+        # Remove columns where all values are 0
+        df = df.loc[:, (df != 0).any()]
+        # Fill any NaN values with 0
+        df = df.fillna(0)
+        return df
+
     def _aggregate_by_source_type(self, df: pd.DataFrame) -> pd.Series:
         """Aggregate data by source type only."""
+        df = self._clean_data(df)
         return df.mean()  # Using mean for the time period
 
     def _split_by_country_and_source(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """Split data into Portuguese and Spanish sources."""
+        df = self._clean_data(df)
         pt_sources = {}
         es_sources = {}
         
         for col in df.columns:
             if col.startswith('PT_'):
-                pt_sources[col[3:]] = df[col].mean()
+                source = col[3:]
+                if df[col].mean() > 0:  # Only include non-zero sources
+                    pt_sources[source] = df[col].mean()
             elif col.startswith('ES_'):
-                es_sources[col[3:]] = df[col].mean()
+                source = col[3:]
+                if df[col].mean() > 0:  # Only include non-zero sources
+                    es_sources[source] = df[col].mean()
                 
         return {'Portugal': pd.Series(pt_sources), 'Spain': pd.Series(es_sources)}
 
@@ -47,12 +61,23 @@ class ElectricityMixVisualizer:
         plt.figure(figsize=figsize)
         
         data = self._aggregate_by_source_type(df)
-        colors = [self.source_colors.get(source, self.source_colors['unknown']) for source in data.index]
         
-        plt.pie(data, labels=data.index, colors=colors, autopct='%1.1f%%', textprops={'fontsize': 8}) #Improved text size
+        # Only plot non-zero values
+        mask = data > 0
+        data = data[mask]
+        
+        if data.empty:
+            print("No non-zero data to plot")
+            return
+            
+        colors = [self.source_colors.get(source, self.source_colors['unknown']) 
+                 for source in data.index]
+        
+        plt.pie(data, labels=data.index, colors=colors, 
+                autopct='%1.1f%%', textprops={'fontsize': 8})
         plt.title(title)
         plt.axis('equal')
-        plt.tight_layout() # Prevents labels from overlapping
+        plt.tight_layout()
         plt.show()
 
     def plot_source_country_pie(self, df: pd.DataFrame, 
@@ -70,16 +95,23 @@ class ElectricityMixVisualizer:
         
         for country in ['Portugal', 'Spain']:
             country_data = data_dict[country]
-            for source, value in country_data.items():
-                labels.append(f"{country}\n{source}")
-                sizes.append(value)
-                base_color = self.source_colors.get(source, self.source_colors['unknown'])
-                colors.append(base_color)
+            if not country_data.empty:
+                for source, value in country_data.items():
+                    if value > 0:  # Only include non-zero values
+                        labels.append(f"{country}\n{source}")
+                        sizes.append(value)
+                        base_color = self.source_colors.get(source, self.source_colors['unknown'])
+                        colors.append(base_color)
 
-        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', textprops={'fontsize': 8}) #Improved text size
+        if not sizes:
+            print("No non-zero data to plot")
+            return
+            
+        plt.pie(sizes, labels=labels, colors=colors, 
+                autopct='%1.1f%%', textprops={'fontsize': 8})
         plt.title(title)
         plt.axis('equal')
-        plt.tight_layout() # Prevents labels from overlapping
+        plt.tight_layout()
         plt.show()
 
     def plot_nested_pie(self, df: pd.DataFrame,
@@ -91,7 +123,18 @@ class ElectricityMixVisualizer:
         data_dict = self._split_by_country_and_source(df)
         
         # Prepare outer ring (countries)
-        country_sizes = [sum(data_dict[country]) for country in ['Portugal', 'Spain']]
+        country_sizes = []
+        for country in ['Portugal', 'Spain']:
+            country_data = data_dict[country]
+            if not country_data.empty:
+                country_sizes.append(country_data.sum())
+            else:
+                country_sizes.append(0)
+                
+        if sum(country_sizes) == 0:
+            print("No non-zero data to plot")
+            return
+            
         country_colors = [self.country_colors[country] for country in ['Portugal', 'Spain']]
         
         # Prepare inner ring (sources)
@@ -100,20 +143,26 @@ class ElectricityMixVisualizer:
         source_labels = []
         
         for country in ['Portugal', 'Spain']:
-            for source, value in data_dict[country].items():
-                source_sizes.append(value)
-                source_colors.append(self.source_colors.get(source, self.source_colors['unknown']))
-                source_labels.append(f"{country}\n{source}")
+            country_data = data_dict[country]
+            if not country_data.empty:
+                for source, value in country_data.items():
+                    if value > 0:  # Only include non-zero values
+                        source_sizes.append(value)
+                        source_colors.append(self.source_colors.get(source, self.source_colors['unknown']))
+                        source_labels.append(f"{country}\n{source}")
 
         # Plot outer ring (countries)
         plt.pie(country_sizes, colors=country_colors, radius=1.3,
-               labels=['Portugal', 'Spain'], autopct='%1.1f%%', textprops={'fontsize': 10}) #Improved text size
+               labels=['Portugal', 'Spain'], autopct='%1.1f%%', 
+               textprops={'fontsize': 10})
         
         # Plot inner ring (sources)
-        plt.pie(source_sizes, colors=source_colors, radius=1.0,
-               labels=source_labels, autopct='%1.1f%%', textprops={'fontsize': 8}) #Improved text size
+        if source_sizes:
+            plt.pie(source_sizes, colors=source_colors, radius=1.0,
+                   labels=source_labels, autopct='%1.1f%%', 
+                   textprops={'fontsize': 8})
         
         plt.title(title)
         plt.axis('equal')
-        plt.tight_layout() # Prevents labels from overlapping
+        plt.tight_layout()
         plt.show()
