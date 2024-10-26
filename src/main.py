@@ -84,46 +84,7 @@ def print_data_summary(data, country):
             print("  DataFrame is empty\n")
 
 def print_results(results, args):
-    # if results is None or results.empty:
-    #     print("No results to display")
-    #     return
-
-    # print("Aggregating results...")
-    # aggregated_results = aggregate_results(results)
-
-    # print(f"\nPortugal's Electricity Mix:")
-    # print(f"Date range: {aggregated_results.index.min()} to {aggregated_results.index.max()}")
-    # print(f"Number of periods: {len(aggregated_results)}")
-    # print(f"Energy sources: {aggregated_results.columns.tolist()}")
-    
-    # print("\nFull results (percentages):")
-    # pd.set_option('display.max_columns', None)  # Show all columns
-    # pd.set_option('display.width', None)  # Don't wrap to multiple lines
-    # print(aggregated_results.applymap(lambda x: f"{x:.2f}%"))
-    
-    # print("\nSummary statistics (percentages):")
-    # print(aggregated_results.describe().applymap(lambda x: f"{x:.2f}%"))
-
-    # Additional data quality checks
-    # print("\nData quality checks:")
-    # print(f"Any NaN values: {aggregated_results.isna().any().any()}")
-    # print(f"Any negative values: {(aggregated_results < 0).any().any()}")
-    # print(f"Any values > 100%: {(aggregated_results > 100).any().any()}")
-    # print(f"Row sums (should be close to 100%):")
-    # print(aggregated_results.sum(axis=1).describe().apply(lambda x: f"{x:.2f}%"))
-
-    # Debug log
-    # print("\nDEBUG: Full aggregated results dataframe:")
-    # print(aggregated_results)
-
-    if args.visualization != 'none':
-        visualizer = ElectricityMixVisualizer()
-        if args.visualization == 'simple':
-            visualizer.plot_simple_pie(aggregated_results)
-        elif args.visualization == 'detailed':
-            visualizer.plot_source_country_pie(aggregated_results)
-        elif args.visualization == 'nested':
-            visualizer.plot_nested_pie(aggregated_results)
+    pass #Function body removed because it was entirely commented out
 
 if __name__ == "__main__":
     asyncio.run(main())
