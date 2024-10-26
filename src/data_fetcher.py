@@ -103,11 +103,9 @@ class ENTSOEDataFetcher:
 
         data = []
         for time_series in root.findall(".//ns:TimeSeries", namespace):
-            # Check document type to determine parsing strategy
             document_type = root.find(".//ns:documentType", namespace)
             is_flow_data = document_type is not None and document_type.text == 'A11'
 
-            # For generation data only, get PSR type
             psr_type = None
             if not is_flow_data:
                 psr_type_elem = time_series.find(".//ns:psrType", namespace)
@@ -143,13 +141,11 @@ class ENTSOEDataFetcher:
                     'resolution': resolution
                 }
 
-                # Only include psr_type for generation data
                 if not is_flow_data and psr_type is not None:
                     data_point['psr_type'] = psr_type
 
                 data.append(data_point)
 
-        # Define columns based on whether it's flow or generation data
         if not data:
             columns = ['start_time', 'end_time', 'quantity', 'resolution']
             if not is_flow_data:
@@ -157,6 +153,16 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=columns)
 
         df = pd.DataFrame(data)
+
+        # Pivot the DataFrame if it's generation data
+        if not df.empty and 'psr_type' in df.columns:
+            df = df.pivot(
+                index=['start_time', 'end_time', 'resolution'],
+                columns='psr_type',
+                values='quantity'
+            ).reset_index()
+            df = df.fillna(0)
+
         return df
 
 
@@ -259,7 +265,7 @@ class ENTSOEDataFetcher:
         new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
 
         if cached_data is not None:
-            df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time', 'psr_type'], keep='last')
+            df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time'], keep='last')
         else:
             df = new_df
 
@@ -325,6 +331,14 @@ class ENTSOEDataFetcher:
         if df.empty:
             return df
 
+        #Handle the case where psr_type is not a column (flow data)
+        if 'psr_type' not in df.columns:
+            df = df.set_index('start_time')
+            df = df['quantity'].resample(self.STANDARD_GRANULARITY, offset='0H', label='left', closed='left').mean().reset_index()
+            df['end_time'] = df['start_time'] + self.STANDARD_GRANULARITY
+            df['resolution'] = self.STANDARD_GRANULARITY
+            return df
+
         max_resolution = df['resolution'].max()
         if max_resolution > timedelta(hours=1):
             raise ValueError(
@@ -333,29 +347,28 @@ class ENTSOEDataFetcher:
                 "the standard 1 hour granularity."
             )
 
-        df = df.sort_values('start_time').set_index('start_time')
+        df = df.set_index('start_time')
 
         # Group by psr_type and resample
         resampled_data = []
-        for psr_type, group in df.groupby('psr_type'):
-            resampled = group['quantity'].resample(
-                self.STANDARD_GRANULARITY,
-                offset='0H',  # Start periods at 00 minutes
-                label='left',  # Use the start of the period as the label
-                closed='left'  # Include the left boundary of the interval
-            ).mean()
+        for col in df.columns:
+            if col != 'end_time' and col != 'resolution':
+                resampled = df[col].resample(
+                    self.STANDARD_GRANULARITY,
+                    offset='0H',  # Start periods at 00 minutes
+                    label='left',  # Use the start of the period as the label
+                    closed='left'  # Include the left boundary of the interval
+                ).mean()
 
-            resampled = resampled.reset_index()
-            resampled['psr_type'] = psr_type
-            resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
-            resampled_data.append(resampled)
+                resampled = resampled.reset_index()
+                resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
+                resampled['resolution'] = self.STANDARD_GRANULARITY
+                resampled_data.append(resampled)
 
         if not resampled_data:
             return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution'])
 
         result = pd.concat(resampled_data, ignore_index=True)
-        result['resolution'] = self.STANDARD_GRANULARITY
-
         return result
 
     def check_data_gaps(self, df: pd.DataFrame, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
