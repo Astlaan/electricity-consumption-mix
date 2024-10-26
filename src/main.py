@@ -29,6 +29,9 @@ async def main():
         return
 
     data_fetcher = ENTSOEDataFetcher()
+    
+    if args.reset_cache:
+        data_fetcher.reset_cache()
 
     start_date = args.start_date
     end_date = args.end_date
@@ -56,6 +59,7 @@ def parse_arguments():
                        help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)")
     parser.add_argument("--visualization", choices=['none', 'simple', 'detailed', 'nested'],
                        default='none', help="Type of visualization to generate")
+    parser.add_argument("--reset_cache", action='store_true', help="Reset the data cache")
     return parser.parse_args()
 
 def parse_datetime(value):

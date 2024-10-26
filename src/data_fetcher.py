@@ -10,7 +10,7 @@ import aiohttp
 import asyncio
 import logging
 from api_token import API_TOKEN
-
+import shutil
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -433,3 +433,11 @@ class ENTSOEDataFetcher:
             'coverage_percentage': (actual_intervals / expected_intervals) * 100 if expected_intervals > 0 else 0.0,
             'missing_times': missing_times.tolist()  # For detailed analysis if needed
         }
+
+    def reset_cache(self):
+        """Delete all cached data."""
+        if os.path.exists(self.CACHE_DIR):
+            print(f"Deleting cache directory: {self.CACHE_DIR}")
+            shutil.rmtree(self.CACHE_DIR)
+            os.makedirs(self.CACHE_DIR)  # Recreate empty cache dir
+
