@@ -335,45 +335,28 @@ class ENTSOEDataFetcher:
         if df.empty:
             return df
 
-        #Handle the case where psr_type is not a column (flow data)
-        if 'psr_type' not in df.columns:
-            df = df.set_index('start_time')
-            df = df['quantity'].resample(self.STANDARD_GRANULARITY, offset='0H', label='left', closed='left').mean().reset_index()
-            df['end_time'] = df['start_time'] + self.STANDARD_GRANULARITY
-            df['resolution'] = self.STANDARD_GRANULARITY
-            return df
-
-        max_resolution = df['resolution'].max()
-        if max_resolution > timedelta(hours=1):
-            raise ValueError(
-                "Resolution must be 1 hour or less. "
-                f"Found data with granularity {max_resolution} which is larger than "
-                "the standard 1 hour granularity."
-            )
-
+        # Set start_time as index for resampling
         df = df.set_index('start_time')
 
-        # Group by psr_type and resample
-        resampled_data = []
-        for col in df.columns:
-            if col != 'end_time' and col != 'resolution':
-                resampled = df[col].resample(
-                    self.STANDARD_GRANULARITY,
-                    offset='0H',  # Start periods at 00 minutes
-                    label='left',  # Use the start of the period as the label
-                    closed='left'  # Include the left boundary of the interval
-                ).mean()
+        # Get all columns except end_time and resolution
+        value_columns = [col for col in df.columns if col not in ['end_time', 'resolution']]
 
-                resampled = resampled.reset_index()
-                resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
-                resampled['resolution'] = self.STANDARD_GRANULARITY
-                resampled_data.append(resampled)
+        # Resample each value column
+        resampled = df[value_columns].resample(
+            self.STANDARD_GRANULARITY,
+            offset='0H',  # Start periods at 00 minutes
+            label='left',  # Use the start of the period as the label
+            closed='left'  # Include the left boundary of the interval
+        ).mean()
 
-        if not resampled_data:
-            return pd.DataFrame(columns=['start_time', 'end_time', 'psr_type', 'quantity', 'resolution'])
+        # Reset index to get start_time as a column
+        resampled = resampled.reset_index()
+        
+        # Add end_time and resolution columns
+        resampled['end_time'] = resampled['start_time'] + self.STANDARD_GRANULARITY
+        resampled['resolution'] = self.STANDARD_GRANULARITY
 
-        result = pd.concat(resampled_data, ignore_index=True)
-        return result
+        return resampled
 
     def check_data_gaps(self, df: pd.DataFrame, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
         """Check for gaps in time series data.
