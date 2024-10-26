@@ -41,16 +41,23 @@ class ElectricityMixCalculator:
     def _group_generation_data(self, df):
         if df.empty:
             return pd.DataFrame()
-        df['hour'] = df['start_time'].dt.floor('H')
-        print(df)
+        
+        # Add hour column if not present
+        if 'hour' not in df.columns:
+            df['hour'] = df['start_time'].dt.floor('H')
+        
+        # Check if data is already pivoted (B01, B02, etc. as columns)
+        psr_columns = [col for col in df.columns if col.startswith('B')]
+        if psr_columns:
+            # Data is already pivoted, just set index to hour and select PSR columns
+            return df.set_index('hour')[psr_columns]
+        
+        # If not pivoted, use the original grouping logic
         try:
             grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
             return grouped
         except Exception as e:
-            print("Failed grouping by psr")
-            print(df)
-            print(f"Error: {e}")
-            # Return empty DataFrame with same structure instead of undefined grouped variable
+            print(f"Error in grouping: {e}")
             return pd.DataFrame(columns=['hour'] + [col for col in df.columns if col != 'hour'])
 
     def _calculate_net_imports(self, imports, exports):
