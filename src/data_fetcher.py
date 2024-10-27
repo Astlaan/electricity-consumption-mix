@@ -9,7 +9,6 @@ from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
 import logging
-from api_token import API_TOKEN
 import shutil
 
 logging.basicConfig(level=logging.DEBUG)
@@ -24,7 +23,7 @@ class ENTSOEDataFetcher:
     STANDARD_GRANULARITY = timedelta(hours=1)  # Set the standard granularity to 1 hour
 
     def __init__(self):
-        self.security_token = API_TOKEN
+        self.security_token = os.getenv('ENTSOE_API_KEY')
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
