@@ -8,7 +8,7 @@ from utils import get_active_psr_in_dataframe
 
 
 def plot(data: Data):
-    data.flow_pt_to_es["Power"]
+    power_pt_to_es = data.flow_pt_to_es["Power"]
 
 
 def plot_source_country_pie(self, df: pd.DataFrame) -> None:

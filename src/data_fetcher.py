@@ -89,13 +89,11 @@ class ENTSOEDataFetcher:
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
         logger.debug(f"Attempting to save cache file: {cache_name}")
 
+        # # Save column order in metadata
+        # metadata["column_order"] = data.columns.tolist()
+
         # Use asyncio.to_thread for the pandas operation since it's CPU-bound
         await asyncio.to_thread(data.to_parquet, cache_file)
-
-        if "resolution" in metadata and isinstance(
-            metadata["resolution"], pd.Timedelta
-        ):
-            metadata["resolution"] = str(metadata["resolution"])
 
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         async with aiofiles.open(metadata_file, "w") as f:
@@ -109,10 +107,15 @@ class ENTSOEDataFetcher:
 
         if os.path.exists(cache_file) and os.path.exists(metadata_file):
             # Use asyncio.to_thread for the pandas operation since it's CPU-bound
-            data = await asyncio.to_thread(pd.read_parquet, cache_file)
             try:
                 async with aiofiles.open(metadata_file, "r") as f:
                     metadata = json.loads(await f.read())
+
+                data = await asyncio.to_thread(pd.read_parquet, cache_file)
+
+                # # Restore column order from metadata if available
+                # if "column_order" in metadata:
+                #     data = data[metadata["column_order"]]
 
                 # Convert string representation back to Timedelta if necessary
                 if "resolution" in metadata and isinstance(metadata["resolution"], str):
@@ -147,7 +150,10 @@ class ENTSOEDataFetcher:
 
     async def _async_parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
         """Async wrapper for XML parsing"""
-        return await asyncio.to_thread(self._parse_xml_internal, xml_data)
+        df = await asyncio.to_thread(self._parse_xml_internal, xml_data)
+        df = utils.resample_to_standard_granularity(df, self.STANDARD_GRANULARITY)
+        return df
+    
 
     def _parse_xml_internal(self, xml_data: str) -> pd.DataFrame:
         """Synchronous XML parsing function to run in thread pool"""
@@ -158,7 +164,7 @@ class ENTSOEDataFetcher:
         document_type = root.find(".//ns:type", namespace)
         is_flow_data = document_type is not None and document_type.text == "A11"
 
-        # Pre-compile XPath expressions for better performance
+        # XPath expressions 
         time_series_path = ".//ns:TimeSeries"
         psr_type_path = ".//ns:psrType"
         period_path = ".//ns:Period"
@@ -226,6 +232,7 @@ class ENTSOEDataFetcher:
 
         # Pivot the DataFrame if it's generation data
         if not df.empty and "psr_type" in df.columns:
+            # TODO: Fails without this duplicate finding, figure out why
             # First aggregate any duplicate entries by taking the mean
             df = (
                 df.groupby(["start_time", "end_time", "resolution", "psr_type"])[
@@ -241,21 +248,16 @@ class ENTSOEDataFetcher:
                 columns="psr_type",
                 values="quantity",
             ).reset_index()
-            df = df.fillna(0)
-
-            # Resample after pivoting
-            df = df.set_index("start_time")
-            resampled = df.resample(
-                self.STANDARD_GRANULARITY, offset="0H", label="left", closed="left"
-            ).mean()
-
-            # Reset index and add required columns
-            df = resampled.reset_index()
-            df["end_time"] = df["start_time"] + self.STANDARD_GRANULARITY
-            df["resolution"] = self.STANDARD_GRANULARITY
+            # df = df.fillna(0) # TODO: is this fine?
 
             # Remove column name from the pivot operation
             df.columns.name = None
+            
+            # Reorder columns to ensure end_time is second
+            cols = df.columns.tolist()
+            cols.remove('end_time')
+            cols.insert(1, 'end_time')
+            df = df[cols]
         return df
 
     async def _make_request_async(
@@ -327,7 +329,6 @@ class ENTSOEDataFetcher:
             )
 
         # Fetch new data
-        logger.debug("Fetching new data")
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
         new_df = await asyncio.gather(
             *[self._async_parse_xml_to_dataframe(xml) for xml in xml_chunks]
@@ -363,9 +364,7 @@ class ENTSOEDataFetcher:
         }
 
         df = await self._fetch_and_cache_data(params, start_date, end_date)
-        result = self._resample_to_standard_granularity(df)
-        # logger.debug(f"Returning result with shape: {result.shape}")
-        return result
+        return df
 
     async def _async_get_physical_flows(
         self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime
@@ -377,38 +376,7 @@ class ENTSOEDataFetcher:
         }
 
         df = await self._fetch_and_cache_data(params, start_date, end_date)
-        return self._resample_to_standard_granularity(df)
-
-    def _resample_to_standard_granularity(self, df: pd.DataFrame) -> pd.DataFrame:
-        if df.empty:
-            return df
-
-        # Set start_time as index for resampling
-        df = df.set_index("start_time")
-
-        # Get all numeric columns for resampling
-        value_columns = df.select_dtypes(include=["float64", "int64"]).columns
-
-        # Resample each value column
-        resampled = (
-            df[value_columns]
-            .resample(
-                self.STANDARD_GRANULARITY,
-                offset="0H",  # Start periods at 00 minutes
-                label="left",  # Use the start of the period as the label
-                closed="left",  # Include the left boundary of the interval
-            )
-            .mean()
-        )
-
-        # Reset index to make start_time a column again
-        resampled = resampled.reset_index()
-
-        # Add end_time and resolution columns
-        resampled["end_time"] = resampled["start_time"] + self.STANDARD_GRANULARITY
-        resampled["resolution"] = self.STANDARD_GRANULARITY
-
-        return resampled
+        return df
 
     def reset_cache(self):
         """Delete all cached data."""
