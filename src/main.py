@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
 from utils import validate_inputs
+import analyzer
 
 
 def main():
@@ -23,6 +24,14 @@ def main():
     end_date = args.end_date
 
     data = data_fetcher.get_data(start_date, end_date)
+
+    if args.visualize == "simple":
+        analyzer.plot(data)
+    elif args.visualize == "country-source":
+        pass
+    elif args.visualize == "source-country":
+        pass
+
 
 
 def parse_arguments():
@@ -42,8 +51,8 @@ def parse_arguments():
         help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
     parser.add_argument(
-        "--visualization",
-        choices=["none", "simple", "detailed", "nested"],
+        "--visualize",
+        choices=["none", "simple", "country-source", "source-country"],
         default="none",
         help="Type of visualization to generate",
     )
