@@ -102,10 +102,10 @@ class ENTSOEDataFetcher:
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
 
         data = []
-        for time_series in root.findall(".//ns:TimeSeries", namespace):
-            document_type = root.find(".//ns:documentType", namespace)
-            is_flow_data = document_type is not None and document_type.text == 'A11'
+        document_type = root.find(".//ns:documentType", namespace)
+        is_flow_data = document_type is not None and document_type.text == 'A11'
 
+        for time_series in root.findall(".//ns:TimeSeries", namespace):
             psr_type = None
             if not is_flow_data:
                 psr_type_elem = time_series.find(".//ns:psrType", namespace)
@@ -137,19 +137,24 @@ class ENTSOEDataFetcher:
                 data_point = {
                     'start_time': point_start_time,
                     'end_time': point_end_time,
-                    'quantity': float(quantity.text),
                     'resolution': resolution
                 }
 
-                if not is_flow_data and psr_type is not None:
+                # Use 'Power' column name for flow data, otherwise use quantity with psr_type
+                if is_flow_data:
+                    data_point['Power'] = float(quantity.text)
+                else:
+                    data_point['quantity'] = float(quantity.text)
                     data_point['psr_type'] = psr_type
 
                 data.append(data_point)
 
         if not data:
-            columns = ['start_time', 'end_time', 'quantity', 'resolution']
-            if not is_flow_data:
-                columns.append('psr_type')
+            columns = ['start_time', 'end_time', 'resolution']
+            if is_flow_data:
+                columns.append('Power')
+            else:
+                columns.extend(['quantity', 'psr_type'])
             return pd.DataFrame(columns=columns)
 
         df = pd.DataFrame(data)
