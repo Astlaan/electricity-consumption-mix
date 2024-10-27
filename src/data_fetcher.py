@@ -112,31 +112,41 @@ class ENTSOEDataFetcher:
                 return df['start_time'].max()
         return None
 
-    def _parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
-        logger.debug(f"Raw XML (first 500 chars): {xml_data[:500]}")
+    async def _parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
+        """Async wrapper for XML parsing"""
+        return await asyncio.to_thread(self._parse_xml_sync, xml_data)
+
+    def _parse_xml_sync(self, xml_data: str) -> pd.DataFrame:
+        """Synchronous XML parsing function to run in thread pool"""
         root = ET.fromstring(xml_data)
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
 
         data = []
-        # Corrected line to find 'type' instead of 'documentType'
         document_type = root.find(".//ns:type", namespace)
         is_flow_data = document_type is not None and document_type.text == 'A11'
 
-        logger.debug(f"Document type: {document_type.text if document_type is not None else 'None'}")
-        logger.debug(f"Is flow data: {is_flow_data}")
+        # Pre-compile XPath expressions for better performance
+        time_series_path = ".//ns:TimeSeries"
+        psr_type_path = ".//ns:psrType"
+        period_path = ".//ns:Period"
+        start_path = ".//ns:start"
+        resolution_path = ".//ns:resolution"
+        point_path = ".//ns:Point"
+        position_path = "ns:position"
+        quantity_path = "ns:quantity"
 
-        for time_series in root.findall(".//ns:TimeSeries", namespace):
+        for time_series in root.findall(time_series_path, namespace):
             psr_type = None
             if not is_flow_data:
-                psr_type_elem = time_series.find(".//ns:psrType", namespace)
+                psr_type_elem = time_series.find(psr_type_path, namespace)
                 psr_type = psr_type_elem.text if psr_type_elem is not None else "Unknown"
 
-            period = time_series.find(".//ns:Period", namespace)
+            period = time_series.find(period_path, namespace)
             if period is None:
                 continue
 
-            start_time = period.find(".//ns:start", namespace)
-            resolution = period.find(".//ns:resolution", namespace)
+            start_time = period.find(start_path, namespace)
+            resolution = period.find(resolution_path, namespace)
 
             if start_time is None or resolution is None:
                 continue
@@ -144,9 +154,9 @@ class ENTSOEDataFetcher:
             start_time = pd.to_datetime(start_time.text).tz_localize(None)
             resolution = pd.Timedelta(resolution.text)
 
-            for point in period.findall(".//ns:Point", namespace):
-                position = point.find("ns:position", namespace)
-                quantity = point.find("ns:quantity", namespace)
+            for point in period.findall(point_path, namespace):
+                position = point.find(position_path, namespace)
+                quantity = point.find(quantity_path, namespace)
 
                 if position is None or quantity is None:
                     continue
@@ -169,9 +179,6 @@ class ENTSOEDataFetcher:
 
                 data.append(data_point)
 
-        logger.debug(f"Data points: {data[:2]}")  # Show first two data points
-        logger.debug(f"Columns in data: {list(data[0].keys()) if data else 'No data'}")
-
         if not data:
             columns = ['start_time', 'end_time', 'resolution']
             if is_flow_data:
@@ -181,8 +188,6 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=columns)
 
         df = pd.DataFrame(data)
-
-        logger.debug(f"DataFrame columns: {df.columns.tolist()}")
 
         # Pivot the DataFrame if it's generation data
         if not df.empty and 'psr_type' in df.columns:
@@ -291,7 +296,8 @@ class ENTSOEDataFetcher:
         # Fetch new data
         logger.debug("Fetching new data")
         xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
-        new_df = pd.concat([self._parse_xml_to_dataframe(xml) for xml in xml_chunks], ignore_index=True)
+        new_df = await asyncio.gather(*[self._parse_xml_to_dataframe(xml) for xml in xml_chunks])
+        new_df = pd.concat(new_df, ignore_index=True)
 
         if cached_data is not None:
             df = pd.concat([cached_data[0], new_df]).drop_duplicates(subset=['start_time'], keep='last')
