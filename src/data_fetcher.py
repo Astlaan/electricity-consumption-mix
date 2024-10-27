@@ -103,7 +103,8 @@ class ENTSOEDataFetcher:
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
 
         data = []
-        document_type = root.find(".//ns:documentType", namespace)
+        # Corrected line to find 'type' instead of 'documentType'
+        document_type = root.find(".//ns:type", namespace)
         is_flow_data = document_type is not None and document_type.text == 'A11'
 
         logger.debug(f"Document type: {document_type.text if document_type is not None else 'None'}")
