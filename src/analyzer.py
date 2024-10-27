@@ -9,6 +9,7 @@ from utils import get_active_psr_in_dataframe
 
 def plot(data: Data):
     power_pt_to_es = data.flow_pt_to_es["Power"]
+    data.generation_pt.columns.intersection(PSR_TYPE_MAPPING.keys())
 
 
 def plot_source_country_pie(self, df: pd.DataFrame) -> None:
