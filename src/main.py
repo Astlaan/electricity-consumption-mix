@@ -6,22 +6,26 @@ import argparse
 import pandas as pd
 from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher
-from calculator import ElectricityMixCalculator
 from utils import validate_inputs, aggregate_results
-from visualizer import ElectricityMixVisualizer
+from analyzer import ElectricityMixAnalyzer
 
 async def fetch_data(fetcher, country, start_date, end_date):
     print(f"Fetching {country} data...")
-    if country == "Portugal":
-        generation = await fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
-        imports = await fetcher.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
-        exports = await fetcher.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
-        return {'generation': generation, 'imports': imports, 'exports': exports}
-    elif country == "Spain":
-        generation = await fetcher.get_generation_data_async('10YES-REE------0', start_date, end_date)
-        return {'generation': generation}
-    else:
-        raise ValueError(f"Unsupported country: {country}")
+    try:
+        if country == "Portugal":
+            generation = await fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
+            imports = await fetcher.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
+            exports = await fetcher.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
+            return {'generation': generation, 'imports': imports, 'exports': exports}
+        elif country == "Spain":
+            generation = await fetcher.get_generation_data_async('10YES-REE------0', start_date, end_date)
+            return {'generation': generation}
+        else:
+            raise ValueError(f"Unsupported country: {country}")
+    except Exception as e:
+        print(f"Error fetching data for {country}: {e}")
+        return {}
+
 
 async def main():
     args = parse_arguments()
@@ -40,19 +44,10 @@ async def main():
         pt_data = await fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = await fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        # Calculate electricity mix
-        calculator = ElectricityMixCalculator()
-        results = calculator.calculate_mix(pt_data, es_data)
-
-        # Create and show visualization if requested
+        # Analyze and visualize electricity mix
+        analyzer = ElectricityMixAnalyzer()
         if args.visualization != 'none':
-            visualizer = ElectricityMixVisualizer()
-            if args.visualization == 'simple':
-                visualizer.plot_simple_pie(results)
-            elif args.visualization == 'detailed':
-                visualizer.plot_source_country_pie(results)
-            elif args.visualization == 'nested':
-                visualizer.plot_nested_pie(results)
+            analyzer.analyze_and_visualize(pt_data, es_data, args.visualization)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -77,20 +72,6 @@ def parse_datetime(value):
         except ValueError:
             raise argparse.ArgumentTypeError(f"Invalid date or datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.")
 
-def print_data_summary(data, country):
-    print(f"\n{country} data:")
-    for key, df in data.items():
-        print(f"{key}:")
-        print(f"  Shape: {df.shape}")
-        print(f"  Columns: {df.columns.tolist()}")
-        if not df.empty:
-            print(f"  Date range: {df['start_time'].min()} to {df['start_time'].max()}")
-            print(f"  Sample data:\n{df.head()}\n")
-        else:
-            print("  DataFrame is empty\n")
-
-def print_results(results, args):
-    pass #Function body removed because it was entirely commented out
 
 if __name__ == "__main__":
     asyncio.run(main())
