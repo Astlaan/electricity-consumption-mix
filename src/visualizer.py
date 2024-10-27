@@ -35,7 +35,17 @@ class ElectricityMixVisualizer:
     def _aggregate_by_source_type(self, df: pd.DataFrame) -> pd.Series:
         """Aggregate data by source type only."""
         df = self._clean_data(df)
-        return df.mean()  # Using mean for the time period
+        
+        # Create a mapping from B-codes to source types
+        from utils import PSR_TYPE_MAPPING
+        
+        # Rename columns from B-codes to source types
+        renamed_data = df.rename(columns=PSR_TYPE_MAPPING)
+        
+        # Group by source type (in case multiple B-codes map to same source)
+        grouped_data = renamed_data.mean()
+        
+        return grouped_data
 
     def _split_by_country_and_source(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """Split data into Portuguese and Spanish sources."""
