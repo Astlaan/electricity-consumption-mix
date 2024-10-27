@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict
 from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
+from utils import get_active_psr_in_dataframe
 
 class ElectricityMixAnalyzer:
     def __init__(self):
