@@ -6,8 +6,31 @@ from typing import Dict
 from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe
 
+def ensure_index_and_sorting(data: Data):
+    # This is handy while the stash fixing saved/loaded indexes is not fixed
+    def _ensure_index_and_sorting(df):
+        if 'start_time' in df.columns:
+            df = df.set_index('start_time')
+            df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        return df
+    
+    data.generation_pt = _ensure_index_and_sorting(data.generation_pt)
+    data.generation_es = _ensure_index_and_sorting(data.generation_es)
+    data.flow_pt_to_es = _ensure_index_and_sorting(data.flow_pt_to_es)
+    data.flow_es_to_pt = _ensure_index_and_sorting(data.flow_es_to_pt)
+
+    return data
+
+
+
 
 def plot(data: Data):
+
+    # If start_time is a column, set it as index. If it's already the index, nothing changes
+    data = ensure_index_and_sorting(data)
+
+
     power_pt_to_es = data.flow_pt_to_es["Power"]
     data.generation_pt.columns.intersection(PSR_TYPE_MAPPING.keys())
 
