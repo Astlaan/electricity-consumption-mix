@@ -11,6 +11,7 @@ import asyncio
 import logging
 import shutil
 from dataclasses import dataclass
+import aiofiles
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -57,30 +58,34 @@ class ENTSOEDataFetcher:
         
         raise ValueError(f"Unsupported combination of document type and domains")
 
-    def _save_to_cache(self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]):
+    async def _save_to_cache(self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]):
         cache_name = self._get_cache_filename(params)
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
         print(f"Attempting to save cache file: {cache_file}")
-        data.to_parquet(cache_file)
+        
+        # Use asyncio.to_thread for the pandas operation since it's CPU-bound
+        await asyncio.to_thread(data.to_parquet, cache_file)
         
         if 'resolution' in metadata and isinstance(metadata['resolution'], pd.Timedelta):
             metadata['resolution'] = str(metadata['resolution'])
 
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         logger.debug(f"Attempting to save metadata file: {metadata_file}")
-        with open(metadata_file, 'w') as f:
-            json.dump(metadata, f)
+        async with aiofiles.open(metadata_file, 'w') as f:
+            await f.write(json.dumps(metadata))
         logger.debug("Successfully saved cache files")
 
-    def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
+    async def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
         cache_name = self._get_cache_filename(params)
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
+        
         if os.path.exists(cache_file) and os.path.exists(metadata_file):
-            data = pd.read_parquet(cache_file)
+            # Use asyncio.to_thread for the pandas operation since it's CPU-bound
+            data = await asyncio.to_thread(pd.read_parquet, cache_file)
             try:
-                with open(metadata_file, 'r') as f:
-                    metadata = json.load(f)
+                async with aiofiles.open(metadata_file, 'r') as f:
+                    metadata = json.loads(await f.read())
 
                 # Convert string representation back to Timedelta if necessary
                 if 'resolution' in metadata and isinstance(metadata['resolution'], str):
@@ -99,8 +104,8 @@ class ENTSOEDataFetcher:
                 return None
         return None
 
-    def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
-        cached_data = self._load_from_cache(params)
+    async def _get_latest_cache_date(self, params: Dict[str, Any]) -> Optional[datetime]:
+        cached_data = await self._load_from_cache(params)
         if cached_data is not None:
             df, metadata = cached_data
             if not df.empty and 'start_time' in df.columns:
@@ -236,7 +241,7 @@ class ENTSOEDataFetcher:
         return loop.run_until_complete(run_async())
 
     async def _fetch_data_in_chunks(self, params: Dict[str, Any], start_date: datetime, end_date: datetime) -> List[str]:
-        latest_cache_date = self._get_latest_cache_date(params)
+        latest_cache_date = await self._get_latest_cache_date(params)
         if latest_cache_date is not None:
             start_date = max(start_date, latest_cache_date)
 
@@ -259,18 +264,8 @@ class ENTSOEDataFetcher:
     ) -> pd.DataFrame:
         if start_date >= end_date:
             raise ValueError("end_date must be greater than start_date")
-        """
-        Common logic for fetching and caching data from ENTSO-E API.
 
-        Args:
-            params: API request parameters
-            start_date: Start of requested period (inclusive)
-            end_date: End of requested period (exclusive)
-        Returns:
-            DataFrame with requested data
-        """
-
-        cached_data = self._load_from_cache(params)
+        cached_data = await self._load_from_cache(params)
 
         logger.debug(f"Requested date range: {start_date} to {end_date}")
 
@@ -279,7 +274,7 @@ class ENTSOEDataFetcher:
             cached_start = pd.to_datetime(metadata['start_date_inclusive'])
             cached_end = pd.to_datetime(metadata['end_date_exclusive'])
 
-            # Note: end_date is exclusive, so cached_end should be >= end_date
+        # Note: end_date is exclusive, so cached_end should be >= end_date
             if cached_start <= start_date and cached_end >= end_date:
                 logger.debug(f"[_fetch_and_cache_data]: FULL CACHE HIT\n{params}\nstart: {start_date}\nend: {end_date}")
                 # Note: end_time < end_date because end_date is exclusive
@@ -292,15 +287,6 @@ class ENTSOEDataFetcher:
                 logger.debug(f"Adjusted start_date to {start_date}")
         else:
             logger.debug(f"[_fetch_and_cache_data]: CACHE MISS\n{params}\nstart: {start_date}\nend: {end_date}")
-            is_testing = os.getenv('ENTSOE_TESTING', '').lower() == 'true'
-
-            # if not is_testing:
-            #     if tuple(params.items()) in self.is_initialized:
-            #         raise ValueError(f"ERROR: Database attempted a 2nd initialization!\n params: {params}")
-            #     start_date = datetime(2010, 1, 1, 0, 0)
-            #     logger.info("Initializing database with historical data since 2010...")
-            #     self.is_initialized[tuple(params.items())] = True
-
 
         # Fetch new data
         logger.debug("Fetching new data")
@@ -318,7 +304,7 @@ class ENTSOEDataFetcher:
                 'end_date_exclusive': df['end_time'].max().isoformat(),
             }
             metadata.update(params)
-            self._save_to_cache(params, df, metadata)
+            await self._save_to_cache(params, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")
 
         return df[(df['start_time'] >= start_date) & (df['start_time'] < end_date)]
