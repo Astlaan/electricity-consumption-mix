@@ -10,11 +10,20 @@ import aiohttp
 import asyncio
 import logging
 import shutil
+from dataclasses import dataclass
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Note: All datetimes are assumed to be in UTC, even though they're stored as naive datetimes
+
+
+@dataclass
+class Data:
+    generation_pt: pd.DataFrame
+    generation_es: pd.DataFrame
+    flow_es_to_pt: pd.DataFrame
+    flow_pt_to_es: pd.DataFrame
 
 
 class ENTSOEDataFetcher:
@@ -339,17 +348,34 @@ class ENTSOEDataFetcher:
         df = await self._fetch_and_cache_data(params, start_date, end_date)
         return self._resample_to_standard_granularity(df)
 
-    def get_portugal_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
-        loop = asyncio.get_event_loop()
-        generation = loop.run_until_complete(self.get_generation_data_async('10YPT-REN------W', start_date, end_date))
-        imports = loop.run_until_complete(self.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date))
-        exports = loop.run_until_complete(self.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date))
-        return {'generation': generation, 'imports': imports, 'exports': exports}
+    async def get_data(self, start_date: datetime, end_date: datetime) -> Data:
+        """Fetch all required data for Portugal and Spain in parallel.
 
-    def get_spain_data(self, start_date: datetime, end_date: datetime) -> Dict[str, pd.DataFrame]:
-        loop = asyncio.get_event_loop()
-        generation = loop.run_until_complete(self.get_generation_data_async('10YES-REE------0', start_date, end_date))
-        return {'generation': generation}
+        Args:
+            start_date: Start of period (inclusive)
+            end_date: End of period (exclusive)
+
+        Returns:
+            Data object containing all required dataframes
+        """
+        # Create all tasks
+        tasks = [
+            self.get_generation_data_async('10YPT-REN------W', start_date, end_date),  # PT generation
+            self.get_generation_data_async('10YES-REE------0', start_date, end_date),   # ES generation
+            self.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date),  # ES->PT flow
+            self.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date)   # PT->ES flow
+        ]
+        
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks)
+        
+        # Pack results into Data object
+        return Data(
+            generation_pt=results[0],
+            generation_es=results[1],
+            flow_es_to_pt=results[2],
+            flow_pt_to_es=results[3]
+        )
 
     def _resample_to_standard_granularity(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty:

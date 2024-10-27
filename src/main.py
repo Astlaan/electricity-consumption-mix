@@ -9,24 +9,6 @@ from data_fetcher import ENTSOEDataFetcher
 from utils import validate_inputs, aggregate_results
 from analyzer import ElectricityMixAnalyzer
 
-async def fetch_data(fetcher, country, start_date, end_date):
-    print(f"Fetching {country} data...")
-    try:
-        if country == "Portugal":
-            generation = await fetcher.get_generation_data_async('10YPT-REN------W', start_date, end_date)
-            imports = await fetcher.get_physical_flows_async('10YES-REE------0', '10YPT-REN------W', start_date, end_date)
-            exports = await fetcher.get_physical_flows_async('10YPT-REN------W', '10YES-REE------0', start_date, end_date)
-            return {'generation': generation, 'imports': imports, 'exports': exports}
-        elif country == "Spain":
-            generation = await fetcher.get_generation_data_async('10YES-REE------0', start_date, end_date)
-            return {'generation': generation}
-        else:
-            raise ValueError(f"Unsupported country: {country}")
-    except Exception as e:
-        print(f"Error fetching data for {country}: {e}")
-        return {}
-
-
 async def main():
     args = parse_arguments()
     if not validate_inputs(args):
@@ -41,8 +23,19 @@ async def main():
     end_date = args.end_date
 
     try:
-        pt_data = await fetch_data(data_fetcher, "Portugal", start_date, end_date)
-        es_data = await fetch_data(data_fetcher, "Spain", start_date, end_date)
+        # Fetch all data in parallel
+        data = await data_fetcher.get_data(start_date, end_date)
+        
+        # Create data dictionaries in the format expected by analyzer
+        pt_data = {
+            'generation': data.generation_pt,
+            'imports': data.flow_es_to_pt,
+            'exports': data.flow_pt_to_es
+        }
+        
+        es_data = {
+            'generation': data.generation_es
+        }
 
         # Analyze and visualize electricity mix
         analyzer = ElectricityMixAnalyzer()
