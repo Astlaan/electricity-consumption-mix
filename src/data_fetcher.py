@@ -98,12 +98,16 @@ class ENTSOEDataFetcher:
         return None
 
     def _parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
+        logger.debug(f"Raw XML (first 500 chars): {xml_data[:500]}")
         root = ET.fromstring(xml_data)
         namespace = {'ns': root.tag.split('}')[0].strip('{')}
 
         data = []
         document_type = root.find(".//ns:documentType", namespace)
         is_flow_data = document_type is not None and document_type.text == 'A11'
+
+        logger.debug(f"Document type: {document_type.text if document_type is not None else 'None'}")
+        logger.debug(f"Is flow data: {is_flow_data}")
 
         for time_series in root.findall(".//ns:TimeSeries", namespace):
             psr_type = None
@@ -149,6 +153,9 @@ class ENTSOEDataFetcher:
 
                 data.append(data_point)
 
+        logger.debug(f"Data points: {data[:2]}")  # Show first two data points
+        logger.debug(f"Columns in data: {list(data[0].keys()) if data else 'No data'}")
+
         if not data:
             columns = ['start_time', 'end_time', 'resolution']
             if is_flow_data:
@@ -158,6 +165,8 @@ class ENTSOEDataFetcher:
             return pd.DataFrame(columns=columns)
 
         df = pd.DataFrame(data)
+
+        logger.debug(f"DataFrame columns: {df.columns.tolist()}")
 
         # Pivot the DataFrame if it's generation data
         if not df.empty and 'psr_type' in df.columns:
