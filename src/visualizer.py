@@ -5,18 +5,7 @@ from typing import Dict, Optional
 
 class ElectricityMixVisualizer:
     def __init__(self):
-        # Define color schemes for different source types
-        self.source_colors = {
-            'Solar': '#FFD700',
-            'Wind': '#87CEEB',
-            'Hydro': '#4169E1',
-            'Nuclear': '#FF69B4',
-            'Fossil Gas': '#808080',
-            'Biomass': '#228B22',
-            'Geothermal': '#8B4513',
-            'Other': '#A9A9A9',
-            'unknown': '#A9A9A9'
-        }
+        self.cmap = plt.get_cmap('tab20')  # Using tab20 colormap which provides 20 distinct colors
         
         # Define country colors for multi-level charts
         self.country_colors = {
@@ -80,8 +69,8 @@ class ElectricityMixVisualizer:
             print("No non-zero data to plot")
             return
             
-        colors = [self.source_colors.get(source, self.source_colors['unknown']) 
-                 for source in data.index]
+        # Get colors from colormap
+        colors = self.cmap(np.linspace(0, 1, len(data)))
         
         plt.pie(data, labels=data.index, colors=colors, 
                 autopct='%1.1f%%', textprops={'fontsize': 8})
