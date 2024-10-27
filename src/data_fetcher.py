@@ -190,13 +190,23 @@ class ENTSOEDataFetcher:
                 columns='psr_type',
                 values='quantity'
             ).reset_index()
-            df = df.fillna(0) # TODO check if this is a good idea
+            df = df.fillna(0)
 
-            # Debug print statements
-            print("Column structure:", df.columns)
-            print("Column names:", list(df.columns.names))
+            # Resample after pivoting
+            df = df.set_index('start_time')
+            resampled = df.resample(
+                self.STANDARD_GRANULARITY,
+                offset='0H',
+                label='left',
+                closed='left'
+            ).mean()
+            
+            # Reset index and add required columns
+            df = resampled.reset_index()
+            df['end_time'] = df['start_time'] + self.STANDARD_GRANULARITY
+            df['resolution'] = self.STANDARD_GRANULARITY
 
-            # Remove psrType as the name of the column's index
+            # Remove column name from the pivot operation
             df.columns.name = None
         return df
 
