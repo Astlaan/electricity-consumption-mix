@@ -33,6 +33,8 @@ class ENTSOEDataFetcher:
 
     def __init__(self):
         self.security_token = os.getenv('ENTSOE_API_KEY')
+        if not self.security_token:
+            raise ValueError("ENTSOE_API_KEY environment variable is not set. Please set it with your ENTSO-E API key.")
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
