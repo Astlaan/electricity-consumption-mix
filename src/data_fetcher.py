@@ -384,8 +384,9 @@ class ENTSOEDataFetcher:
         # Set start_time as index for resampling
         df = df.set_index('start_time')
 
-        # Get all columns except end_time and resolution
-        value_columns = [col for col in df.columns if col not in ['end_time', 'resolution']]
+        # Get all numeric columns for resampling
+        # This will include B01, B02, etc. columns after pivoting
+        value_columns = df.select_dtypes(include=['float64', 'int64']).columns
 
         # Resample each value column
         resampled = df[value_columns].resample(
