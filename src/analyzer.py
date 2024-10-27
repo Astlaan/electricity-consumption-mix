@@ -1,41 +1,15 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from typing import Dict, Optional
-from utils import PSR_TYPE_MAPPING, get_active_psr_in_dataframe
+from typing import Dict
+from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
 
 class ElectricityMixAnalyzer:
     def __init__(self):
         # Visualization settings
         self.cmap = plt.get_cmap('tab20')
-        self.country_colors = {
-            'Portugal': '#006600',
-            'Spain': '#FF0000'
-        }
-        
-        # Define source colors mapping here
-        self.source_colors = {
-            'Biomass': '#8B4513',
-            'Fossil Brown coal/Lignite': '#A0522D',
-            'Fossil Coal-derived gas': '#A0522D',
-            'Fossil Gas': '#8B4513',
-            'Fossil Hard coal': '#A0522D',
-            'Fossil Oil': '#8B0000',
-            'Fossil Oil shale': '#8B0000',
-            'Fossil Peat': '#8B4513',
-            'Geothermal': '#800080',
-            'Hydro Pumped Storage': '#000080',
-            'Hydro Run-of-river and poundage': '#000080',
-            'Hydro Water Reservoir': '#000080',
-            'Marine': '#008080',
-            'Nuclear': '#FF0000',
-            'Other renewable': '#008000',
-            'Solar': '#FFD700',
-            'Waste': '#A0522D',
-            'Wind Offshore': '#ADD8E6',
-            'Wind Onshore': '#87CEEB',
-            'Other': '#808080'  # Default gray for unknown sources
-        }
+        self.country_colors = COUNTRY_COLORS
+        self.source_colors = SOURCE_COLORS
 
     def analyze_and_visualize(self, pt_data: dict, es_data: dict, viz_type: str = 'simple') -> None:
         """Main method to analyze data and create visualization"""
@@ -186,28 +160,12 @@ class ElectricityMixAnalyzer:
         
         return grouped_data
 
-    def _split_by_country_and_source(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
-        """Split data into Portuguese and Spanish sources."""
-        df = self._clean_data(df)
-        pt_sources = {}
-        es_sources = {}
-        
-        for col in df.columns:
-            if col.startswith('PT_'):
-                source = col[3:]
-                if df[col].mean() > 0:  # Only include non-zero sources
-                    pt_sources[source] = df[col].mean()
-            elif col.startswith('ES_'):
-                source = col[3:]
-                if df[col].mean() > 0:  # Only include non-zero sources
-                    es_sources[source] = df[col].mean()
-                
-        return {'Portugal': pd.Series(pt_sources), 'Spain': pd.Series(es_sources)}
-
     def _plot_source_country_pie(self, df: pd.DataFrame) -> None:
         plt.figure(figsize=(12, 10))
         
-        data_dict = self._split_by_country_and_source(df)
+        # Clean and prepare data
+        df = df.loc[:, (df != 0).any()]
+        df = df.fillna(0)
         
         # Prepare data for plotting
         labels = []
@@ -215,13 +173,16 @@ class ElectricityMixAnalyzer:
         colors = []
         
         for country in ['Portugal', 'Spain']:
-            country_data = data_dict[country]
-            if not country_data.empty:
-                for source, value in country_data.items():
-                    if value > 0:  # Only include non-zero values
-                        labels.append(f"{country}\n{source}")
-                        sizes.append(value)
-                        colors.append(self.source_colors.get(source, self.source_colors['Other']))
+            country_prefix = f"{country[:2]}_"
+            country_columns = [col for col in df.columns if col.startswith(country_prefix)]
+            
+            for col in country_columns:
+                source = col[3:]  # Remove country prefix
+                value = df[col].mean()
+                if value > 0:  # Only include non-zero values
+                    labels.append(f"{country}\n{source}")
+                    sizes.append(value)
+                    colors.append(self.source_colors.get(source, self.source_colors['Other']))
 
         if not sizes:
             print("No non-zero data to plot")
@@ -237,13 +198,14 @@ class ElectricityMixAnalyzer:
     def _plot_nested_pie(self, df: pd.DataFrame) -> None:
         plt.figure(figsize=(14, 12))
         
-        data_dict = self._split_by_country_and_source(df)
+        # Clean and prepare data
+        df = df.loc[:, (df != 0).any()]
+        df = df.fillna(0)
         
         # Prepare outer ring (countries)
-        country_sizes = []
-        for country in ['Portugal', 'Spain']:
-            country_data = data_dict[country]
-            country_sizes.append(country_data.sum() if not country_data.empty else 0)
+        pt_data = df[[col for col in df.columns if col.startswith('PT_')]].mean()
+        es_data = df[[col for col in df.columns if col.startswith('ES_')]].mean()
+        country_sizes = [pt_data.sum(), es_data.sum()]
                 
         if sum(country_sizes) == 0:
             print("No non-zero data to plot")
@@ -256,14 +218,13 @@ class ElectricityMixAnalyzer:
         source_colors = []
         source_labels = []
         
-        for country in ['Portugal', 'Spain']:
-            country_data = data_dict[country]
+        for country_data, country in zip([pt_data, es_data], ['Portugal', 'Spain']):
             if not country_data.empty:
                 for source, value in country_data.items():
                     if value > 0:  # Only include non-zero values
                         source_sizes.append(value)
-                        source_colors.append(self.source_colors.get(source, self.source_colors['Other']))
-                        source_labels.append(f"{country}\n{source}")
+                        source_colors.append(self.source_colors.get(source[3:], self.source_colors['Other']))
+                        source_labels.append(f"{country}\n{source[3:]}")
 
         # Plot outer ring (countries)
         plt.pie(country_sizes, colors=country_colors, radius=1.3,
@@ -280,11 +241,3 @@ class ElectricityMixAnalyzer:
         plt.axis('equal')
         plt.tight_layout()
         plt.show()
-
-    def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove columns with all zeros and handle NaN values."""
-        # Remove columns where all values are 0
-        df = df.loc[:, (df != 0).any()]
-        # Fill any NaN values with 0
-        df = df.fillna(0)
-        return df

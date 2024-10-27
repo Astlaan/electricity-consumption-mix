@@ -1,28 +1,6 @@
 from datetime import datetime
 import pandas as pd
-
-PSR_TYPE_MAPPING = {
-    'B01': 'Biomass',
-    'B02': 'Fossil Brown coal/Lignite',
-    'B03': 'Fossil Coal-derived gas',
-    'B04': 'Fossil Gas',
-    'B05': 'Fossil Hard coal',
-    'B06': 'Fossil Oil',
-    'B07': 'Fossil Oil shale',
-    'B08': 'Fossil Peat',
-    'B09': 'Geothermal',
-    'B10': 'Hydro Pumped Storage',
-    'B11': 'Hydro Run-of-river and poundage',
-    'B12': 'Hydro Water Reservoir',
-    'B13': 'Marine',
-    'B14': 'Nuclear',
-    'B15': 'Other renewable',
-    'B16': 'Solar',
-    'B17': 'Waste',
-    'B18': 'Wind Offshore',
-    'B19': 'Wind Onshore',
-    'B20': 'Other',
-}
+from config import PSR_TYPE_MAPPING
 
 def validate_inputs(args):
     if args.start_date >= args.end_date:
@@ -43,4 +21,3 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
 
 def get_active_psr_in_dataframe(df):
     return [col for col in df.columns if col in PSR_TYPE_MAPPING]
-
