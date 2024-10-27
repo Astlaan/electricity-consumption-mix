@@ -52,21 +52,23 @@ class ElectricityMixCalculator:
             # Data is already pivoted, just set index to hour and select PSR columns
             return df.set_index('hour')[psr_columns]
         
-        # If not pivoted, use the original grouping logic
+        # If not pivoted, use the original grouping logic (should not happen with new format)
         try:
             grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
             return grouped
         except Exception as e:
             print(f"Error in grouping: {e}")
-            return pd.DataFrame(columns=['hour'] + [col for col in df.columns if col != 'hour'])
+            return pd.DataFrame()
 
     def _calculate_net_imports(self, imports, exports):
         if imports.empty and exports.empty:
             return pd.Series(dtype=float)
+        
+        # Use 'Power' column instead of 'quantity'
         imports['hour'] = imports['start_time'].dt.floor('H')
         exports['hour'] = exports['start_time'].dt.floor('H')
-        imports_grouped = imports.groupby('hour')['quantity'].sum()
-        exports_grouped = exports.groupby('hour')['quantity'].sum()
+        imports_grouped = imports.groupby('hour')['Power'].sum()
+        exports_grouped = exports.groupby('hour')['Power'].sum()
         net_imports = imports_grouped.sub(exports_grouped, fill_value=0)
         return net_imports
 
