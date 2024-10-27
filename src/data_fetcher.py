@@ -254,8 +254,6 @@ class ENTSOEDataFetcher:
             params: API request parameters
             start_date: Start of requested period (inclusive)
             end_date: End of requested period (exclusive)
-            initialize_db: If True, fetch all historical data from 2010
-
         Returns:
             DataFrame with requested data
         """
@@ -284,12 +282,12 @@ class ENTSOEDataFetcher:
             logger.debug(f"[_fetch_and_cache_data]: CACHE MISS\n{params}\nstart: {start_date}\nend: {end_date}")
             is_testing = os.getenv('ENTSOE_TESTING', '').lower() == 'true'
 
-            if not is_testing:
-                if tuple(params.items()) in self.is_initialized:
-                    raise ValueError(f"ERROR: Database attempted a 2nd initialization!\n params: {params}")
-                start_date = datetime(2010, 1, 1, 0, 0)
-                logger.info("Initializing database with historical data since 2010...")
-                self.is_initialized[tuple(params.items())] = True
+            # if not is_testing:
+            #     if tuple(params.items()) in self.is_initialized:
+            #         raise ValueError(f"ERROR: Database attempted a 2nd initialization!\n params: {params}")
+            #     start_date = datetime(2010, 1, 1, 0, 0)
+            #     logger.info("Initializing database with historical data since 2010...")
+            #     self.is_initialized[tuple(params.items())] = True
 
 
         # Fetch new data
