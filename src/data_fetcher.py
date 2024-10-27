@@ -180,8 +180,14 @@ class ENTSOEDataFetcher:
                 columns='psr_type',
                 values='quantity'
             ).reset_index()
-            df = df.fillna(0)
+            df = df.fillna(0) # TODO check if this is a good idea
 
+            # Debug print statements
+            print("Column structure:", df.columns)
+            print("Column names:", list(df.columns.names))
+
+            # Remove psrType as the name of the column's index
+            df.columns.name = None
         return df
 
 

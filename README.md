@@ -4,9 +4,12 @@
 
 - There may be gaps in the data, due to information outages. How to deal with these?
 - Will the mean work well if there are gaps in the data? Ex. in one of the hours, only 3 blocks exist due to data outage? (Have to check if production zero of a source is represented in the data by an absense or a zero)
-- I may be forcing a convertion from NaN to 0 somewhere, check if it is sensible. 
+- I may be forcing a convertion from NaN to 0 somewhere, check if it is sensible.
+- Actual Consumption from the energy sources themselves is not being considered. Take a look at how big they are and if they really should be included 
 
-- Physical flows are not working properly? data is wrong 
+- Remove psr_type column from flows and generations
+- Fix column called "Unknown" in flow, should be quantity
+
 
 
 ## To-Do Features:

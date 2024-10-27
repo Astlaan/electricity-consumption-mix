@@ -1,4 +1,5 @@
 import pandas as pd
+from utils import PSR_TYPE_MAPPING, get_active_psr_in_dataframe
 
 class ElectricityMixCalculator:
     def calculate_mix(self, pt_data: dict, es_data: dict) -> pd.DataFrame:
@@ -47,18 +48,20 @@ class ElectricityMixCalculator:
             df['hour'] = df['start_time'].dt.floor('H')
         
         # Check if data is already pivoted (B01, B02, etc. as columns)
-        psr_columns = [col for col in df.columns if col.startswith('B')]
+        psr_columns = get_active_psr_in_dataframe(df)
         if psr_columns:
             # Data is already pivoted, just set index to hour and select PSR columns
             return df.set_index('hour')[psr_columns]
         
         # If not pivoted, use the original grouping logic (should not happen with new format)
-        try:
-            grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
-            return grouped
-        except Exception as e:
-            print(f"Error in grouping: {e}")
-            return pd.DataFrame()
+        # try:
+        #     grouped = df.groupby(['hour', 'psr_type'])['quantity'].sum().unstack(fill_value=0)
+        #     return grouped
+        # except Exception as e:
+        #     print(f"Error in grouping: {e}")
+        #     return pd.DataFrame()
+        raise ValueError("Unexpected data format: PSR types should be pre-pivoted in the input DataFrame")
+
 
     def _calculate_net_imports(self, imports, exports):
         if imports.empty and exports.empty:

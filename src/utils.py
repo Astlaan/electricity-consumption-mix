@@ -40,3 +40,7 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
 
     return results
 
+
+def get_active_psr_in_dataframe(df):
+    return [col for col in df.columns if col in PSR_TYPE_MAPPING]
+
