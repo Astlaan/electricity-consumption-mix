@@ -48,11 +48,11 @@ async def main():
         if args.visualization != 'none':
             visualizer = ElectricityMixVisualizer()
             if args.visualization == 'simple':
-                visualizer.create_simple_visualization(results)
+                visualizer.plot_simple_pie(results)
             elif args.visualization == 'detailed':
-                visualizer.create_detailed_visualization(results)
+                visualizer.plot_source_country_pie(results)
             elif args.visualization == 'nested':
-                visualizer.create_nested_visualization(results)
+                visualizer.plot_nested_pie(results)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
