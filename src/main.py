@@ -40,13 +40,19 @@ async def main():
         pt_data = await fetch_data(data_fetcher, "Portugal", start_date, end_date)
         es_data = await fetch_data(data_fetcher, "Spain", start_date, end_date)
 
-        # print_data_summary(pt_data, "Portugal")
-        # print_data_summary(es_data, "Spain")
-
-        # Calculate and print electricity mix
+        # Calculate electricity mix
         calculator = ElectricityMixCalculator()
         results = calculator.calculate_mix(pt_data, es_data)
-        # print_results(results, args)
+
+        # Create and show visualization if requested
+        if args.visualization != 'none':
+            visualizer = ElectricityMixVisualizer()
+            if args.visualization == 'simple':
+                visualizer.create_simple_visualization(results)
+            elif args.visualization == 'detailed':
+                visualizer.create_detailed_visualization(results)
+            elif args.visualization == 'nested':
+                visualizer.create_nested_visualization(results)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
