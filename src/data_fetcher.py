@@ -95,7 +95,7 @@ class ENTSOEDataFetcher:
         # metadata["column_order"] = data.columns.tolist()
 
         # Use asyncio.to_thread for the pandas operation since it's CPU-bound
-        await asyncio.to_thread(data.to_parquet, cache_file)
+        await asyncio.to_thread(data.to_parquet, cache_file, index=True)
 
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         async with aiofiles.open(metadata_file, "w") as f:
@@ -246,7 +246,8 @@ class ENTSOEDataFetcher:
 
             # Then pivot
             df = df.pivot(
-                index=["start_time", "end_time", "resolution"],
+                # index=["start_time", "end_time", "resolution"],
+                index="start_time", # if we want to drop the other columns
                 columns="psr_type",
                 values="quantity",
             ).reset_index()
@@ -256,6 +257,9 @@ class ENTSOEDataFetcher:
             df.columns.name = None
             
             # Reorder columns to ensure end_time is second
+
+        df = df.set_index(pd.to_datetime(df["start_time"])) # Make sure we set the index, even for flow data
+        if "end_time" in df.columns:
             cols = df.columns.tolist()
             cols.remove('end_time')
             cols.insert(1, 'end_time')
@@ -335,25 +339,25 @@ class ENTSOEDataFetcher:
         new_df = await asyncio.gather(
             *[self._async_parse_xml_to_dataframe(xml) for xml in xml_chunks]
         )
-        new_df = pd.concat(new_df, ignore_index=True)
+        new_df = pd.concat(new_df)
 
         if cached_data is not None:
-            df = pd.concat([cached_data[0], new_df]).drop_duplicates(
-                subset=["start_time"], keep="last"
-            )
+            df = pd.concat([cached_data[0], new_df])
+            df = df[~df.index.duplicated(keep='last')].sort_index()
+
         else:
             df = new_df
 
         if not df.empty:
             metadata = {
-                "start_date_inclusive": df["start_time"].min().isoformat(),
-                "end_date_exclusive": df["end_time"].max().isoformat(),
+                "start_date_inclusive": df.index.min().isoformat(),
+                "end_date_exclusive": df.index.max().isoformat(),
             }
             metadata.update(params)
             await self._save_to_cache(params, df, metadata)
             logger.debug(f"Saved to cache: {metadata}")
 
-        return df[(df["start_time"] >= start_date) & (df["start_time"] < end_date)]
+        return df[df.index.to_series().between(start_date, end_date, inclusive='left')]
 
     async def _async_get_generation_data(
         self, country_code: str, start_date: datetime, end_date: datetime
