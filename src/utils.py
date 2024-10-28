@@ -1,14 +1,23 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 import pandas as pd
 from config import PSR_TYPE_MAPPING
 
 
-def validate_inputs(args):
-    if args.start_date >= args.end_date:
-        print("Error: Start date must be before end date.")
-        return False
-    return True
+def validate_inputs(start_date, end_date):
+    def _assert_exact_hour(dt):
+        assert(dt.minute == 0 and dt.second == 0 and dt.microsecond == 0)
+
+    _assert_exact_hour(start_date)
+    _assert_exact_hour(end_date)
+
+    assert(end_date-start_date >= timedelta(hours=1))
+
+    current_day = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
+    
+    assert(start_date <= current_day)
+    assert(end_date <= current_day)
 
 
 def get_active_psr_in_dataframe(df):

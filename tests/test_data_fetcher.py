@@ -55,7 +55,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             "in_Domain": "10YPT-REN------W",
             "outBiddingZone_Domain": "10YPT-REN------W",
             "periodStart": "202401010000",
-            "periodEnd": "202401010100",  # 1 day
+            "periodEnd": "202401010100",  
         }
 
         # params['documentType'] = ""
@@ -63,6 +63,25 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         xml_data = self.fetcher._make_request(params)
         df = self.fetcher._parse_xml_to_dataframe(xml_data)
         print(df)
+        assert df.empty == False
+
+    def test_request_generation_es(self):
+        self.fetcher = ENTSOEDataFetcher()
+
+        params = {
+            "documentType": "A75",
+            "processType": "A16",
+            "in_Domain": "10YES-REE------0",
+            "outBiddingZone_Domain": "10YES-REE------0",
+            "periodStart": "202401010000",
+            "periodEnd": "202401010100",  
+        }
+
+        # params['documentType'] = ""
+
+        xml_data = self.fetcher._make_request(params)
+        df = self.fetcher._parse_xml_internal(xml_data)
+        print(df["B10"])
         assert df.empty == False
 
     def test_request_flow_pt_to_es(self):

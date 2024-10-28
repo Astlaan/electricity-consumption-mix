@@ -12,8 +12,6 @@ import analyzer
 
 def main():
     args = parse_arguments()
-    if not validate_inputs(args):
-        return
 
     data_fetcher = ENTSOEDataFetcher()
 

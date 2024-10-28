@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 class Data:
     generation_pt: pd.DataFrame
     generation_es: pd.DataFrame
-    flow_es_to_pt: pd.DataFrame
     flow_pt_to_es: pd.DataFrame
+    flow_es_to_pt: pd.DataFrame
 
 
 class ENTSOEDataFetcher:
@@ -54,6 +54,8 @@ class ENTSOEDataFetcher:
         Returns:
             Data object containing all required dataframes
         """
+
+        utils.validate_inputs(start_date, end_date)
 
         async def _async_get_data():
             return await asyncio.gather(
@@ -367,7 +369,7 @@ class ENTSOEDataFetcher:
         return df
 
     async def _async_get_physical_flows(
-        self, in_domain: str, out_domain: str, start_date: datetime, end_date: datetime
+        self, out_domain: str, in_domain: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         params = {
             "documentType": "A11",
