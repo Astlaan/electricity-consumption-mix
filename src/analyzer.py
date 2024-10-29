@@ -85,12 +85,14 @@ def plot(data: Data):
     print("consumption_per_source head:\n", consumption_per_source.head())
 
 
-    _plot_internal(consumption_per_source)
+    fig = _plot_internal(consumption_per_source)
     # TODO  maybe this doesn't work due to the Power column, that isn't matched in the other dfs?
     # probably fixed with the .values thing above
 
 
     # TODO: maybe this wont work since PT and ES don't have the same number of columns (ex. portugal doesnt have nuclear)
+
+    return fig # Return the figure object
 
 
 
@@ -177,9 +179,8 @@ def _plot_internal(df: pd.DataFrame) -> None:
     )
     
 
+    return fig
 
-
-    fig.show()
 
 
 def _plot_internal_2(df: pd.DataFrame) -> None:
@@ -241,7 +242,7 @@ def _plot_internal_2(df: pd.DataFrame) -> None:
         )]
     )
     
-    fig.show()
+    return fig
 
 def _format_date_range(df: pd.DataFrame) -> str:
     start_date = df.index.min()

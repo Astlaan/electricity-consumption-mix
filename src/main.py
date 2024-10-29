@@ -3,34 +3,21 @@ import logging
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 import argparse
-import pandas as pd
 from datetime import datetime
-from data_fetcher import ENTSOEDataFetcher
-from utils import validate_inputs
-import analyzer
-
+from core import generate_visualization
 
 def main():
     args = parse_arguments()
-
-    data_fetcher = ENTSOEDataFetcher()
-
-    if args.reset_cache:
-        data_fetcher.reset_cache()
-
-    start_date = args.start_date
-    end_date = args.end_date
-
-    data = data_fetcher.get_data(start_date, end_date)
-
-    if args.visualize == "simple":
-        analyzer.plot(data)
-    elif args.visualize == "country-source":
-        pass
-    elif args.visualize == "source-country":
-        pass
-
-
+    
+    fig = generate_visualization(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        visualize_type=args.visualize,
+        reset_cache=args.reset_cache
+    )
+    
+    if fig is not None:
+        fig.show()  # Show figure in browser for CLI usage
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
