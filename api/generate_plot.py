@@ -1,9 +1,18 @@
+import logging
+import sys
+import json
+import os
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime
-import json
-import sys
-import os
 from data_fetcher import ENTSOEDataFetcher
+
+# Configure logging to write to stderr which Vercel can capture
+logging.basicConfig(
+    stream=sys.stderr,
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add src directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -58,24 +67,24 @@ def handle_request(request_body):
 def check_cache_status():
     import sys
     import os
-    print(f"Python version: {sys.version}")
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Directory contents: {os.listdir('.')}")
+    logger.debug(f"Python version: {sys.version}")
+    logger.debug(f"Current working directory: {os.getcwd()}")
+    logger.debug(f"Directory contents: {os.listdir('.')}")
     
     cache_dir = ENTSOEDataFetcher.CACHE_DIR
-    print(f"Checking cache directory: {cache_dir}")  
+    logger.debug(f"Checking cache directory: {cache_dir}")  
     
     # Get absolute path
     abs_cache_dir = os.path.abspath(cache_dir)
-    print(f"Absolute cache path: {abs_cache_dir}")
+    logger.debug(f"Absolute cache path: {abs_cache_dir}")
     
     exists = os.path.exists(abs_cache_dir)
     files = os.listdir(abs_cache_dir) if exists else []
     is_empty = not exists or not files
     
-    print(f"Cache dir exists: {exists}")
-    print(f"Cache files: {files}")
-    print(f"Is empty: {is_empty}")
+    logger.debug(f"Cache dir exists: {exists}")
+    logger.debug(f"Cache files: {files}")
+    logger.debug(f"Is empty: {is_empty}")
     
     return {
         'statusCode': 200,
@@ -84,9 +93,11 @@ def check_cache_status():
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        logger.debug(f"Received GET request for path: {self.path}")
         if self.path == '/api/check_cache':
             result = check_cache_status()
             
+            logger.debug(f"Cache check result: {result}")
             self.send_response(result['statusCode'])
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -99,10 +110,13 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'Not found'}).encode('utf-8'))
 
     def do_POST(self):
+        logger.debug("Received POST request")
         content_length = int(self.headers['Content-Length'])
         request_body = self.rfile.read(content_length).decode('utf-8')
         
+        logger.debug(f"Request body: {request_body}")
         result = handle_request(request_body)
+        logger.debug(f"Handler result: {result}")
         
         self.send_response(result['statusCode'])
         self.send_header('Content-type', 'application/json')
