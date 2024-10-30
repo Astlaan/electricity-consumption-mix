@@ -11,6 +11,11 @@ def main():
 
     if args.initialize_cache:
         core.initialize_cache()
+        return
+
+    if args.start_date is None or args.end_date is None:
+        print("Error: --start_date and --end_date are required when not using --initialize-cache")
+        return
     
     fig = core.generate_visualization(
         start_date=args.start_date,
@@ -28,13 +33,13 @@ def parse_arguments():
     )
     parser.add_argument(
         "--start_date",
-        required=True,
+        required=False,
         type=parse_datetime,
         help="Start date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
     parser.add_argument(
         "--end_date",
-        required=True,
+        required=False,
         type=parse_datetime,
         help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
