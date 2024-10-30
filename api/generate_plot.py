@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import sys
 import os
+from data_fetcher import ENTSOEDataFetcher
 
 # Add src directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -54,7 +55,31 @@ def handle_request(request_body):
             'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
         }
 
+def check_cache_status():
+    cache_dir = ENTSOEDataFetcher.CACHE_DIR
+    # Check if directory exists and has files
+    is_empty = not os.path.exists(cache_dir) or not os.listdir(cache_dir)
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'is_empty': is_empty})
+    }
+
 class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/api/check_cache':
+            result = check_cache_status()
+            
+            self.send_response(result['statusCode'])
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(result['body'].encode('utf-8'))
+        else:
+            self.send_response(404)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': 'Not found'}).encode('utf-8'))
+
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         request_body = self.rfile.read(content_length).decode('utf-8')
@@ -70,6 +95,6 @@ class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET') # Added GET
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
