@@ -56,6 +56,7 @@ def handle_request(request_body):
         }
 
 def check_cache_status():
+    print(f"Current working directory: {os.getcwd()}")
     cache_dir = ENTSOEDataFetcher.CACHE_DIR
     print(f"Checking cache directory: {cache_dir}")  # Debug log
     
