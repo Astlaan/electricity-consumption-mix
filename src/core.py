@@ -3,6 +3,14 @@ from data_fetcher import ENTSOEDataFetcher
 import analyzer
 from typing import Optional
 
+from utils import RECORDS_START, current_day_start
+
+def initialize_cache():
+    data_fetcher = ENTSOEDataFetcher()
+    data_fetcher.reset_cache()
+    data_fetcher.get_data(RECORDS_START, current_day_start())
+
+
 def generate_visualization(start_date: datetime, 
                          end_date: datetime, 
                          visualize_type: str = "simple",

@@ -16,6 +16,11 @@ when it is plugged into the website.
 - Actual Consumption from the energy sources themselves is not being considered. Take a look at how big they are and if they really should be included 
 
 
+- Try ENTSOE-py package
+- Find out why hydro storage pump was weird and reply to email
+- Hydro Pumped Storage: how to deal with this source?
+
+
 ## To-Do Features:
 - Charting:
   - Chart with the sources aggregated by type, regardless of the country of origin (Done)

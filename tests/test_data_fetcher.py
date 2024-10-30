@@ -80,6 +80,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
         # params['documentType'] = ""
 
         xml_data = self.fetcher._make_request(params)
+        print(xml_data)
         df = self.fetcher._parse_xml_internal(xml_data)
         print(df["B10"])
         assert df.empty == False
@@ -531,6 +532,16 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             self.fetcher._resample_to_standard_granularity(df)
 
         self.assertTrue("Resolution must be 1 hour or less" in str(context.exception))
+
+    # TODO: 
+    # - full hit full range
+    # - full hit partial range
+    # - Cache exists, partial overlap (fetch date should be = to cache end)
+    # - Cache exists, no overlap (fetch date should be = to cache end)
+    # - Cache exists, no overlap with gap (fetch date should be = to cache end)
+    # all of the above: returns desired range
+    # def test__fetch_and_cache_data(self):
+    #     pass
 
 
 if __name__ == "__main__":

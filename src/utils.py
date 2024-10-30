@@ -3,21 +3,31 @@ from typing import Any, Dict
 import pandas as pd
 from config import PSR_TYPE_MAPPING
 
+RECORDS_START = datetime("2015-01-10 00:00:00")
+
+def current_day_start():
+    return datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
 
 def validate_inputs(start_date, end_date):
-    def _assert_exact_hour(dt):
-        assert(dt.minute == 0 and dt.second == 0 and dt.microsecond == 0)
+    def _assert_exact_hour(date):
+        assert(date.minute == 0 and date.second == 0 and date.microsecond == 0)
+
+    def _assert_within_records(date):
+        RECORDS_START <= date
+
+    def _assert_less_or_equal_than_current_day_start(date):
+        assert(date <= current_day_start())
+
+
 
     _assert_exact_hour(start_date)
     _assert_exact_hour(end_date)
-
+    _assert_within_records(start_date)
+    _assert_within_records(end_date)
+    _assert_less_or_equal_than_current_day_start(start_date)
+    _assert_less_or_equal_than_current_day_start(end_date)
     assert(end_date-start_date >= timedelta(hours=1))
-
-    current_day = datetime.now(timezone.utc).replace(
-                hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
-    
-    assert(start_date <= current_day)
-    assert(end_date <= current_day)
 
 
 def get_active_psr_in_dataframe(df):
@@ -59,7 +69,7 @@ def resample_to_standard_granularity(df: pd.DataFrame, granularity: timedelta) -
         df[value_columns]
         .resample(
             granularity,
-            offset="0H",  # Start periods at 00 minutes
+            offset="0h",  # Start periods at 00 minutes
             label="left",  # Use the start of the period as the label
             closed="left",  # Include the left boundary of the interval
         )

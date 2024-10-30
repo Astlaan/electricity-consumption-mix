@@ -177,6 +177,9 @@ class ENTSOEDataFetcher:
         quantity_path = "ns:quantity"
 
         for time_series in root.findall(time_series_path, namespace):
+            if not is_flow_data and time_series.find(".//ns:outBiddingZone_Domain.mRID", namespace) is not None:
+                continue
+    
             psr_type = None
             if not is_flow_data:
                 psr_type_elem = time_series.find(psr_type_path, namespace)
@@ -303,12 +306,16 @@ class ENTSOEDataFetcher:
 
         logger.debug(f"Requested date range: {start_date} to {end_date}")
 
-        if cached_data is not None:
+        fetch_start = start_date
+        fetch_end = end_date
+
+        if cached_data is not None: # FULL OR PARTIAL HIT
             df, metadata = cached_data
             cached_start = pd.to_datetime(metadata["start_date_inclusive"])
             cached_end = pd.to_datetime(metadata["end_date_exclusive"])
 
             # Note: end_date is exclusive, so cached_end should be >= end_date
+            # FULL HIT
             if cached_start <= start_date and cached_end >= end_date:
                 logger.debug(
                     f"[_fetch_and_cache_data]: FULL CACHE HIT\n{params}\nstart: {start_date}\nend: {end_date}"
@@ -318,29 +325,28 @@ class ENTSOEDataFetcher:
                     (df["start_time"] >= start_date) & (df["start_time"] < end_date)
                 ]
 
-            # If there's overlap, adjust the request range
-            if cached_end > start_date:
-                logger.debug(
-                    f"[_fetch_and_cache_data]: PARTIAL CACHE HIT\n{params}\ncache_end: {cached_end}\nstart: {start_date}\nend: {end_date}"
-                )
-                start_date = cached_end
-                logger.debug(f"Adjusted start_date to {start_date}")
+            # CACHE EXISTS, BUT IT'S A PARTIAL HIT OR FULL MISS
+            fetch_start = cached_end
+            logger.debug(
+                f"[_fetch_and_cache_data]: FETCH NEEDED: \n{params}\ncache_end: {cached_end}\nstart: {start_date}\nend: {end_date}"
+            )
+            logger.debug(f"Adjusted fetch_start to {fetch_start}")
         else:
             logger.debug(
                 f"[_fetch_and_cache_data]: CACHE MISS\n{params}\nstart: {start_date}\nend: {end_date}"
             )
 
         # Fetch new data
-        xml_chunks = await self._fetch_data_in_chunks(params, start_date, end_date)
-        new_df = await asyncio.gather(
+        xml_chunks = await self._fetch_data_in_chunks(params, fetch_start, fetch_end)
+        new_df_chunks = await asyncio.gather(
             *[self._async_parse_xml_to_dataframe(xml) for xml in xml_chunks]
         )
-        new_df = pd.concat(new_df, ignore_index=True)
+        new_df = pd.concat(new_df_chunks, ignore_index=True)
 
         if cached_data is not None:
             df = pd.concat([cached_data[0], new_df]).drop_duplicates(
                 subset=["start_time"], keep="last"
-            )
+            ).reset_index(drop=True)
         else:
             df = new_df
 

@@ -4,12 +4,15 @@ logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 import argparse
 from datetime import datetime
-from core import generate_visualization
+import core
 
 def main():
     args = parse_arguments()
+
+    if args.initialize_cache:
+        core.initialize_cache()
     
-    fig = generate_visualization(
+    fig = core.generate_visualization(
         start_date=args.start_date,
         end_date=args.end_date,
         visualize_type=args.visualize,
@@ -43,7 +46,10 @@ def parse_arguments():
     )
     parser.add_argument(
         "--reset-cache", action="store_true", help="Reset the data cache"
-    )  # Changed from reset_cache to reset-cache
+    ) 
+    parser.add_argument(
+        "--initialize-cache", action="store_true", help="Initialize the data cache"
+    ) 
     return parser.parse_args()
 
 

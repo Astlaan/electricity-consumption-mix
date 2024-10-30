@@ -52,16 +52,19 @@
     <div class="form-container">
         <form id="plotForm">
             <label for="start_date">Start Date:</label>
-            <input type="datetime-local" id="start_date" required>
+            <input type="datetime-local" id="start_date" required 
+                value="2024-01-01T00:00">
             
             <label for="end_date">End Date:</label>
-            <input type="datetime-local" id="end_date" required>
+            <input type="datetime-local" id="end_date" required
+                value="2024-01-01T01:00">
             
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
         <div id="errorMessage" class="error-message"></div>
         <div id="loading" class="loading">Generating visualization...</div>
     </div>
+
 
     <div id="plotContainer"></div>
 
@@ -115,14 +118,14 @@
         });
 
         // Set default date range (last 24 hours)
-        window.addEventListener('load', () => {
-            const now = new Date();
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
+        //window.addEventListener('load', () => {
+        //    const now = new Date();
+        //    const yesterday = new Date(now);
+        //    yesterday.setDate(yesterday.getDate() - 1);
             
-            document.getElementById('end_date').value = now.toISOString().slice(0, 16);
-            document.getElementById('start_date').value = yesterday.toISOString().slice(0, 16);
-        });
+        //    document.getElementById('end_date').value = now.toISOString().slice(0, 16);
+        //    document.getElementById('start_date').value = yesterday.toISOString().slice(0, 16);
+        //});
     </script>
 </body>
 </html>

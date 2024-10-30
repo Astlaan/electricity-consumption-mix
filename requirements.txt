@@ -7,4 +7,5 @@ aiohttp
 pytz
 aiofiles
 plotly
+entsoe-py
 
