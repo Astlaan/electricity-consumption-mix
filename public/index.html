@@ -53,11 +53,11 @@
         <form id="plotForm">
             <label for="start_date">Start Date:</label>
             <input type="datetime-local" id="start_date" required 
-                value="2024-01-01T00:00">
+                value="2024-01-01T00:00" step="3600">
             
             <label for="end_date">End Date:</label>
             <input type="datetime-local" id="end_date" required
-                value="2024-01-01T01:00">
+                value="2024-01-01T01:00" step="3600">
             
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
@@ -68,6 +68,25 @@
         </div>
     </div>
 
+    <script>
+        // Function to round time to nearest hour
+        function roundToHour(dateTimeInput) {
+            const date = new Date(dateTimeInput.value);
+            date.setMinutes(0);
+            date.setSeconds(0);
+            date.setMilliseconds(0);
+            dateTimeInput.value = date.toISOString().slice(0, 16);
+        }
+
+        // Add listeners to both inputs
+        document.getElementById('start_date').addEventListener('change', function() {
+            roundToHour(this);
+        });
+
+        document.getElementById('end_date').addEventListener('change', function() {
+            roundToHour(this);
+        });
+    </script>
 
     <div id="plotContainer"></div>
 
