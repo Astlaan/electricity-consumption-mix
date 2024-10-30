@@ -57,8 +57,10 @@ def handle_request(request_body):
 
 def check_cache_status():
     cache_dir = ENTSOEDataFetcher.CACHE_DIR
-    # Check if directory exists and has files
-    is_empty = not os.path.exists(cache_dir) or not os.listdir(cache_dir)
+    print(f"Checking cache directory: {cache_dir}")  # Debug log
+    exists = os.path.exists(cache_dir)
+    is_empty = not exists or not os.listdir(cache_dir)
+    print(f"Cache dir exists: {exists}, is_empty: {is_empty}")  # Debug log
     return {
         'statusCode': 200,
         'body': json.dumps({'is_empty': is_empty})

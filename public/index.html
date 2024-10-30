@@ -124,16 +124,28 @@
 
         // Check cache status on page load
         window.addEventListener('load', async () => {
+            console.log("Checking cache status...");
             try {
                 const response = await fetch('/api/check_cache');
+                console.log("Cache check response:", response);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
+                console.log("Cache status data:", data);
                 
                 if (data.is_empty) {
+                    console.log("Cache is empty, showing warning");
                     cacheWarning.style.display = 'block';
                     submitBtn.disabled = true;
+                } else {
+                    console.log("Cache is not empty");
                 }
             } catch (error) {
                 console.error('Error checking cache status:', error);
+                // Optionally show error to user
+                errorMessage.textContent = 'Failed to check cache status: ' + error.message;
+                errorMessage.style.display = 'block';
             }
         });
 
