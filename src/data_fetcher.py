@@ -286,6 +286,7 @@ class ENTSOEDataFetcher:
         tasks = []
         async with aiohttp.ClientSession() as session:
             while start_date < end_date:
+                # Ranges of 360 days to avoid the limit with more tolerance
                 chunk_end_date = min(start_date + timedelta(days=360), end_date)
                 chunk_params = params.copy()
                 chunk_params["periodStart"] = start_date.strftime("%Y%m%d%H%M")
