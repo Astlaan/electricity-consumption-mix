@@ -56,9 +56,14 @@ def handle_request(request_body):
         }
 
 def check_cache_status():
+    import sys
+    import os
+    print(f"Python version: {sys.version}")
     print(f"Current working directory: {os.getcwd()}")
+    print(f"Directory contents: {os.listdir('.')}")
+    
     cache_dir = ENTSOEDataFetcher.CACHE_DIR
-    print(f"Checking cache directory: {cache_dir}")  # Debug log
+    print(f"Checking cache directory: {cache_dir}")  
     
     # Get absolute path
     abs_cache_dir = os.path.abspath(cache_dir)
