@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pandas as pd
 from config import PSR_TYPE_MAPPING
 
-RECORDS_START = datetime("2015-01-10 00:00:00")
+RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
 
 def current_day_start():
     return datetime.now(timezone.utc).replace(
@@ -14,7 +14,7 @@ def validate_inputs(start_date, end_date):
         assert(date.minute == 0 and date.second == 0 and date.microsecond == 0)
 
     def _assert_within_records(date):
-        RECORDS_START <= date
+        assert(RECORDS_START <= date)
 
     def _assert_less_or_equal_than_current_day_start(date):
         assert(date <= current_day_start())
