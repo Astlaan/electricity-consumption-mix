@@ -81,11 +81,29 @@
         // Add listeners to both inputs
         document.getElementById('start_date').addEventListener('change', function() {
             roundToHour(this);
+            validateDates();
         });
 
         document.getElementById('end_date').addEventListener('change', function() {
             roundToHour(this);
+            validateDates();
         });
+
+        function validateDates() {
+            const startDate = new Date(document.getElementById('start_date').value);
+            const endDate = new Date(document.getElementById('end_date').value);
+            if (startDate >= endDate) {
+                errorMessage.textContent = "End date must be after start date.";
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = true;
+                return false;
+            } else {
+                // Clear error if validation passes
+                errorMessage.style.display = 'none';
+                submitBtn.disabled = false;
+                return true;
+            }
+        }
     </script>
 
     <div id="plotContainer"></div>
@@ -159,6 +177,8 @@
                     submitBtn.disabled = true;
                 } else {
                     console.log("Cache is not empty");
+                    submitBtn.disabled = false;
+                    validateDates();
                 }
             } catch (error) {
                 console.error('Error checking cache status:', error);
