@@ -1,3 +1,4 @@
+import gc
 import logging
 import sys
 import json
@@ -39,14 +40,19 @@ def handle_request(request_body):
                 'body': json.dumps({'error': 'Failed to generate visualization'})
             }
 
-        # Convert plot to JSON
-        plot_json = fig.to_json()
+        # Convert plot to JSON with smaller precision and compressed format
+        plot_json = fig.to_json(
+            validate=False,  # Skip validation for speed
+            pretty=False,    # Remove unnecessary whitespace
+            engine='orjson'  # Use faster JSON serializer if available
+        )
+        
+        # Force garbage collection after generating plot
+        gc.collect()
         
         return {
             'statusCode': 200,
-            'body': json.dumps({
-                'figure': json.loads(plot_json)
-            })
+            'body': plot_json  # Note: plot_json is already a string
         }
     except json.JSONDecodeError as e:
         return {
@@ -59,6 +65,8 @@ def handle_request(request_body):
             'body': json.dumps({'error': f'Missing required field in request body: {e}'})
         }
     except Exception as e:
+        logger.error(f"Error handling request: {str(e)}")
+        gc.collect()  # Clean up on error too
         return {
             'statusCode': 500, # Internal Server Error
             'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
@@ -92,6 +100,14 @@ def check_cache_status():
     }
 
 class handler(BaseHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        logger.debug("Initializing handler")
+        try:
+            super().__init__(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error initializing handler: {str(e)}")
+            raise
+
     def do_GET(self):
         logger.debug(f"Received GET request for path: {self.path}")
         if self.path == '/api/check_cache':
@@ -110,19 +126,38 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'Not found'}).encode('utf-8'))
 
     def do_POST(self):
-        logger.debug("Received POST request")
-        content_length = int(self.headers['Content-Length'])
-        request_body = self.rfile.read(content_length).decode('utf-8')
-        
-        logger.debug(f"Request body: {request_body}")
-        result = handle_request(request_body)
-        logger.debug(f"Handler result: {result}")
-        
-        self.send_response(result['statusCode'])
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')  # For development
-        self.end_headers()
-        self.wfile.write(result['body'].encode('utf-8'))
+        try:
+            content_length = int(self.headers['Content-Length'])
+            request_body = self.rfile.read(content_length).decode('utf-8')
+            
+            logger.debug(f"Request body: {request_body}")
+            result = handle_request(request_body)
+            
+            # Check response size
+            response_size = len(result['body'])
+            if response_size > 50 * 1024 * 1024:  # 50MB limit
+                result = {
+                    'statusCode': 413,
+                    'body': json.dumps({'error': 'Response too large'})
+                }
+            
+            self.send_response(result['statusCode'])
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            # Send in chunks if large
+            chunk_size = 8192
+            body_bytes = result['body'].encode('utf-8')
+            for i in range(0, len(body_bytes), chunk_size):
+                self.wfile.write(body_bytes[i:i+chunk_size])
+                
+        except Exception as e:
+            logger.error(f"Error in handler: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
 
     def do_OPTIONS(self):
         self.send_response(200)
