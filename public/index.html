@@ -63,6 +63,9 @@
         </form>
         <div id="errorMessage" class="error-message"></div>
         <div id="loading" class="loading">Generating visualization...</div>
+        <div id="cacheWarning" class="error-message" style="display: none;">
+            Warning: Data cache is empty. Please initialize the cache before proceeding.  <button id="initializeCacheBtn">Initialize Cache</button>
+        </div>
     </div>
 
 
@@ -74,6 +77,8 @@
         const errorMessage = document.getElementById('errorMessage');
         const loading = document.getElementById('loading');
         const plotContainer = document.getElementById('plotContainer');
+        const cacheWarning = document.getElementById('cacheWarning');
+        const initializeCacheBtn = document.getElementById('initializeCacheBtn');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -117,15 +122,34 @@
             }
         });
 
-        // Set default date range (last 24 hours)
-        //window.addEventListener('load', () => {
-        //    const now = new Date();
-        //    const yesterday = new Date(now);
-        //    yesterday.setDate(yesterday.getDate() - 1);
-            
-        //    document.getElementById('end_date').value = now.toISOString().slice(0, 16);
-        //    document.getElementById('start_date').value = yesterday.toISOString().slice(0, 16);
-        //});
+        // Check cache status on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/check_cache');
+                const data = await response.json();
+                
+                if (data.is_empty) {
+                    cacheWarning.style.display = 'block';
+                    submitBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Error checking cache status:', error);
+            }
+        });
+
+        initializeCacheBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/initialize_cache', { method: 'POST' });
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+                cacheWarning.style.display = 'none';
+                submitBtn.disabled = false;
+                alert("Cache initialization started.  Please refresh the page after a few minutes.");
+            } catch (error) {
+                alert(`Error initializing cache: ${error}`);
+            }
+        });
     </script>
 </body>
 </html>
