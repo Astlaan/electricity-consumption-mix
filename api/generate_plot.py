@@ -58,9 +58,19 @@ def handle_request(request_body):
 def check_cache_status():
     cache_dir = ENTSOEDataFetcher.CACHE_DIR
     print(f"Checking cache directory: {cache_dir}")  # Debug log
-    exists = os.path.exists(cache_dir)
-    is_empty = not exists or not os.listdir(cache_dir)
-    print(f"Cache dir exists: {exists}, is_empty: {is_empty}")  # Debug log
+    
+    # Get absolute path
+    abs_cache_dir = os.path.abspath(cache_dir)
+    print(f"Absolute cache path: {abs_cache_dir}")
+    
+    exists = os.path.exists(abs_cache_dir)
+    files = os.listdir(abs_cache_dir) if exists else []
+    is_empty = not exists or not files
+    
+    print(f"Cache dir exists: {exists}")
+    print(f"Cache files: {files}")
+    print(f"Is empty: {is_empty}")
+    
     return {
         'statusCode': 200,
         'body': json.dumps({'is_empty': is_empty})
