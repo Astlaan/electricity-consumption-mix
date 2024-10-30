@@ -44,12 +44,13 @@ class ENTSOEDataFetcher:
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
-    def get_data(self, start_date: datetime, end_date: datetime) -> Data:
+    def get_data(self, start_date: datetime, end_date: datetime, progress_callback=None) -> Data:
         """Fetch all required data for Portugal and Spain in parallel.
 
         Args:
             start_date: Start of period (inclusive)
             end_date: End of period (exclusive)
+            progress_callback: Optional callback function to report progress
 
         Returns:
             Data object containing all required dataframes
@@ -60,16 +61,16 @@ class ENTSOEDataFetcher:
         async def _async_get_data():
             return await asyncio.gather(
                 self._async_get_generation_data(
-                    "10YPT-REN------W", start_date, end_date
+                    "10YPT-REN------W", start_date, end_date, progress_callback
                 ),  # PT generation
                 self._async_get_generation_data(
-                    "10YES-REE------0", start_date, end_date
+                    "10YES-REE------0", start_date, end_date, progress_callback
                 ),  # ES generation
                 self._async_get_physical_flows(
-                    "10YES-REE------0", "10YPT-REN------W", start_date, end_date
+                    "10YES-REE------0", "10YPT-REN------W", start_date, end_date, progress_callback
                 ),  # ES->PT flow
                 self._async_get_physical_flows(
-                    "10YPT-REN------W", "10YES-REE------0", start_date, end_date
+                    "10YPT-REN------W", "10YES-REE------0", start_date, end_date, progress_callback
                 ),  # PT->ES flow
             )
 
@@ -362,7 +363,7 @@ class ENTSOEDataFetcher:
         return df[(df["start_time"] >= start_date) & (df["start_time"] < end_date)]
 
     async def _async_get_generation_data(
-        self, country_code: str, start_date: datetime, end_date: datetime
+        self, country_code: str, start_date: datetime, end_date: datetime, progress_callback=None
     ) -> pd.DataFrame:
         params = {
             "documentType": "A75",
@@ -372,10 +373,12 @@ class ENTSOEDataFetcher:
         }
 
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        if progress_callback:
+            progress_callback()
         return df
 
     async def _async_get_physical_flows(
-        self, out_domain: str, in_domain: str, start_date: datetime, end_date: datetime
+        self, out_domain: str, in_domain: str, start_date: datetime, end_date: datetime, progress_callback=None
     ) -> pd.DataFrame:
         params = {
             "documentType": "A11",
@@ -384,6 +387,8 @@ class ENTSOEDataFetcher:
         }
 
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        if progress_callback:
+            progress_callback()
         return df
 
     def reset_cache(self):
