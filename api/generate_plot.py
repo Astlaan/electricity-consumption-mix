@@ -28,31 +28,22 @@ def handle_request(request_body):
         end_date = datetime.fromisoformat(body['end_date'])
 
         # Generate visualization
-        fig = generate_visualization(
+        message = generate_visualization(
             start_date=start_date,
             end_date=end_date,
             visualize_type="simple"
         )
         
-        if fig is None:
+        if message is None:
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Failed to generate visualization'})
             }
 
-        # Convert plot to JSON with smaller precision and compressed format
-        plot_json = fig.to_json(
-            validate=False,  # Skip validation for speed
-            pretty=False,    # Remove unnecessary whitespace
-            engine='orjson'  # Use faster JSON serializer if available
-        )
-        
-        # Force garbage collection after generating plot
-        gc.collect()
-        
+        # Return message instead of plot
         return {
             'statusCode': 200,
-            'body': plot_json  # Note: plot_json is already a string
+            'body': json.dumps({'message': message})
         }
     except json.JSONDecodeError as e:
         return {

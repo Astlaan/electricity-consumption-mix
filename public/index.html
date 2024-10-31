@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Electricity Mix Visualization</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Removed Plotly script since we won't be using it for now -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -146,8 +146,8 @@
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
-                // Create new plot or update existing one
-                Plotly.newPlot(plotContainer, data.figure.data, data.figure.layout);
+                // Just display the message about the size
+                plotContainer.textContent = data.message;
 
             } catch (error) {
                 errorMessage.textContent = error.message;
