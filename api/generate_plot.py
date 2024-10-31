@@ -5,7 +5,6 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime
-from data_fetcher import ENTSOEDataFetcher
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from core import generate_visualization
+from data_fetcher import ENTSOEDataFetcher
 
 def handle_request(request_body):
     try:
