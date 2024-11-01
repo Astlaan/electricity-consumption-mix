@@ -34,6 +34,8 @@ class ENTSOEDataFetcher:
         os.path.dirname(os.path.abspath(__file__)), "..", ".data_cache"
     )
     STANDARD_GRANULARITY = timedelta(hours=1)  # Set the standard granularity to 1 hour
+    CACHE_EXTENSION = "pkl.gz"
+    COMPRESSION_METHOD = "gzip"
 
     def __init__(self):
         self.security_token = os.getenv("ENTSOE_API_KEY")
@@ -89,14 +91,14 @@ class ENTSOEDataFetcher:
         self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]
     ):
         cache_name = utils.get_cache_filename(params)
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
+        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
         logger.debug(f"Attempting to save cache file: {cache_name}")
 
         # # Save column order in metadata
         # metadata["column_order"] = data.columns.tolist()
 
         # Use asyncio.to_thread for the pandas operation since it's CPU-bound
-        await asyncio.to_thread(data.to_parquet, cache_file)
+        await asyncio.to_thread(data.to_pickle, cache_file, compression={'method': self.COMPRESSION_METHOD, 'compresslevel': 1, "mtime": 0})
 
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
         async with aiofiles.open(metadata_file, "w") as f:
@@ -105,7 +107,7 @@ class ENTSOEDataFetcher:
 
     async def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
         cache_name = utils.get_cache_filename(params)
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.parquet")
+        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
         metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
 
         if os.path.exists(cache_file) and os.path.exists(metadata_file):
@@ -114,7 +116,7 @@ class ENTSOEDataFetcher:
                 async with aiofiles.open(metadata_file, "r") as f:
                     metadata = json.loads(await f.read())
 
-                data = await asyncio.to_thread(pd.read_parquet, cache_file)
+                data = await asyncio.to_thread(pd.read_pickle, cache_file)
 
                 # # Restore column order from metadata if available
                 # if "column_order" in metadata:
