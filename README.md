@@ -17,8 +17,17 @@ when it is plugged into the website.
 
 
 - Try ENTSOE-py package
-- Find out why hydro storage pump was weird and reply to email
-- Hydro Pumped Storage: how to deal with this source?
+- Hydro Pumped Storage: how to deal with this source? (has both consumption and production)
+    - Simply ignore, and only consider real energy production?
+- How to deal with data gaps? (NaN)
+  - Some sources don't appear at all in the data (ex. no Coal columns for Portugal)
+  - Some appear but are NaN always (Offshore Wind in Portugal and Spain)
+  - Some appear but are 0 most of the time
+  - Sometimes whole hours have no data at all for all sources
+  - df.ffill?
+
+- Put data-cache in blob instead of root/.data_cache. Use an environment variable to specify the alternate location (ex. blob) of data cache
+  
 
 
 ## To-Do Features:
