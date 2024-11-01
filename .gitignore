@@ -1,8 +1,12 @@
 .aider*
-*.pyc
+.codebuddy
+.pytest_cache
 .venv
+.aider_env
+.env
+# .vercel
+.conda
+.vercel/cache
+*.pyc
 *.egg-info
 .data_cache
-.env
-.codebuddy
-.vercel

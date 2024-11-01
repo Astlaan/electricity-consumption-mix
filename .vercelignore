@@ -1,0 +1,22 @@
+#include .gitignore
+!.data_cache
+
+attic
+docs
+tests
+tools
+.continueignore
+run.py
+setup.py
+
+# from gitignore:
+
+.aider*
+.codebuddy
+.pytest_cache
+.venv
+.aider_env
+.env
+.conda
+*.pyc
+*.egg-info

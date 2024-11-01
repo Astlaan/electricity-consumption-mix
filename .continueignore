@@ -1,1 +1,4 @@
 attic
+.conda
+.aider_env
+.venv
