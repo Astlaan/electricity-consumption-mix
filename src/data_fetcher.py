@@ -352,7 +352,7 @@ class ENTSOEDataFetcher:
         if not df.empty:
             metadata = {
                 "start_date_inclusive": df["start_time"].min().isoformat(),
-                "end_date_exclusive": df["start_time"].max().isoformat(), # Changed to start_time.max()
+                "end_date_exclusive": (df["start_time"].max() + self.STANDARD_GRANULARITY).isoformat(),
             }
             metadata.update(params)
             await self._save_to_cache(params, df, metadata)
