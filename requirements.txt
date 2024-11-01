@@ -1,11 +1,8 @@
-requests
 pandas
 numpy
 matplotlib
-pyarrow
 aiohttp
-pytz
 aiofiles
-plotly
-entsoe-py
+# plotly
+#entsoe-py
 tqdm
