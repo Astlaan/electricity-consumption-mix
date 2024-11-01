@@ -4,7 +4,8 @@
 .venv
 .aider_env
 .env
-# .vercel
+.vercel
+!.vercel/project.json
 .conda
 .vercel/cache
 *.pyc
