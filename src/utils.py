@@ -79,8 +79,4 @@ def resample_to_standard_granularity(df: pd.DataFrame, granularity: timedelta) -
     # Reset index to make start_time a column again
     resampled = resampled.reset_index()
 
-    # Add end_time and resolution columns
-    resampled["end_time"] = resampled["start_time"] + granularity
-    resampled["resolution"] = granularity
-
     return resampled

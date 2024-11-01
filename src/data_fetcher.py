@@ -211,12 +211,12 @@ class ENTSOEDataFetcher:
                     continue
 
                 point_start_time = start_time + resolution * (int(position.text) - 1)
-                point_end_time = point_start_time + resolution
+                # point_end_time = point_start_time + resolution
 
                 data_point = {
                     "start_time": point_start_time,
-                    "end_time": point_end_time,
-                    "resolution": resolution,
+                    # "end_time": point_end_time,
+                    # "resolution": resolution,
                 }
 
                 # Use 'Power' column name for flow data, otherwise use quantity with psr_type
@@ -229,7 +229,7 @@ class ENTSOEDataFetcher:
                 data.append(data_point)
 
         if not data:
-            columns = ["start_time", "end_time", "resolution"]
+            columns = ["start_time"]
             if is_flow_data:
                 columns.append("Power")
             else:
@@ -243,7 +243,7 @@ class ENTSOEDataFetcher:
             # TODO: Fails without this duplicate finding, figure out why
             # First aggregate any duplicate entries by taking the mean
             df = (
-                df.groupby(["start_time", "end_time", "resolution", "psr_type"])[
+                df.groupby(["start_time", "psr_type"])[
                     "quantity"
                 ]
                 .mean()
@@ -252,7 +252,7 @@ class ENTSOEDataFetcher:
 
             # Then pivot
             df = df.pivot(
-                index=["start_time", "end_time", "resolution"],
+                index="start_time",
                 columns="psr_type",
                 values="quantity",
             ).reset_index()
@@ -261,11 +261,6 @@ class ENTSOEDataFetcher:
             # Remove column name from the pivot operation
             df.columns.name = None
             
-            # Reorder columns to ensure end_time is second
-            cols = df.columns.tolist()
-            cols.remove('end_time')
-            cols.insert(1, 'end_time')
-            df = df[cols]
         return df
 
     async def _make_request_async(
@@ -357,7 +352,7 @@ class ENTSOEDataFetcher:
         if not df.empty:
             metadata = {
                 "start_date_inclusive": df["start_time"].min().isoformat(),
-                "end_date_exclusive": df["end_time"].max().isoformat(),
+                "end_date_exclusive": df["start_time"].max().isoformat(), # Changed to start_time.max()
             }
             metadata.update(params)
             await self._save_to_cache(params, df, metadata)
