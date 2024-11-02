@@ -1,5 +1,5 @@
 from data_fetcher import Data
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from typing import Dict
@@ -12,7 +12,7 @@ pd.set_option('display.max_rows', None)     # Show all rows
 pd.set_option('display.width', None)        # Set width to expand to full display
 pd.set_option('display.max_colwidth', None)
 
-cmap = plt.get_cmap('tab20')
+# cmap = plt.get_cmap('tab20')
 
 def ensure_index_and_sorting(data: Data):
     # This is handy while the stash fixing saved/loaded indexes is not fixed
@@ -52,52 +52,21 @@ def plot(data: Data):
     # If start_time is a column, set it as index. If it's already the index, nothing changes
     data = ensure_index_and_sorting(data)
 
-
     G_pt = data.generation_pt[data.generation_pt.columns.intersection(PSR_TYPE_MAPPING.keys())]
-    print("G_pt shape:", G_pt.shape)
-    print("G_pt head:\n", G_pt.head())
-
     G_es = data.generation_es[data.generation_es.columns.intersection(PSR_TYPE_MAPPING.keys())]
-    print("G_es shape:", G_es.shape)
-    print("G_es head:\n", G_es.head())
-
     F_pt_es = data.flow_pt_to_es["Power"].values[:, None]
-    print("F_pt_es shape:", F_pt_es.shape)
-    print("F_pt_es head:\n", F_pt_es[:5])
-
     F_es_pt = data.flow_es_to_pt["Power"].values[:, None]
-    print("F_es_pt shape:", F_es_pt.shape)
-    print("F_es_pt head:\n", F_es_pt[:5])
-
     flow_per_source_pt_es = F_pt_es * (G_pt/G_pt.sum(axis=1).values[0])
-    print("flow_per_source_pt_es shape:", flow_per_source_pt_es.shape)
-    print("flow_per_source_pt_es head:\n", flow_per_source_pt_es[:5])
-
     flow_per_source_es_pt = F_es_pt * (G_es / G_es.sum(axis = 1).values[0])
-    print("flow_per_source_es_pt shape:", flow_per_source_es_pt.shape)
-    print("flow_per_source_es_pt head:\n", flow_per_source_es_pt[:5])
-    print("flow_per_source_es_pt NUCLEAR:\n", flow_per_source_es_pt["B14"])
-
-    print("IS EQUAL?: ", G_pt == G_pt.sub(flow_per_source_pt_es))
-
     consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
-    print("consumption_per_source shape:", consumption_per_source.shape)
-    print("consumption_per_source head:\n", consumption_per_source.head())
-
 
     fig = _plot_internal(consumption_per_source)
-    # TODO  maybe this doesn't work due to the Power column, that isn't matched in the other dfs?
-    # probably fixed with the .values thing above
-
-
-    # TODO: maybe this wont work since PT and ES don't have the same number of columns (ex. portugal doesnt have nuclear)
-
-    return fig # Return the figure object
+    return fig 
 
 
 
 def _plot_internal(df: pd.DataFrame) -> None:
-    plt.figure(figsize=(10, 8))
+    # plt.figure(figsize=(10, 8))
 
     df = _time_aggregation(df)
 
@@ -110,7 +79,7 @@ def _plot_internal(df: pd.DataFrame) -> None:
         return
 
     # Get colors from colormap
-    colors = cmap(np.linspace(0, 1, len(df)))
+    # colors = cmap(np.linspace(0, 1, len(df)))
 
     # plt.pie(df, labels=df.index, colors=colors,
     #         autopct='%1.1f%%', textprops={'fontsize': 8})
@@ -183,66 +152,66 @@ def _plot_internal(df: pd.DataFrame) -> None:
 
 
 
-def _plot_internal_2(df: pd.DataFrame) -> None:
-    df = _time_aggregation(df)
+# def _plot_internal_2(df: pd.DataFrame) -> None:
+#     df = _time_aggregation(df)
 
-    # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
+#     # Only plot non-zero values
+#     mask = df > 0
+#     df = df[mask]
 
-    if df.empty:
-        print("No non-zero data to plot")
-        return
+#     if df.empty:
+#         print("No non-zero data to plot")
+#         return
 
-    # Calculate percentages
-    percentages = df / df.sum() * 100
+#     # Calculate percentages
+#     percentages = df / df.sum() * 100
     
-    # Determine which slices should have outside labels (e.g., less than 5%)
-    threshold = 5
-    pull_values = [0.0 if p >= threshold else 0.2 for p in percentages]
-    text_positions = ['inside' if p >= threshold else 'outside' for p in percentages]
+#     # Determine which slices should have outside labels (e.g., less than 5%)
+#     threshold = 5
+#     pull_values = [0.0 if p >= threshold else 0.2 for p in percentages]
+#     text_positions = ['inside' if p >= threshold else 'outside' for p in percentages]
 
-    fig = px.pie(
-        values=df.values,
-        names=df.index,
-        title="Electricity Mix by Source Type",
-        color_discrete_sequence=px.colors.qualitative.Set3,
-        hole=.2
-    )
+#     fig = px.pie(
+#         values=df.values,
+#         names=df.index,
+#         title="Electricity Mix by Source Type",
+#         color_discrete_sequence=px.colors.qualitative.Set3,
+#         hole=.2
+#     )
     
-    # Update traces with more sophisticated label positioning
-    fig.update_traces(
-        textinfo='percent+label+value',
-        textposition=text_positions,
-        pull=pull_values,
-        texttemplate='%{label}<br>%{value:,.2f}<br>%{percent:.1f}%',
-        textfont=dict(size=10),
-        insidetextorientation='horizontal'
-    )
+#     # Update traces with more sophisticated label positioning
+#     fig.update_traces(
+#         textinfo='percent+label+value',
+#         textposition=text_positions,
+#         pull=pull_values,
+#         texttemplate='%{label}<br>%{value:,.2f}<br>%{percent:.1f}%',
+#         textfont=dict(size=10),
+#         insidetextorientation='horizontal'
+#     )
     
-    fig.update_layout(
-        showlegend=True,  # Enable legend for better readability
-        width=900,        # Slightly wider to accommodate outside labels
-        height=700,
-        title_x=0.5,
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="right",
-            x=1.1
-        ),
-        annotations=[dict(
-            text="Source: Energy Data",
-            showarrow=False,
-            x=0.5,
-            y=-0.1,
-            xref="paper",
-            yref="paper"
-        )]
-    )
+#     fig.update_layout(
+#         showlegend=True,  # Enable legend for better readability
+#         width=900,        # Slightly wider to accommodate outside labels
+#         height=700,
+#         title_x=0.5,
+#         legend=dict(
+#             orientation="v",
+#             yanchor="middle",
+#             y=0.5,
+#             xanchor="right",
+#             x=1.1
+#         ),
+#         annotations=[dict(
+#             text="Source: Energy Data",
+#             showarrow=False,
+#             x=0.5,
+#             y=-0.1,
+#             xref="paper",
+#             yref="paper"
+#         )]
+#     )
     
-    return fig
+#     return fig
 
 def _format_date_range(df: pd.DataFrame) -> str:
     start_date = df.index.min()
@@ -260,128 +229,3 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
     grouped_data = df.mean()
 
     return grouped_data
-# def _plot_internal(df: pd.DataFrame) -> None:
-#     plt.figure(figsize=(10, 8))
-
-#     data = _aggregate_by_source_type(df)
-
-#     # Only plot non-zero values
-#     mask = data > 0
-#     data = data[mask]
-
-#     if data.empty:
-#         print("No non-zero data to plot")
-#         return
-
-#     # Get colors from colormap
-#     colors = self.cmap(np.linspace(0, 1, len(data)))
-
-#     plt.pie(data, labels=data.index, colors=colors,
-#             autopct='%1.1f%%', textprops={'fontsize': 8})
-#     plt.title("Electricity Mix by Source Type")
-#     plt.axis('equal')
-#     plt.tight_layout()
-#     plt.show()
-
-def plot_source_country_pie(self, df: pd.DataFrame) -> None:
-    plt.figure(figsize=(12, 10))
-
-    # Clean and prepare data
-    df = df.loc[:, (df != 0).any()]
-    df = df.fillna(0)
-
-    # Prepare data for plotting
-    labels = []
-    sizes = []
-    colors = []
-
-    for country in ["Portugal", "Spain"]:
-        country_prefix = f"{country[:2]}_"
-        country_columns = [col for col in df.columns if col.startswith(country_prefix)]
-
-        for col in country_columns:
-            source = col[3:]  # Remove country prefix
-            value = df[col].mean()
-            if value > 0:  # Only include non-zero values
-                labels.append(f"{country}\n{source}")
-                sizes.append(value)
-                colors.append(
-                    self.source_colors.get(source, self.source_colors["Other"])
-                )
-
-    if not sizes:
-        print("No non-zero data to plot")
-        return
-
-    plt.pie(
-        sizes,
-        labels=labels,
-        colors=colors,
-        autopct="%1.1f%%",
-        textprops={"fontsize": 8},
-    )
-    plt.title(f"Electricity Mix by Source Type and Country")
-    #<br><sup>date range</sup>
-    plt.axis("equal")
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_nested_pie(self, df: pd.DataFrame) -> None:
-    plt.figure(figsize=(14, 12))
-
-    # Clean and prepare data
-    df = df.loc[:, (df != 0).any()]
-    df = df.fillna(0)
-
-    # Prepare outer ring (countries)
-    pt_data = df[[col for col in df.columns if col.startswith("PT_")]].mean()
-    es_data = df[[col for col in df.columns if col.startswith("ES_")]].mean()
-    country_sizes = [pt_data.sum(), es_data.sum()]
-
-    if sum(country_sizes) == 0:
-        print("No non-zero data to plot")
-        return
-
-    country_colors = [self.country_colors[country] for country in ["Portugal", "Spain"]]
-
-    # Prepare inner ring (sources)
-    source_sizes = []
-    source_colors = []
-    source_labels = []
-
-    for country_data, country in zip([pt_data, es_data], ["Portugal", "Spain"]):
-        if not country_data.empty:
-            for source, value in country_data.items():
-                if value > 0:  # Only include non-zero values
-                    source_sizes.append(value)
-                    source_colors.append(
-                        self.source_colors.get(source[3:], self.source_colors["Other"])
-                    )
-                    source_labels.append(f"{country}\n{source[3:]}")
-
-    # Plot outer ring (countries)
-    plt.pie(
-        country_sizes,
-        colors=country_colors,
-        radius=1.3,
-        labels=["Portugal", "Spain"],
-        autopct="%1.1f%%",
-        textprops={"fontsize": 10},
-    )
-
-    # Plot inner ring (sources)
-    if source_sizes:
-        plt.pie(
-            source_sizes,
-            colors=source_colors,
-            radius=1.0,
-            labels=source_labels,
-            autopct="%1.1f%%",
-            textprops={"fontsize": 8},
-        )
-
-    plt.title("Electricity Mix by Country and Source Type")
-    plt.axis("equal")
-    plt.tight_layout()
-    plt.show()
