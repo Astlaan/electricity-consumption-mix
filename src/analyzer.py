@@ -393,13 +393,11 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
 
 def _plot_internal_bokeh_2(df: pd.DataFrame):
     from bokeh.plotting import figure
-    from bokeh.layouts import column
     from bokeh.transform import cumsum
     from bokeh.palettes import Set3
-    from math import pi, cos, sin
-    from bokeh.models import ColumnDataSource, Legend, Title, Label, LabelSet
-    import numpy as np
-    
+    from math import pi
+    from bokeh.models import ColumnDataSource, Title, Label
+
     df = _time_aggregation(df)
     
     # Only plot non-zero values
@@ -409,104 +407,36 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     if df.empty:
         print("No non-zero data to plot")
         return
-        
-    # Calculate percentages
-    total = df.sum()
-    percentages = df / total * 100
-    
-    # Determine which slices should be pulled out
-    threshold = 5
-    pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
-    
+
     # Prepare data
-    data = pd.DataFrame({
+    total = df.sum()
+    source_data = pd.DataFrame({
         'source': df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
         'value': df.values,
-        'percentage': percentages,
+        'percentage': df / total * 100,
         'angle': df.values / total * 2 * pi,
-        'pull': pull_values,
         'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]
     })
     
-    # Calculate start and end angles
-    data['start_angle'] = data['angle'].cumsum().shift(fill_value=0)
-    data['end_angle'] = data['start_angle'] + data['angle']
+    source_data['start_angle'] = source_data['angle'].cumsum().shift(fill_value=0)
+    source_data['end_angle'] = source_data['start_angle'] + source_data['angle']
     
-    # Calculate middle angles and positions for labels
-    data['middle_angle'] = (data['start_angle'] + data['end_angle']) / 2
-    OUTER_RADIUS = 1.0
-    INNER_RADIUS = 0.3  # Smaller hole
-    
-    # Calculate positions for both inside and outside labels
-    data['inside_x'] = 0.65 * np.cos(data['middle_angle'] - pi/2)  # Position inside slices
-    data['inside_y'] = 0.65 * np.sin(data['middle_angle'] - pi/2)
-    
-    LABEL_RADIUS = 1.3
-    data['outside_x'] = LABEL_RADIUS * np.cos(data['middle_angle'] - pi/2)
-    data['outside_y'] = LABEL_RADIUS * np.sin(data['middle_angle'] - pi/2)
-    
-    # Create text for labels
-    data['label_text'] = data.apply(
-        lambda row: f"{row['source']}\n{row['value']:.0f} MW\n{row['percentage']:.1f}%", 
-        axis=1
-    )
-    
-    # Split data into two groups: small and large slices
-    small_slices = data[data['percentage'] < threshold].copy()
-    large_slices = data[data['percentage'] >= threshold].copy()
-    
-    # Create figure
-    p = figure(height=700, width=900, 
+    source = ColumnDataSource(source_data)
+
+    p = figure(height=700, width=900,
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
-              x_range=(-1.8, 1.8), y_range=(-1.5, 1.5))
-    
-    source = ColumnDataSource(data)
-    small_source = ColumnDataSource(small_slices)
-    large_source = ColumnDataSource(large_slices)
-    
-    # Draw outer ring
-    r = p.wedge(x=0, y=0,
-                start_angle='start_angle', end_angle='end_angle',
-                radius=OUTER_RADIUS,
-                color='color', legend_field='source',
-                source=source)
-    
-    # Draw inner ring (to create donut hole)
+              x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
+
+    # Draw the donut chart
     p.wedge(x=0, y=0,
-            start_angle='start_angle', end_angle='end_angle',
-            radius=INNER_RADIUS,
-            color='white',
+            start_angle='start_angle',
+            end_angle='end_angle',
+            radius=1,
+            inner_radius=0.3,
+            color='color',
+            legend_field='source',
             source=source)
 
-    # Add inside labels for large slices
-    inside_labels = LabelSet(x='inside_x', y='inside_y', text='label_text',
-                           source=large_source,
-                           text_align='center',
-                           text_baseline='middle')
-    p.add_layout(inside_labels)
-
-    # Add outside labels for small slices
-    outside_labels = LabelSet(x='outside_x', y='outside_y', text='label_text',
-                            source=small_source,
-                            text_align='left',
-                            text_baseline='middle')
-    p.add_layout(outside_labels)
-
-    # Add connecting lines for small slices
-    for _, row in small_slices.iterrows():
-        angle = row['middle_angle'] - pi/2
-        inner_x = OUTER_RADIUS * cos(angle)
-        inner_y = OUTER_RADIUS * sin(angle)
-        outer_x = row['outside_x']
-        outer_y = row['outside_y']
-        
-        p.line(
-            x=[inner_x, outer_x],
-            y=[inner_y, outer_y],
-            line_color='gray',
-            line_width=0.5
-        )
-    
     # Customize appearance
     p.axis.visible = False
     p.grid.grid_line_color = None
@@ -515,14 +445,13 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     # Add title
     p.add_layout(Title(text="Electricity Mix by Source Type", text_font_size="16px"), 'above')
     
-    # Add source annotation
+    # Add source attribution
     source_label = Label(x=0, y=-1.3, text="Source: Energy Data",
                         text_align='center', text_baseline='top')
     p.add_layout(source_label)
     
     # Customize legend
-    p.legend.location = "center_right"
+    p.legend.location = "right"
     p.legend.click_policy = "hide"
-    p.legend.label_text_font_size = "10px"
-    
+
     return p
