@@ -423,7 +423,8 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     
     source = ColumnDataSource(source_data)
 
-    p = figure(height=700, width=900,
+    # Modify the figure creation to make room for legend on right
+    p = figure(height=700, width=1100,  # Increased width to accommodate legend
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
               x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
 
@@ -452,8 +453,16 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
                         text_align='center', text_baseline='top')
     p.add_layout(source_label)
     
-    # Customize legend
-    p.legend.location = "right"
+    # Modify the legend settings
+    p.legend.location = "center_right"
     p.legend.click_policy = "hide"
+    p.legend.border_line_color = None
+    p.legend.background_fill_alpha = 0.7
+    p.legend.glyph_height = 20
+    p.legend.glyph_width = 20
+    p.legend.label_text_font_size = '10pt'
+    # Position legend outside of plot area
+    p.legend.x = 50  # Positive value moves legend right
+    p.legend.y = 0   # Centers vertically
 
     return p
