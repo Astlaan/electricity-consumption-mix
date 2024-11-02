@@ -10,4 +10,4 @@
 .vercel/cache
 *.pyc
 *.egg-info
-.data_cache
+#.data_cache
