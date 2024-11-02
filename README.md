@@ -27,6 +27,7 @@ when it is plugged into the website.
   - df.ffill?
 
 - Put data-cache in blob instead of root/.data_cache. Use an environment variable to specify the alternate location (ex. blob) of data cache
+- How will the asynchronous read/writes on the blob work? Will it be a problem?
   
 
 
