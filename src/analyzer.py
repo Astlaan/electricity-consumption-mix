@@ -310,7 +310,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     plt.clf()
     plt.close('all')
     # Make figure wider to accommodate legend
-    fig = plt.figure(figsize=(16, 10)) #Increased figure size
+    fig = plt.figure(figsize=(14, 8.5)) #Changed figure size
     
     df = _time_aggregation(df)
 
@@ -347,7 +347,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         pctdistance=0.75,
         wedgeprops=dict(width=0.5),  # Creates donut hole
         explode=pull_values,  # Pull out small slices
-        textprops={'fontsize': 8},
+        textprops={'fontsize': 10},  # Increased from 8 to 10
         radius=1  # Full size pie
     )
 
@@ -359,10 +359,11 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         title="Source Types",
         loc="center left",
         bbox_to_anchor=(1, 0.5),
-        fontsize=8
+        fontsize=10,  # Increased from 8 to 10
+        title_fontsize=12  # Added explicit title font size
     )
 
-    plt.title("Electricity Mix by Source Type", pad=20)
+    plt.title("Electricity Mix by Source Type", pad=20, fontsize=14) #Increased title font size
     
     # Add source annotation at bottom
     plt.annotate(
@@ -370,7 +371,8 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         xy=(0.5, -0.1),
         xycoords='figure fraction',
         ha='center',
-        va='center'
+        va='center',
+        fontsize=10  # Added explicit font size
     )
 
     plt.axis('equal')
