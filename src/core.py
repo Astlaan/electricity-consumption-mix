@@ -4,8 +4,11 @@ import analyzer
 from typing import Optional
 from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
+import logging
 
 from utils import RECORDS_START, current_day_start
+
+logger = logging.getLogger(__name__) # Add logger
 
 def initialize_cache():
     data_fetcher = ENTSOEDataFetcher()
@@ -16,9 +19,9 @@ def initialize_cache():
     end = current_day_start()
     total_years = (end.year - start.year) + 1
     
-    print(f"Initializing cache from {start.date()} to {end.date()}")
-    print(f"This will fetch approximately {total_years} years of data")
-    print("This operation may take several minutes...")
+    logger.info(f"Initializing cache from {start.date()} to {end.date()}")
+    logger.info(f"This will fetch approximately {total_years} years of data")
+    logger.info("This operation may take several minutes...")
     
     with tqdm(total=total_years * 4, desc="Fetching data") as pbar:
         def progress_callback():
@@ -41,6 +44,10 @@ def generate_visualization(start_date: datetime,
 
     try:
         data = data_fetcher.get_data(start_date, end_date)
+        if data is None or len(data) == 0:
+            logger.warning("No data found for the specified date range.")
+            return None
+
         if visualize_type == "simple":
             return analyzer.plot(data)
         elif visualize_type == "country-source":
@@ -50,8 +57,9 @@ def generate_visualization(start_date: datetime,
             # TODO: Implement when needed
             pass
         else:
+            logger.error(f"Invalid visualization type: {visualize_type}")
             return None # Handle invalid visualize_type
     except Exception as e:
-        print(f"An error occurred: {e}") # Log the error for debugging
+        logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
         return None
 
