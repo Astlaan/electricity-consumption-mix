@@ -5,9 +5,7 @@ import sys
 import gc
 import os
 from datetime import datetime
-import io
-import base64
-import matplotlib.pyplot as plt
+from bokeh.embed import json_item  # Add this import
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -43,17 +41,14 @@ def handle_request(request_body):
                 'body': json.dumps({'error': 'Failed to generate visualization'})
             }
 
-        # Convert Matplotlib figure to base64 encoded PNG
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png')
-        buf.seek(0)
-        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close(fig) # Close the figure to release resources
-
+        # Convert Bokeh figure to JSON
+        plot_json = json_item(fig)
+        
         return {
             'statusCode': 200,
-            'body': json.dumps({'image': img_base64})
+            'body': json.dumps({'plot': plot_json})
         }
+
     except json.JSONDecodeError as e:
         logger.exception(f"Invalid JSON request body: {e}")
         return {
@@ -70,7 +65,7 @@ def handle_request(request_body):
         logger.exception(f"An unexpected error occurred: {e}")
         gc.collect()  # Clean up on error too
         return {
-            'statusCode': 500, # Internal Server Error
+            'statusCode': 500,
             'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
         }
 

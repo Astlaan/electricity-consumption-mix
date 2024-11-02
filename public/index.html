@@ -49,6 +49,11 @@
             margin: 20px 0;
         }
     </style>
+    <!-- Add these in the <head> section -->
+    <link href="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.css" rel="stylesheet">
+    <link href="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.css" rel="stylesheet">
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.js"></script>
 </head>
 <body>
     <h1>Electricity Mix Visualization</h1>
@@ -150,14 +155,13 @@
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
-                if (data.image) {
-                    const img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.image;
-                    img.alt = 'Electricity Mix Visualization';
+                if (data.plot) {
+                    // Clear previous plot
                     plotContainer.innerHTML = '';
-                    plotContainer.appendChild(img);
+                    // Render the Bokeh plot
+                    Bokeh.embed.embed_item(data.plot, 'plotContainer');
                 } else {
-                    plotContainer.textContent = data.message || 'Failed to generate visualization';
+                    plotContainer.textContent = 'Failed to generate visualization';
                 }
 
             } catch (error) {
