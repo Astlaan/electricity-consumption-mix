@@ -26,7 +26,7 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
     df = df.fillna(0)
 
     # Group by source type (in case multiple B-codes map to same source)
-    grouped_data = df.sum()
+    grouped_data = df.mean()
 
     return grouped_data
 
