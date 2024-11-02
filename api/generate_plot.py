@@ -4,6 +4,8 @@ import sys
 import json
 import os
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -89,65 +91,43 @@ def check_cache_status():
         'body': json.dumps({'is_empty': is_empty})
     }
 
-def handler(request):
-    """Vercel serverless function handler"""
-    try:
-        if request.method == 'GET' and request.url.path == '/api/check_cache':
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/api/check_cache':
             result = check_cache_status()
-            return {
-                'statusCode': result['statusCode'],
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': result['body']
-            }
-            
-        if request.method == 'POST':
-            request_body = request.body.decode('utf-8')
-            result = handle_request(request_body)
-            
-            response_size = len(result['body'])
-            if response_size > 50 * 1024 * 1024:  # 50MB limit
-                result = {
-                    'statusCode': 413,
-                    'body': json.dumps({'error': 'Response too large'})
-                }
-                
-            return {
-                'statusCode': result['statusCode'],
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': result['body']
-            }
-            
-        if request.method == 'OPTIONS':
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'POST, GET',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                },
-                'body': ''
-            }
-            
-        return {
-            'statusCode': 404,
-            'headers': {
-                'Content-Type': 'application/json'
-            },
-            'body': json.dumps({'error': 'Not found'})
-        }
+            self.send_response(result['statusCode'])
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(result['body'].encode())
+        else:
+            self.send_response(404)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': 'Not found'}).encode())
+
+    def do_POST(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        request_body = self.rfile.read(content_length).decode('utf-8')
         
-    except Exception as e:
-        logger.error(f"Error in handler: {str(e)}")
-        return {
-            'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json'
-            },
-            'body': json.dumps({'error': str(e)})
-        }
+        result = handle_request(request_body)
+        
+        response_size = len(result['body'])
+        if response_size > 50 * 1024 * 1024:  # 50MB limit
+            result = {
+                'statusCode': 413,
+                'body': json.dumps({'error': 'Response too large'})
+            }
+        
+        self.send_response(result['statusCode'])
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(result['body'].encode())
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
