@@ -334,8 +334,11 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         def my_autopct(pct):
             # Find the closest percentage value
             idx = min(range(len(pcts)), key=lambda i: abs(pcts[i] - pct))
-            # Only show the percentage in the pie chart
-            return f'{pct:.1f}%'
+            # Only show percentage if it's >= 5%
+            if pct >= 5:
+                return f'{pct:.1f}%'
+            else:
+                return ''  # Return empty string for small percentages
         return my_autopct
 
     # Create pie chart with a hole (donut chart)
@@ -352,7 +355,8 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     )
 
     # Add legend with values
-    legend_labels = [f'{name}\n{value:.1f} MW' for name, value in df.items()]
+    legend_labels = [f'{name}\n{value:.1f} MW ({pct:.1f}%)' 
+                     for name, value, pct in zip(df.index, df.values, percentages)]
     plt.legend(
         wedges,
         legend_labels,
