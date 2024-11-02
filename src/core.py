@@ -44,7 +44,11 @@ def generate_visualization(start_date: datetime,
 
     try:
         data = data_fetcher.get_data(start_date, end_date)
-        if data is None or len(data) == 0:
+        if (data is None or 
+            data.generation_pt.empty or 
+            data.generation_es.empty or 
+            data.flow_pt_to_es.empty or 
+            data.flow_es_to_pt.empty):
             logger.warning("No data found for the specified date range.")
             return None
 
