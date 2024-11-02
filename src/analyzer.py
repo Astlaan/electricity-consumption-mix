@@ -449,7 +449,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.add_layout(Title(text="Electricity Mix by Source Type", text_font_size="16px"), 'above')
     
     # Add source attribution
-    source_label = Label(x=0, y=-1.3, text="Source: Energy Data",
+    source_label = Label(x=0, y=-1.3, text="Source: ENTSO-E",
                         text_align='center', text_baseline='top')
     p.add_layout(source_label)
     
