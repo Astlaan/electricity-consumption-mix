@@ -4,7 +4,7 @@ import numpy as np
 from typing import Dict
 from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe
-# import plotly.express as px
+import plotly.express as px # Import px
 import matplotlib.pyplot as plt
 
 pd.set_option('display.max_columns', None)  # Show all columns
