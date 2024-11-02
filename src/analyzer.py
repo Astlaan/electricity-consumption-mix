@@ -396,8 +396,9 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     from bokeh.layouts import column
     from bokeh.transform import cumsum
     from bokeh.palettes import Set3
-    from math import pi
-    from bokeh.models import ColumnDataSource, Legend, Title, Label
+    from math import pi, cos, sin
+    from bokeh.models import ColumnDataSource, Legend, Title, Label, LabelSet
+    import numpy as np
     
     df = _time_aggregation(df)
     
@@ -424,34 +425,74 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
         'percentage': percentages,
         'angle': df.values / total * 2 * pi,
         'pull': pull_values,
-        'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]  # Safe color handling
+        'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]
     })
     
     # Calculate start and end angles
     data['start_angle'] = data['angle'].cumsum().shift(fill_value=0)
     data['end_angle'] = data['start_angle'] + data['angle']
     
+    # Calculate label positions
+    data['middle_angle'] = (data['start_angle'] + data['end_angle']) / 2
+    OUTER_RADIUS = 1.0
+    INNER_RADIUS = 0.3  # Smaller hole (similar to plotly's hole=0.2)
+    LABEL_RADIUS = 1.3
+
+    # Calculate x, y positions for labels
+    data['label_x'] = LABEL_RADIUS * np.cos(data['middle_angle'] - pi/2)
+    data['label_y'] = LABEL_RADIUS * np.sin(data['middle_angle'] - pi/2)
+    
+    # Create text for labels
+    data['label_text'] = data.apply(
+        lambda row: f"{row['source']}\n{row['value']:.0f} MW\n{row['percentage']:.1f}%", 
+        axis=1
+    )
+    
     # Create figure
     p = figure(height=700, width=900, 
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
-              x_range=(-1.5, 1.5), y_range=(-1.2, 1.2))
+              x_range=(-1.8, 1.8), y_range=(-1.5, 1.5))
     
-    # Create donut chart
     source = ColumnDataSource(data)
     
     # Draw outer ring
     r = p.wedge(x=0, y=0,
                 start_angle='start_angle', end_angle='end_angle',
-                radius=1.0,  # outer radius
+                radius=OUTER_RADIUS,
                 color='color', legend_field='source',
                 source=source)
     
     # Draw inner ring (to create donut hole)
     p.wedge(x=0, y=0,
             start_angle='start_angle', end_angle='end_angle',
-            radius=0.6,  # inner radius
-            color='white',  # same color as background
+            radius=INNER_RADIUS,
+            color='white',
             source=source)
+
+    # Add labels with connecting lines for small slices
+    labels = LabelSet(x='label_x', y='label_y', text='label_text',
+                     source=source,
+                     text_align='left' if data['middle_angle'].mean() < pi else 'right',
+                     text_baseline='middle')
+    p.add_layout(labels)
+
+    # Add connecting lines for small slices
+    for i, row in data.iterrows():
+        if row['percentage'] < threshold:
+            # Calculate points for the connecting line
+            angle = row['middle_angle'] - pi/2
+            inner_x = OUTER_RADIUS * cos(angle)
+            inner_y = OUTER_RADIUS * sin(angle)
+            outer_x = row['label_x']
+            outer_y = row['label_y']
+            
+            # Draw the connecting line
+            p.line(
+                x=[inner_x, outer_x],
+                y=[inner_y, outer_y],
+                line_color='gray',
+                line_width=0.5
+            )
     
     # Customize appearance
     p.axis.visible = False
@@ -462,7 +503,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.add_layout(Title(text="Electricity Mix by Source Type", text_font_size="16px"), 'above')
     
     # Add source annotation
-    source_label = Label(x=0, y=-1.1, text="Source: Energy Data",
+    source_label = Label(x=0, y=-1.3, text="Source: Energy Data",
                         text_align='center', text_baseline='top')
     p.add_layout(source_label)
     
