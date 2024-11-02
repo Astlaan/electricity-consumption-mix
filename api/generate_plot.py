@@ -32,7 +32,7 @@ def handle_request(request_body):
         fig = generate_visualization(
             start_date=start_date,
             end_date=end_date,
-            visualize_type="simple"
+            visualize_type="_plot_internal_bokeh_2"
         )
         
         if fig is None:

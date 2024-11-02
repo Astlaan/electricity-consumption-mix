@@ -424,7 +424,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     source = ColumnDataSource(source_data)
 
     # Modify the figure creation to keep original size
-    p = figure(height=600, width=800,  # Return to original dimensions
+    p = figure(height=700, width=800,  # Return to original dimensions
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
               x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
 

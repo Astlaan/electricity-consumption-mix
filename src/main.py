@@ -25,7 +25,29 @@ def main():
     )
     
     if fig is not None:
-        fig.show()  # Show figure in browser for CLI usage
+        if str(type(fig).__module__).startswith('plotly'):
+            print("BACKEND: Plotly")
+            fig.show()  # Show Plotly figure in browser
+        elif str(type(fig).__module__).startswith('bokeh'):
+            print("BACKEND: Bokeh")
+            from bokeh.plotting import show 
+            show(fig)  # Show Bokeh figure in browser
+        else:
+            print("BACKEND: Matplotlib")
+            # Save matplotlib figure to HTML and open in browser
+            import mpld3
+            import webbrowser
+            import tempfile
+            import os
+            
+            # Create temporary HTML file
+            temp_path = os.path.join(tempfile.gettempdir(), 'matplotlib_figure.html')
+            html_str = mpld3.fig_to_html(fig)
+            with open(temp_path, 'w') as f:
+                f.write(html_str)
+            
+            # Open in browser
+            webbrowser.open('file://' + temp_path)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -45,7 +67,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "--visualize",
-        choices=["none", "simple", "country-source", "source-country"],
+        # choices=["none", "simple", "country-source", "source-country"],
         default="none",
         help="Type of visualization to generate",
     )

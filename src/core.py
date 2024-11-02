@@ -5,7 +5,6 @@ from typing import Optional
 from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
-import matplotlib.pyplot as plt
 
 from utils import RECORDS_START, current_day_start
 
@@ -52,23 +51,11 @@ def generate_visualization(start_date: datetime,
             data.flow_es_to_pt.empty):
             logger.warning("No data found for the specified date range.")
             return None
+        
 
-        if visualize_type == "simple":
-            fig = analyzer.plot(data)
-            return fig
-            
-        elif visualize_type == "country-source":
-            # TODO: Implement when needed
-            pass
-        elif visualize_type == "source-country":
-            # TODO: Implement when needed
-            pass
-        else:
-            logger.error(f"Invalid visualization type: {visualize_type}")
-            return None # Handle invalid visualize_type
+        fig = analyzer.plot(data, visualize_type)
+        return fig
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
         return None
-    finally:
-        plt.close('all')  # Ensure all matplotlib resources are cleaned up
 
