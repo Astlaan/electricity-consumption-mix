@@ -431,11 +431,6 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     data['start_angle'] = data['angle'].cumsum().shift(fill_value=0)
     data['end_angle'] = data['start_angle'] + data['angle']
     
-    # Adjust radius for pulled slices
-    base_radius = 0.8
-    data['inner_radius'] = [base_radius + (p * 0.2) for p in pull_values]
-    data['outer_radius'] = [1.0 + (p * 0.2) for p in pull_values]
-    
     # Create figure
     p = figure(height=700, width=900, 
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
@@ -443,11 +438,20 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     
     # Create donut chart
     source = ColumnDataSource(data)
+    
+    # Draw outer ring
     r = p.wedge(x=0, y=0,
                 start_angle='start_angle', end_angle='end_angle',
-                radius='outer_radius', inner_radius='inner_radius',
+                radius=1.0,  # outer radius
                 color='color', legend_field='source',
                 source=source)
+    
+    # Draw inner ring (to create donut hole)
+    p.wedge(x=0, y=0,
+            start_angle='start_angle', end_angle='end_angle',
+            radius=0.6,  # inner radius
+            color='white',  # same color as background
+            source=source)
     
     # Customize appearance
     p.axis.visible = False
