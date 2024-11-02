@@ -310,7 +310,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     plt.clf()
     plt.close('all')
     # Make figure wider to accommodate legend
-    fig = plt.figure(figsize=(14, 8.5)) #Changed figure size
+    fig = plt.figure(figsize=(12, 8.5)) #Changed figure size and reduced width
     
     df = _time_aggregation(df)
 
@@ -362,7 +362,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         legend_labels,
         title="Source Types",
         loc="center left",
-        bbox_to_anchor=(1, 0.5),
+        bbox_to_anchor=(1.05, 0.5),  # Changed from (1, 0.5) to bring legend closer
         fontsize=10,  # Increased from 8 to 10
         title_fontsize=12  # Added explicit title font size
     )
@@ -380,7 +380,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     )
 
     plt.axis('equal')
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust the right margin to prevent legend cutoff
     
     result = fig
     plt.close(fig)  # Clean up
