@@ -309,7 +309,8 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
 def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     plt.clf()
     plt.close('all')
-    fig = plt.figure(figsize=(10, 7))
+    # Make figure wider to accommodate legend
+    fig = plt.figure(figsize=(12, 7))
     
     df = _time_aggregation(df)
 
@@ -324,7 +325,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     # Rename the index using PSR_TYPE_MAPPING
     df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
 
-    # Calculate percentages and determine which slices should be pulled out
+    # Calculate percentages
     percentages = df / df.sum() * 100
     threshold = 5
     pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
@@ -333,38 +334,35 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
         def my_autopct(pct):
             # Find the closest percentage value
             idx = min(range(len(pcts)), key=lambda i: abs(pcts[i] - pct))
-            return f'{values.index[idx]}\n{values.iloc[idx]:.2f}\n{pct:.1f}%'
+            # Only show the percentage in the pie chart
+            return f'{pct:.1f}%'
         return my_autopct
 
     # Create pie chart with a hole (donut chart)
     wedges, texts, autotexts = plt.pie(
         df, 
-        labels=[''] * len(df),  # Empty labels since we include them in autopct
+        labels=[''] * len(df),  # Empty labels
         colors=cmap(np.linspace(0, 1, len(df))),
         autopct=make_autopct(df, percentages),
-        pctdistance=0.85,
+        pctdistance=0.75,
         wedgeprops=dict(width=0.5),  # Creates donut hole
         explode=pull_values,  # Pull out small slices
-        textprops={'fontsize': 8}
+        textprops={'fontsize': 8},
+        radius=1  # Full size pie
     )
 
-    # Adjust text positions based on percentage
-    for i, p in enumerate(percentages):
-        if p < threshold:
-            # Move text outward for small slices
-            autotexts[i].set_position((1.5 * autotexts[i].get_position()[0], 
-                                     1.5 * autotexts[i].get_position()[1]))
-
-    plt.title("Electricity Mix by Source Type", pad=20)
-    
-    # Add legend
+    # Add legend with values
+    legend_labels = [f'{name}\n{value:.1f} MW' for name, value in df.items()]
     plt.legend(
         wedges,
-        df.index,
+        legend_labels,
         title="Source Types",
         loc="center left",
-        bbox_to_anchor=(1, 0.5)
+        bbox_to_anchor=(1, 0.5),
+        fontsize=8
     )
+
+    plt.title("Electricity Mix by Source Type", pad=20)
     
     # Add source annotation at bottom
     plt.annotate(
