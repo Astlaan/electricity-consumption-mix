@@ -427,11 +427,11 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
               x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
 
-    # Draw the donut chart
+    # Draw the donut chart with outer_radius and inner_radius
     p.wedge(x=0, y=0,
             start_angle='start_angle',
             end_angle='end_angle',
-            radius=1,
+            outer_radius=1.0,
             inner_radius=0.3,
             color='color',
             legend_field='source',
