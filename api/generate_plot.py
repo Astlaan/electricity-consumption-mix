@@ -74,9 +74,19 @@ def handle_request(request_body):
             'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
         }
 
-def check_cache_status():
-    # ... (This function remains unchanged) ...
-    
-
 class handler(BaseHTTPRequestHandler):
-    # ... (This class remains largely unchanged) ...
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length).decode('utf-8')
+        response = handle_request(post_data)
+        self.send_response(response['statusCode'])
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(response['body'].encode('utf-8'))
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Hello, World!") # Placeholder for GET request
+
