@@ -432,15 +432,18 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     data['start_angle'] = data['angle'].cumsum().shift(fill_value=0)
     data['end_angle'] = data['start_angle'] + data['angle']
     
-    # Calculate label positions
+    # Calculate middle angles and positions for labels
     data['middle_angle'] = (data['start_angle'] + data['end_angle']) / 2
     OUTER_RADIUS = 1.0
-    INNER_RADIUS = 0.3  # Smaller hole (similar to plotly's hole=0.2)
+    INNER_RADIUS = 0.3  # Smaller hole
+    
+    # Calculate positions for both inside and outside labels
+    data['inside_x'] = 0.65 * np.cos(data['middle_angle'] - pi/2)  # Position inside slices
+    data['inside_y'] = 0.65 * np.sin(data['middle_angle'] - pi/2)
+    
     LABEL_RADIUS = 1.3
-
-    # Calculate x, y positions for labels
-    data['label_x'] = LABEL_RADIUS * np.cos(data['middle_angle'] - pi/2)
-    data['label_y'] = LABEL_RADIUS * np.sin(data['middle_angle'] - pi/2)
+    data['outside_x'] = LABEL_RADIUS * np.cos(data['middle_angle'] - pi/2)
+    data['outside_y'] = LABEL_RADIUS * np.sin(data['middle_angle'] - pi/2)
     
     # Create text for labels
     data['label_text'] = data.apply(
@@ -448,12 +451,18 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
         axis=1
     )
     
+    # Split data into two groups: small and large slices
+    small_slices = data[data['percentage'] < threshold].copy()
+    large_slices = data[data['percentage'] >= threshold].copy()
+    
     # Create figure
     p = figure(height=700, width=900, 
               tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
               x_range=(-1.8, 1.8), y_range=(-1.5, 1.5))
     
     source = ColumnDataSource(data)
+    small_source = ColumnDataSource(small_slices)
+    large_source = ColumnDataSource(large_slices)
     
     # Draw outer ring
     r = p.wedge(x=0, y=0,
@@ -469,30 +478,34 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
             color='white',
             source=source)
 
-    # Add labels with connecting lines for small slices
-    labels = LabelSet(x='label_x', y='label_y', text='label_text',
-                     source=source,
-                     text_align='left' if data['middle_angle'].mean() < pi else 'right',
-                     text_baseline='middle')
-    p.add_layout(labels)
+    # Add inside labels for large slices
+    inside_labels = LabelSet(x='inside_x', y='inside_y', text='label_text',
+                           source=large_source,
+                           text_align='center',
+                           text_baseline='middle')
+    p.add_layout(inside_labels)
+
+    # Add outside labels for small slices
+    outside_labels = LabelSet(x='outside_x', y='outside_y', text='label_text',
+                            source=small_source,
+                            text_align='left',
+                            text_baseline='middle')
+    p.add_layout(outside_labels)
 
     # Add connecting lines for small slices
-    for i, row in data.iterrows():
-        if row['percentage'] < threshold:
-            # Calculate points for the connecting line
-            angle = row['middle_angle'] - pi/2
-            inner_x = OUTER_RADIUS * cos(angle)
-            inner_y = OUTER_RADIUS * sin(angle)
-            outer_x = row['label_x']
-            outer_y = row['label_y']
-            
-            # Draw the connecting line
-            p.line(
-                x=[inner_x, outer_x],
-                y=[inner_y, outer_y],
-                line_color='gray',
-                line_width=0.5
-            )
+    for _, row in small_slices.iterrows():
+        angle = row['middle_angle'] - pi/2
+        inner_x = OUTER_RADIUS * cos(angle)
+        inner_y = OUTER_RADIUS * sin(angle)
+        outer_x = row['outside_x']
+        outer_y = row['outside_y']
+        
+        p.line(
+            x=[inner_x, outer_x],
+            y=[inner_y, outer_y],
+            line_color='gray',
+            line_width=0.5
+        )
     
     # Customize appearance
     p.axis.visible = False
