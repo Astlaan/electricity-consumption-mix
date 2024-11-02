@@ -118,12 +118,19 @@ def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
     threshold = 5
     pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
     
+    def make_autopct(values, pcts):
+        def my_autopct(pct):
+            # Find the closest percentage value (to handle floating point comparison)
+            idx = min(range(len(pcts)), key=lambda i: abs(pcts[i] - pct))
+            return f'{pct:.1f}%\n{values.iloc[idx]:.0f} MW'
+        return my_autopct
+
     # Create pie chart with a hole (donut chart)
     wedges, texts, autotexts = plt.pie(
         df, 
         labels=df.index,
         colors=cmap(np.linspace(0, 1, len(df))),
-        autopct=lambda pct: f'{pct:.1f}%\n{df[percentages[percentages == pct].index[0]]:.0f} MW',
+        autopct=make_autopct(df, percentages),
         pctdistance=0.85,
         wedgeprops=dict(width=0.5),  # Creates donut hole
         explode=pull_values,  # Pull out small slices
@@ -230,6 +237,6 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
     df = df.fillna(0)
 
     # Group by source type (in case multiple B-codes map to same source)
-    grouped_data = df.mean()
+    grouped_data = df.sum()
 
     return grouped_data
