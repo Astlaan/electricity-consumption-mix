@@ -310,7 +310,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     plt.clf()
     plt.close('all')
     # Make figure wider to accommodate legend
-    fig = plt.figure(figsize=(12, 7))
+    fig = plt.figure(figsize=(16, 10)) #Increased figure size
     
     df = _time_aggregation(df)
 
