@@ -431,7 +431,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.wedge(x=0, y=0,
             start_angle='start_angle',
             end_angle='end_angle',
-            radius=1.0,
+            outer_radius=1.0, #Corrected this line
             inner_radius=0.3,
             color='color',
             legend_field='source',
