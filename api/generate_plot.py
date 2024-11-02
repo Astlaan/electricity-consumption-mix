@@ -76,6 +76,9 @@ def handle_request(request_body):
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length).decode('utf-8')
         response = handle_request(post_data)

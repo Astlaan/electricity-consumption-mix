@@ -5,6 +5,7 @@ from typing import Optional
 from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
+import matplotlib.pyplot as plt
 
 from utils import RECORDS_START, current_day_start
 
@@ -53,7 +54,9 @@ def generate_visualization(start_date: datetime,
             return None
 
         if visualize_type == "simple":
-            return analyzer.plot(data)
+            fig = analyzer.plot(data)
+            return fig
+            
         elif visualize_type == "country-source":
             # TODO: Implement when needed
             pass
@@ -66,4 +69,6 @@ def generate_visualization(start_date: datetime,
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
         return None
+    finally:
+        plt.close('all')  # Ensure all matplotlib resources are cleaned up
 

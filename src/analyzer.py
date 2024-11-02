@@ -65,8 +65,10 @@ def plot(data: Data):
 
 
 
-def _plot_internal_matplotlib(df: pd.DataFrame) -> None:
-    plt.figure(figsize=(10, 8))
+def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
+    plt.clf()
+    plt.close('all')
+    fig = plt.figure(figsize=(10, 8))
     
     df = _time_aggregation(df)
 
@@ -76,7 +78,7 @@ def _plot_internal_matplotlib(df: pd.DataFrame) -> None:
 
     if df.empty:
         print("No non-zero data to plot")
-        return
+        return fig
 
     # Get colors from colormap
     colors = cmap(np.linspace(0, 1, len(df)))
@@ -86,7 +88,9 @@ def _plot_internal_matplotlib(df: pd.DataFrame) -> None:
     plt.title("Electricity Mix by Source Type")
     plt.axis('equal')
     plt.tight_layout()
-    return plt.gcf()
+    result = fig
+    plt.close(fig)  # Clean up
+    return result
 
 def _plot_internal_plotly(df: pd.DataFrame) -> None:
     df = _time_aggregation(df)
