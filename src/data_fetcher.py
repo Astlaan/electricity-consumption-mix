@@ -1,10 +1,8 @@
-import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
-import hashlib
 from typing import Dict, Any, Optional, List
 import aiohttp
 import asyncio
