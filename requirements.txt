@@ -1,8 +1,5 @@
 pandas
 numpy
-# matplotlib
 aiohttp
 aiofiles
-# plotly
-#entsoe-py
 tqdm
