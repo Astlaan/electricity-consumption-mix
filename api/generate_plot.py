@@ -3,7 +3,6 @@ import logging
 import sys
 import json
 import os
-from http.server import BaseHTTPRequestHandler
 from datetime import datetime
 
 # Configure logging to write to stderr which Vercel can capture
@@ -90,69 +89,65 @@ def check_cache_status():
         'body': json.dumps({'is_empty': is_empty})
     }
 
-class handler(BaseHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        logger.debug("Initializing handler")
-        try:
-            super().__init__(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Error initializing handler: {str(e)}")
-            raise
-
-    def do_GET(self):
-        logger.debug(f"Received GET request for path: {self.path}")
-        if self.path == '/api/check_cache':
+def handler(request):
+    """Vercel serverless function handler"""
+    try:
+        if request.method == 'GET' and request.url.path == '/api/check_cache':
             result = check_cache_status()
+            return {
+                'statusCode': result['statusCode'],
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': result['body']
+            }
             
-            logger.debug(f"Cache check result: {result}")
-            self.send_response(result['statusCode'])
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(result['body'].encode('utf-8'))
-        else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'Not found'}).encode('utf-8'))
-
-    def do_POST(self):
-        try:
-            content_length = int(self.headers['Content-Length'])
-            request_body = self.rfile.read(content_length).decode('utf-8')
-            
-            logger.debug(f"Request body: {request_body}")
+        if request.method == 'POST':
+            request_body = request.body.decode('utf-8')
             result = handle_request(request_body)
             
-            # Check response size
             response_size = len(result['body'])
             if response_size > 50 * 1024 * 1024:  # 50MB limit
                 result = {
                     'statusCode': 413,
                     'body': json.dumps({'error': 'Response too large'})
                 }
-            
-            self.send_response(result['statusCode'])
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            # Send in chunks if large
-            chunk_size = 8192
-            body_bytes = result['body'].encode('utf-8')
-            for i in range(0, len(body_bytes), chunk_size):
-                self.wfile.write(body_bytes[i:i+chunk_size])
                 
-        except Exception as e:
-            logger.error(f"Error in handler: {str(e)}")
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
-
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, GET') # Added GET
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+            return {
+                'statusCode': result['statusCode'],
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': result['body']
+            }
+            
+        if request.method == 'OPTIONS':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, GET',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                'body': ''
+            }
+            
+        return {
+            'statusCode': 404,
+            'headers': {
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({'error': 'Not found'})
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in handler: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({'error': str(e)})
+        }
