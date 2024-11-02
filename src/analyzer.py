@@ -65,7 +65,7 @@ def plot(data: Data):
 
 
 
-def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
+def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
     plt.clf()
     plt.close('all')
     fig = plt.figure(figsize=(10, 8))
@@ -91,6 +91,68 @@ def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
     plt.title("Electricity Mix by Source Type")
     plt.axis('equal')
     plt.tight_layout()
+    result = fig
+    plt.close(fig)  # Clean up
+    return result
+
+def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
+    plt.clf()
+    plt.close('all')
+    fig = plt.figure(figsize=(10, 7))
+    
+    df = _time_aggregation(df)
+
+    # Only plot non-zero values
+    mask = df > 0
+    df = df[mask]
+
+    if df.empty:
+        print("No non-zero data to plot")
+        return fig
+
+    # Rename the index using PSR_TYPE_MAPPING
+    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+
+    # Calculate percentages and determine which slices should be pulled out
+    percentages = df / df.sum() * 100
+    threshold = 5
+    pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
+    
+    # Create pie chart with a hole (donut chart)
+    wedges, texts, autotexts = plt.pie(
+        df, 
+        labels=df.index,
+        colors=cmap(np.linspace(0, 1, len(df))),
+        autopct=lambda pct: f'{pct:.1f}%\n{df[percentages[percentages == pct].index[0]]:.0f} MW',
+        pctdistance=0.85,
+        wedgeprops=dict(width=0.5),  # Creates donut hole
+        explode=pull_values,  # Pull out small slices
+        textprops={'fontsize': 8}
+    )
+
+    # Adjust text positions based on percentage
+    for i, p in enumerate(percentages):
+        if p < threshold:
+            # Move text outward for small slices
+            texts[i].set_position((1.5 * texts[i].get_position()[0], 
+                                 1.5 * texts[i].get_position()[1]))
+            autotexts[i].set_position((1.5 * autotexts[i].get_position()[0], 
+                                     1.5 * autotexts[i].get_position()[1]))
+
+    plt.title("Electricity Mix by Source Type", pad=20)
+    
+    # Add source annotation at bottom
+    plt.annotate(
+        "Source: ENTSO-E",
+        xy=(0.5, -0.1),
+        xycoords='figure fraction',
+        ha='center',
+        va='center'
+    )
+
+    plt.axis('equal')
+    plt.tight_layout()
+    
     result = fig
     plt.close(fig)  # Clean up
     return result
