@@ -47,7 +47,7 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 
 
 
-def plot(data: Data):
+def plot(data: Data, mode: str):
 
     # If start_time is a column, set it as index. If it's already the index, nothing changes
     data = ensure_index_and_sorting(data)
@@ -60,7 +60,8 @@ def plot(data: Data):
     flow_per_source_es_pt = F_es_pt * (G_es / G_es.sum(axis = 1).values[0])
     consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
 
-    fig = _plot_internal_matplotlib_1(consumption_per_source)
+    plot_func = globals()[f'{mode}']
+    fig = plot_func(consumption_per_source)
     return fig 
 
 
