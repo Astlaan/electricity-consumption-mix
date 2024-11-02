@@ -80,6 +80,9 @@ def _plot_internal_matplotlib(df: pd.DataFrame) -> plt.Figure:
         print("No non-zero data to plot")
         return fig
 
+    # Rename the index using PSR_TYPE_MAPPING
+    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+
     # Get colors from colormap
     colors = cmap(np.linspace(0, 1, len(df)))
 
