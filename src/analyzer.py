@@ -424,7 +424,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
         'percentage': percentages,
         'angle': df.values / total * 2 * pi,
         'pull': pull_values,
-        'color': Set3[max(8, len(df))][:len(df)]  # Similar colors to plotly Set3
+        'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]  # Safe color handling
     })
     
     # Calculate start and end angles
