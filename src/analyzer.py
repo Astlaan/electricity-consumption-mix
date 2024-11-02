@@ -449,17 +449,18 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.add_layout(Title(text="Electricity Mix by Source Type", text_font_size="16px"), 'above')
     
     # Add source attribution
-    source_label = Label(x=0, y=-1.3, text="Source: ENTSO-E",
+    source_label = Label(x=0, y=-1.5, text="Source: ENTSO-E",  # Changed y from -1.3 to -1.5
                         text_align='center', text_baseline='top')
     p.add_layout(source_label)
     
-    # Modify the legend settings
-    p.legend.location = "right"  # Position legend on the right
+    # Modify the legend settings to move it slightly more to the right
+    p.legend.location = "right"
     p.legend.click_policy = "hide"
     p.legend.border_line_color = None
     p.legend.background_fill_alpha = 0.7
     p.legend.glyph_height = 20
     p.legend.glyph_width = 20
     p.legend.label_text_font_size = '10pt'
+    p.legend.margin = 20  # Add margin to move legend further right
 
     return p
