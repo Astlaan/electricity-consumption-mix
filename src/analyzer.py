@@ -109,13 +109,15 @@ def _plot_internal_plotly(df: pd.DataFrame) -> None:
     pull_values = [0.0 if p >= threshold else 0.2 for p in percentages]
     text_positions = ['inside' if p >= threshold else 'outside' for p in percentages]
 
-    fig = px.pie(
-        values=df.values,
-        names=df.index,
-        title="Electricity Mix by Source Type",
-        color_discrete_sequence=px.colors.qualitative.Set3,
-        hole=.2
-    )
+    # Commented out plotly-specific code for now
+    # fig = px.pie(
+    #     values=df.values,
+    #     names=df.index,
+    #     title="Electricity Mix by Source Type",
+    #     color_discrete_sequence=px.colors.qualitative.Set3,
+    #     hole=.2
+    # )
+    fig = None  # Placeholder while plotly is disabled
 
     fig.update_traces(
         textinfo='percent+label+value',
