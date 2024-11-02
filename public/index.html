@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Electricity Mix Visualization</title>
-    <!-- Removed Plotly script since we won't be using it for now -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -43,6 +42,11 @@
         input[type="datetime-local"] {
             padding: 5px;
             margin-right: 10px;
+        }
+        #plotContainer img {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -146,8 +150,15 @@
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
-                // Just display the message about the size
-                plotContainer.textContent = data.message;
+                if (data.image) {
+                    const img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.image;
+                    img.alt = 'Electricity Mix Visualization';
+                    plotContainer.innerHTML = '';
+                    plotContainer.appendChild(img);
+                } else {
+                    plotContainer.textContent = data.message || 'Failed to generate visualization';
+                }
 
             } catch (error) {
                 errorMessage.textContent = error.message;
