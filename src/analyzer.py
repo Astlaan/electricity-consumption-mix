@@ -5,20 +5,30 @@ from typing import Dict
 from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe
 # import plotly.express as px # Import px (commented for now)
-import matplotlib.pyplot as plt
-
-from bokeh.plotting import figure
-from bokeh.layouts import column
-from bokeh.transform import cumsum
-from bokeh.palettes import Set3
-from math import pi
 
 pd.set_option('display.max_columns', None)  # Show all columns
 pd.set_option('display.max_rows', None)     # Show all rows
 pd.set_option('display.width', None)        # Set width to expand to full display
 pd.set_option('display.max_colwidth', None)
 
-cmap = plt.get_cmap('tab20')
+
+
+def _format_date_range(df: pd.DataFrame) -> str:
+    start_date = df.index.min()
+    end_date = df.index.max()
+    return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
+
+def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
+    """Aggregate data by source type only."""
+    # Remove columns where all values are 0
+    df = df.loc[:, (df != 0).any()]
+    # Fill any NaN values with 0
+    df = df.fillna(0)
+
+    # Group by source type (in case multiple B-codes map to same source)
+    grouped_data = df.sum()
+
+    return grouped_data
 
 def ensure_index_and_sorting(data: Data):
     # This is handy while the stash fixing saved/loaded indexes is not fixed
@@ -70,39 +80,9 @@ def plot(data: Data, mode: str):
     fig = plot_func(consumption_per_source)
     return fig 
 
-
-
-def _plot_internal_matplotlib_1(df: pd.DataFrame) -> plt.Figure:
-    plt.clf()
-    plt.close('all')
-    fig = plt.figure(figsize=(10, 8))
-    
-    df = _time_aggregation(df)
-
-    # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
-
-    if df.empty:
-        print("No non-zero data to plot")
-        return fig
-
-    # Rename the index using PSR_TYPE_MAPPING
-    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
-
-    # Get colors from colormap
-    colors = cmap(np.linspace(0, 1, len(df)))
-
-    plt.pie(df, labels=df.index, colors=colors,
-            autopct='%1.1f%%', textprops={'fontsize': 8})
-    plt.title("Electricity Mix by Source Type")
-    plt.axis('equal')
-    plt.tight_layout()
-    result = fig
-    plt.close(fig)  # Clean up
-    return result
-
-def _plot_internal_matplotlib_0(df: pd.DataFrame) -> plt.Figure:
+def _plot_internal_matplotlib_0(df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('tab20')
     plt.clf()
     plt.close('all')
     fig = plt.figure(figsize=(10, 7))
@@ -166,6 +146,122 @@ def _plot_internal_matplotlib_0(df: pd.DataFrame) -> plt.Figure:
 
     plt.axis('equal')
     plt.tight_layout()
+    
+    result = fig
+    plt.close(fig)  # Clean up
+    return result
+
+def _plot_internal_matplotlib_1(df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('tab20')
+
+    plt.clf()
+    plt.close('all')
+    fig = plt.figure(figsize=(10, 8))
+    
+    df = _time_aggregation(df)
+
+    # Only plot non-zero values
+    mask = df > 0
+    df = df[mask]
+
+    if df.empty:
+        print("No non-zero data to plot")
+        return fig
+
+    # Rename the index using PSR_TYPE_MAPPING
+    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+
+    # Get colors from colormap
+    colors = cmap(np.linspace(0, 1, len(df)))
+
+    plt.pie(df, labels=df.index, colors=colors,
+            autopct='%1.1f%%', textprops={'fontsize': 8})
+    plt.title("Electricity Mix by Source Type")
+    plt.axis('equal')
+    plt.tight_layout()
+    result = fig
+    plt.close(fig)  # Clean up
+    return result
+
+def _plot_internal_matplotlib_2(df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('tab20')
+
+    plt.clf()
+    plt.close('all')
+    # Make figure wider to accommodate legend
+    fig = plt.figure(figsize=(12, 8.5)) #Changed figure size and reduced width
+    
+    df = _time_aggregation(df)
+
+    # Only plot non-zero values
+    mask = df > 0
+    df = df[mask]
+
+    if df.empty:
+        print("No non-zero data to plot")
+        return fig
+
+    # Rename the index using PSR_TYPE_MAPPING
+    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+
+    # Calculate percentages
+    percentages = df / df.sum() * 100
+    threshold = 5
+    pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
+    
+    def make_autopct(values, pcts):
+        def my_autopct(pct):
+            # Find the closest percentage value
+            idx = min(range(len(pcts)), key=lambda i: abs(pcts[i] - pct))
+            # Only show percentage if it's >= 5%
+            if pct >= 5:
+                return f'{pct:.1f}%'
+            else:
+                return ''  # Return empty string for small percentages
+        return my_autopct
+
+    # Create pie chart with a hole (donut chart)
+    wedges, texts, autotexts = plt.pie(
+        df, 
+        labels=[''] * len(df),  # Empty labels
+        colors=cmap(np.linspace(0, 1, len(df))),
+        autopct=make_autopct(df, percentages),
+        pctdistance=0.75,
+        wedgeprops=dict(width=0.5),  # Creates donut hole
+        explode=pull_values,  # Pull out small slices
+        textprops={'fontsize': 10},  # Increased from 8 to 10
+        radius=1  # Full size pie
+    )
+
+    # Add legend with values
+    legend_labels = [f'{name}\n{value:.1f} MW ({pct:.1f}%)' 
+                     for name, value, pct in zip(df.index, df.values, percentages)]
+    plt.legend(
+        wedges,
+        legend_labels,
+        title="Source Types",
+        loc="center left",
+        bbox_to_anchor=(1.05, 0.5),  # Changed from (1, 0.5) to bring legend closer
+        fontsize=10,  # Increased from 8 to 10
+        title_fontsize=12  # Added explicit title font size
+    )
+
+    plt.title("Electricity Mix by Source Type", pad=20, fontsize=14) #Increased title font size
+    
+    # Add source annotation at bottom
+    plt.annotate(
+        "Source: Energy Data",
+        xy=(0.5, -0.1),
+        xycoords='figure fraction',
+        ha='center',
+        va='center',
+        fontsize=10  # Added explicit font size
+    )
+
+    plt.axis('equal')
+    plt.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust the right margin to prevent legend cutoff
     
     result = fig
     plt.close(fig)  # Clean up
@@ -295,104 +391,12 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
     return fig
 
 
-def _format_date_range(df: pd.DataFrame) -> str:
-    start_date = df.index.min()
-    end_date = df.index.max()
-    return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
-
-def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
-    """Aggregate data by source type only."""
-    # Remove columns where all values are 0
-    df = df.loc[:, (df != 0).any()]
-    # Fill any NaN values with 0
-    df = df.fillna(0)
-
-    # Group by source type (in case multiple B-codes map to same source)
-    grouped_data = df.sum()
-
-    return grouped_data
-
-def _plot_internal_matplotlib_2(df: pd.DataFrame) -> plt.Figure:
-    plt.clf()
-    plt.close('all')
-    # Make figure wider to accommodate legend
-    fig = plt.figure(figsize=(12, 8.5)) #Changed figure size and reduced width
-    
-    df = _time_aggregation(df)
-
-    # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
-
-    if df.empty:
-        print("No non-zero data to plot")
-        return fig
-
-    # Rename the index using PSR_TYPE_MAPPING
-    df.index = df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
-
-    # Calculate percentages
-    percentages = df / df.sum() * 100
-    threshold = 5
-    pull_values = [0.2 if p < threshold else 0.0 for p in percentages]
-    
-    def make_autopct(values, pcts):
-        def my_autopct(pct):
-            # Find the closest percentage value
-            idx = min(range(len(pcts)), key=lambda i: abs(pcts[i] - pct))
-            # Only show percentage if it's >= 5%
-            if pct >= 5:
-                return f'{pct:.1f}%'
-            else:
-                return ''  # Return empty string for small percentages
-        return my_autopct
-
-    # Create pie chart with a hole (donut chart)
-    wedges, texts, autotexts = plt.pie(
-        df, 
-        labels=[''] * len(df),  # Empty labels
-        colors=cmap(np.linspace(0, 1, len(df))),
-        autopct=make_autopct(df, percentages),
-        pctdistance=0.75,
-        wedgeprops=dict(width=0.5),  # Creates donut hole
-        explode=pull_values,  # Pull out small slices
-        textprops={'fontsize': 10},  # Increased from 8 to 10
-        radius=1  # Full size pie
-    )
-
-    # Add legend with values
-    legend_labels = [f'{name}\n{value:.1f} MW ({pct:.1f}%)' 
-                     for name, value, pct in zip(df.index, df.values, percentages)]
-    plt.legend(
-        wedges,
-        legend_labels,
-        title="Source Types",
-        loc="center left",
-        bbox_to_anchor=(1.05, 0.5),  # Changed from (1, 0.5) to bring legend closer
-        fontsize=10,  # Increased from 8 to 10
-        title_fontsize=12  # Added explicit title font size
-    )
-
-    plt.title("Electricity Mix by Source Type", pad=20, fontsize=14) #Increased title font size
-    
-    # Add source annotation at bottom
-    plt.annotate(
-        "Source: Energy Data",
-        xy=(0.5, -0.1),
-        xycoords='figure fraction',
-        ha='center',
-        va='center',
-        fontsize=10  # Added explicit font size
-    )
-
-    plt.axis('equal')
-    plt.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust the right margin to prevent legend cutoff
-    
-    result = fig
-    plt.close(fig)  # Clean up
-    return result
-
 def _plot_internal_bokeh_2(df: pd.DataFrame):
+    from bokeh.plotting import figure
+    from bokeh.layouts import column
+    from bokeh.transform import cumsum
+    from bokeh.palettes import Set3
+    from math import pi
     from bokeh.models import ColumnDataSource, Legend, Title, Label
     
     df = _time_aggregation(df)
