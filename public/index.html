@@ -19,8 +19,11 @@
         }
         .error-message {
             color: red;
-            display: none;
             margin-top: 10px;
+        }
+        .error-item {
+            display: block;
+            margin-bottom: 5px;
         }
         .loading {
             display: none;
@@ -60,13 +63,13 @@
     
     <div class="form-container">
         <form id="plotForm">
-            <label for="start_date">Start Date:</label>
+            <label for="start_date">Start Date (UTC):</label>
             <input type="datetime-local" id="start_date" required 
-                value="2024-01-01T00:00" step="3600">
+                value="2024-01-01T00:00" step="3600" min="2015-01-15T00:00">
             
-            <label for="end_date">End Date:</label>
+            <label for="end_date">End Date (UTC):</label>
             <input type="datetime-local" id="end_date" required
-                value="2024-01-01T01:00" step="3600">
+                value="2024-01-01T01:00" step="3600" min="2015-01-15T01:00">
             
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
@@ -87,27 +90,100 @@
             dateTimeInput.value = date.toISOString().slice(0, 16);
         }
 
-        // Add listeners to both inputs
+        function getCurrentUTCHour() {
+            const now = new Date();
+            now.setUTCMinutes(0);     // Set minutes to 0
+            now.setUTCSeconds(0);     // Set seconds to 0
+            now.setUTCMilliseconds(0);
+            return now;
+        }
+
+        // Add this function after getCurrentUTCHour()
+        function setMaxDates() {
+            const maxEndDate = getCurrentUTCHour();
+            const maxStartDate = new Date(maxEndDate);
+            maxStartDate.setTime(maxStartDate.getTime() - (60 * 60 * 1000)); // One hour before max end date
+
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+
+            // Format dates to ISO string and slice to get the format required by datetime-local
+            startDateInput.max = maxStartDate.toISOString().slice(0, 16);
+            endDateInput.max = maxEndDate.toISOString().slice(0, 16);
+        }
+
+
+        // Modify the event listeners section to include 'input' events
+        document.getElementById('start_date').addEventListener('input', function() {
+            validateDates();
+        });
         document.getElementById('start_date').addEventListener('change', function() {
-            roundToHour(this);
+            // roundToHour(this);
             validateDates();
         });
 
+        document.getElementById('end_date').addEventListener('input', function() {
+            validateDates();
+        });
         document.getElementById('end_date').addEventListener('change', function() {
-            roundToHour(this);
+            // roundToHour(this);
             validateDates();
         });
 
         function validateDates() {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+
+            let errors = [];
+
+            // Check if either date is invalid (NaN)
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                errors.push("Please insert valid dates");
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.innerHTML = errors.map(error => `<div class="error-item">${error}</div>`).join('');
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = true;
+                return false;
+            }
+
+            const minStartDate = new Date('2015-01-15T00:00');
+            const minEndDate = new Date(minStartDate);
+            minEndDate.setTime(minEndDate.getTime() + (60 * 60 * 1000)); // One hour after min start date            
+            const maxEndDate = getCurrentUTCHour();
+            const maxStartDate = new Date(maxEndDate);
+            maxStartDate.setTime(maxStartDate.getTime() - (60 * 60 * 1000));
+            
+            // Check date ranges
+            if (startDate < minStartDate) {
+                errors.push("Start date cannot be earlier than 2015-01-15T00:00");
+            }
+            if (startDate > maxStartDate) {
+                errors.push("Start date cannot be later than one hour before current time");
+            }
+            
+            if (endDate < minEndDate) {
+                errors.push("End date cannot be earlier than 2015-01-15T01:00");
+            }
+            if (endDate > maxEndDate) {
+                errors.push("End date cannot be later than current time");
+            }
+
+            // Check date order
             if (startDate >= endDate) {
-                errorMessage.textContent = "End date must be after start date.";
+                errors.push("End date must be after start date");
+            }
+
+            // Display errors or hide error container
+            const errorMessage = document.getElementById('errorMessage');
+            if (errors.length > 0) {
+                errorMessage.innerHTML = errors.map(error => `<div class="error-item">${error}</div>`).join('');
                 errorMessage.style.display = 'block';
                 submitBtn.disabled = true;
                 return false;
             } else {
-                // Clear error if validation passes
+                errorMessage.innerHTML = '';
                 errorMessage.style.display = 'none';
                 submitBtn.disabled = false;
                 return true;
@@ -174,48 +250,11 @@
             }
         });
 
-        // Check cache status on page load
-        // window.addEventListener('load', async () => {
-        //     console.log("Checking cache status...");
-        //     try {
-        //         const response = await fetch('/api/check_cache');
-        //         console.log("Cache check response:", response);
-        //         if (!response.ok) {
-        //             throw new Error(`HTTP error! status: ${response.status}`);
-        //         }
-        //         const data = await response.json();
-        //         console.log("Cache status data:", data);
-                
-        //         if (data.is_empty) {
-        //             console.log("Cache is empty, showing warning");
-        //             cacheWarning.style.display = 'block';
-        //             submitBtn.disabled = true;
-        //         } else {
-        //             console.log("Cache is not empty");
-        //             submitBtn.disabled = false;
-        //             validateDates();
-        //         }
-        //     } catch (error) {
-        //         console.error('Error checking cache status:', error);
-        //         // Optionally show error to user
-        //         errorMessage.textContent = 'Failed to check cache status: ' + error.message;
-        //         errorMessage.style.display = 'block';
-        //     }
-        // });
-
-        // initializeCacheBtn.addEventListener('click', async () => {
-        //     try {
-        //         const response = await fetch('/api/initialize_cache', { method: 'POST' });
-        //         if (!response.ok) {
-        //             throw new Error(await response.text());
-        //         }
-        //         cacheWarning.style.display = 'none';
-        //         submitBtn.disabled = false;
-        //         alert("Cache initialization started.  Please refresh the page after a few minutes.");
-        //     } catch (error) {
-        //         alert(`Error initializing cache: ${error}`);
-        //     }
-        // });
+        // Add this event listener at the end of your script section
+        window.addEventListener('load', function() {
+            setMaxDates();
+            validateDates();
+        });
     </script>
 </body>
 </html>

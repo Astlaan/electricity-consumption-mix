@@ -9,25 +9,25 @@ def current_day_start():
     return datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
 
+def available_date_end_exclusive():
+    """Returns the current UTC hour as a naive datetime"""
+    now = datetime.utcnow()  # Use utcnow() instead of now(timezone.utc)
+    return now.replace(minute=0, second=0, microsecond=0)
+
+
 def validate_inputs(start_date, end_date):
-    def _assert_exact_hour(date):
+    def _assert_whole_hour(date):
         assert(date.minute == 0 and date.second == 0 and date.microsecond == 0)
+ 
+    _assert_whole_hour(start_date)
+    _assert_whole_hour(end_date)
 
-    def _assert_within_records(date):
-        assert(RECORDS_START <= date)
-
-    def _assert_less_or_equal_than_current_day_start(date):
-        assert(date <= current_day_start())
-
-
-
-    _assert_exact_hour(start_date)
-    _assert_exact_hour(end_date)
-    _assert_within_records(start_date)
-    _assert_within_records(end_date)
-    _assert_less_or_equal_than_current_day_start(start_date)
-    _assert_less_or_equal_than_current_day_start(end_date)
+    # Assert minimum interval of 1 hour
     assert(end_date-start_date >= timedelta(hours=1))
+
+    # Assert within records
+    assert(RECORDS_START <= start_date)
+    assert(end_date <= available_date_end_exclusive())
 
 
 def get_active_psr_in_dataframe(df):
