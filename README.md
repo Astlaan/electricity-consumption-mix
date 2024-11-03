@@ -30,7 +30,6 @@ when it is plugged into the website.
 - How will the asynchronous read/writes on the blob work? Will it be a problem?
   - Desativar save_to_disk por agora
 
-- Permitir considerar o dia de hoje nas datas
 - Mostrar MWh em vez de MW
 - Constrangir datas no frontend.
 - Meter warning se cache não detetada

@@ -6,7 +6,7 @@ from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, current_day_start
+from utils import RECORDS_START, available_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
@@ -16,7 +16,7 @@ def initialize_cache():
     
     # Calculate total number of years to fetch
     start = RECORDS_START
-    end = current_day_start()
+    end = available_date_end_exclusive()
     total_years = (end.year - start.year) + 1
     
     logger.info(f"Initializing cache from {start.date()} to {end.date()}")
@@ -27,7 +27,7 @@ def initialize_cache():
         def progress_callback():
             pbar.update(1)
         
-        data_fetcher.get_data(RECORDS_START, current_day_start(), progress_callback=progress_callback)
+        data_fetcher.get_data(RECORDS_START, end, progress_callback=progress_callback)
 
 def generate_visualization(start_date: datetime, 
                          end_date: datetime, 
