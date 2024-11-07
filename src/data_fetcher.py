@@ -45,7 +45,8 @@ class ENTSOEDataFetcher:
             )
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
-        self.cached_data = self._load_cached_data()
+        self.cached_data: pd.DataFrame = self._load_cached_data()
+        # Note: cached_data is guaranteed to have DatetimeIndex after _load_cached_data
 
 
     def _load_cached_data(self) -> pd.DataFrame:
@@ -478,17 +479,17 @@ class ENTSOEDataFetcher:
         # Apply year filter
         if pattern.years.strip():
             years = [int(x) for x in pattern.years.split(',')]
-            mask &= self.cached_data.index.year.isin(years)
+            mask &= self.cached_data.index.year.isin(years)  # type: ignore
         
         # Apply month filter
         if pattern.months.strip():
             months = [int(x) for x in pattern.months.split(',')]
-            mask &= self.cached_data.index.month.isin(months)
+            mask &= self.cached_data.index.month.isin(months)  # type: ignore
         
         # Apply day filter
         if pattern.days.strip():
             days = [int(x) for x in pattern.days.split(',')]
-            mask &= self.cached_data.index.day.isin(days)
+            mask &= self.cached_data.index.day.isin(days)  # type: ignore
         
         # Apply hour filter
         if pattern.hours.strip():
@@ -496,8 +497,8 @@ class ENTSOEDataFetcher:
             for hour_range in pattern.hours.split(','):
                 start, end = map(int, hour_range.split('-'))
                 hour_mask |= (
-                    (self.cached_data.index.hour >= start) & 
-                    (self.cached_data.index.hour < end)
+                    (self.cached_data.index.hour >= start) &  # type: ignore
+                    (self.cached_data.index.hour < end)  # type: ignore
                 )
             mask &= hour_mask
         
