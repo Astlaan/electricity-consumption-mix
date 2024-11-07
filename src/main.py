@@ -1,5 +1,7 @@
 import logging
 
+from src.utils import SimpleInterval
+
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 import argparse
@@ -17,25 +19,26 @@ def main():
         print("Error: --start_date and --end_date are required when not using --initialize-cache")
         return
     
+    data_request = SimpleInterval(args.start_date, args.end_date)
+
     fig = core.generate_visualization(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        visualize_type=args.visualize,
+        data_request,
+        backend=args.visualize,
         reset_cache=args.reset_cache
     )
     
     if fig is not None:
         if str(type(fig).__module__).startswith('plotly'):
             print("BACKEND: Plotly")
-            fig.show()  # Show Plotly figure in browser
+            fig.show()  # type: ignore # Show Plotly figure in browser
         elif str(type(fig).__module__).startswith('bokeh'):
             print("BACKEND: Bokeh")
-            from bokeh.plotting import show 
+            from bokeh.plotting import show  # type: ignore
             show(fig)  # Show Bokeh figure in browser
         else:
             print("BACKEND: Matplotlib")
             # Save matplotlib figure to HTML and open in browser
-            import mpld3
+            import mpld3 # type: ignore
             import webbrowser
             import tempfile
             import os

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 import aiohttp
 import asyncio
 import logging
@@ -11,6 +11,8 @@ import shutil
 from dataclasses import dataclass
 import aiofiles
 import utils
+from utils import AdvancedPattern, DataRequest, SimpleInterval
+from src.time_pattern import TimePatternParser # Added import
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -43,8 +45,30 @@ class ENTSOEDataFetcher:
             )
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
+        self.cached_data = self._load_cached_data()
 
-    def get_data(self, start_date: datetime, end_date: datetime, progress_callback=None) -> Data:
+
+    def _load_cached_data(self) -> pd.DataFrame:
+        """Loads all cached data into a single DataFrame."""
+        try:
+            all_data = []
+            for filename in os.listdir(self.CACHE_DIR):
+                if filename.endswith(f".{self.CACHE_EXTENSION}"):
+                    filepath = os.path.join(self.CACHE_DIR, filename)
+                    df = pd.read_pickle(filepath, compression={'method': self.COMPRESSION_METHOD})
+                    all_data.append(df)
+            if all_data:
+                combined_df = pd.concat(all_data, ignore_index=True)
+                combined_df = combined_df.sort_values('start_time').set_index('start_time')
+                return combined_df
+            else:
+                return pd.DataFrame()
+        except Exception as e:
+            logger.error(f"Error loading cached data: {e}")
+            return pd.DataFrame()
+
+
+    def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch all required data for Portugal and Spain in parallel.
 
         Args:
@@ -56,34 +80,43 @@ class ENTSOEDataFetcher:
             Data object containing all required dataframes
         """
 
-        utils.validate_inputs(start_date, end_date)
+        if isinstance(data_request, SimpleInterval):
+            start_date = data_request.start_date
+            end_date = data_request.end_date
 
-        async def _async_get_data():
-            return await asyncio.gather(
-                self._async_get_generation_data(
-                    "10YPT-REN------W", start_date, end_date, progress_callback
-                ),  # PT generation
-                self._async_get_generation_data(
-                    "10YES-REE------0", start_date, end_date, progress_callback
-                ),  # ES generation
-                self._async_get_physical_flows(
-                    "10YES-REE------0", "10YPT-REN------W", start_date, end_date, progress_callback
-                ),  # ES->PT flow
-                self._async_get_physical_flows(
-                    "10YPT-REN------W", "10YES-REE------0", start_date, end_date, progress_callback
-                ),  # PT->ES flow
+            utils.validate_inputs(start_date, end_date)
+
+            async def _async_get_data():
+                return await asyncio.gather(
+                    self._async_get_generation_data(
+                        "10YPT-REN------W", start_date, end_date, progress_callback
+                    ),  # PT generation
+                    self._async_get_generation_data(
+                        "10YES-REE------0", start_date, end_date, progress_callback
+                    ),  # ES generation
+                    self._async_get_physical_flows(
+                        "10YES-REE------0", "10YPT-REN------W", start_date, end_date, progress_callback
+                    ),  # ES->PT flow
+                    self._async_get_physical_flows(
+                        "10YPT-REN------W", "10YES-REE------0", start_date, end_date, progress_callback
+                    ),  # PT->ES flow
+                )
+
+            # Run the async operations
+            results = asyncio.run(_async_get_data())
+
+            # Pack results into Data object
+            return Data(
+                generation_pt=results[0],
+                generation_es=results[1],
+                flow_es_to_pt=results[2],
+                flow_pt_to_es=results[3],
             )
-
-        # Run the async operations
-        results = asyncio.run(_async_get_data())
-
-        # Pack results into Data object
-        return Data(
-            generation_pt=results[0],
-            generation_es=results[1],
-            flow_es_to_pt=results[2],
-            flow_pt_to_es=results[3],
-        )
+        
+        elif isinstance(data_request, AdvancedPattern):
+            raise ValueError("Not implemented")
+        else:
+            raise ValueError("This DataRequest type is not allowed")
 
     async def _save_to_cache(
         self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]
@@ -92,8 +125,6 @@ class ENTSOEDataFetcher:
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
         logger.debug(f"Attempting to save cache file: {cache_name}")
 
-        # # Save column order in metadata
-        # metadata["column_order"] = data.columns.tolist()
 
         # Use asyncio.to_thread for the pandas operation since it's CPU-bound
         await asyncio.to_thread(data.to_pickle, cache_file, compression={'method': self.COMPRESSION_METHOD, 'compresslevel': 1, "mtime": 0})
@@ -115,10 +146,6 @@ class ENTSOEDataFetcher:
                     metadata = json.loads(await f.read())
 
                 data = await asyncio.to_thread(pd.read_pickle, cache_file)
-
-                # # Restore column order from metadata if available
-                # if "column_order" in metadata:
-                #     data = data[metadata["column_order"]]
 
                 # Convert string representation back to Timedelta if necessary
                 if "resolution" in metadata and isinstance(metadata["resolution"], str):
@@ -198,8 +225,8 @@ class ENTSOEDataFetcher:
             if start_time is None or resolution is None:
                 continue
 
-            start_time = pd.to_datetime(start_time.text).tz_localize(None)
-            resolution = pd.Timedelta(resolution.text)
+            start_time = pd.to_datetime(start_time.text).tz_localize(None) # type: ignore
+            resolution = pd.Timedelta(resolution.text) # type: ignore
 
             for point in period.findall(point_path, namespace):
                 position = point.find(position_path, namespace)
@@ -208,7 +235,7 @@ class ENTSOEDataFetcher:
                 if position is None or quantity is None:
                     continue
 
-                point_start_time = start_time + resolution * (int(position.text) - 1)
+                point_start_time = start_time + resolution * (int(position.text) - 1) # type: ignore
                 # point_end_time = point_start_time + resolution
 
                 data_point = {
@@ -219,9 +246,9 @@ class ENTSOEDataFetcher:
 
                 # Use 'Power' column name for flow data, otherwise use quantity with psr_type
                 if is_flow_data:
-                    data_point["Power"] = float(quantity.text)
+                    data_point["Power"] = float(quantity.text) # type: ignore
                 else:
-                    data_point["quantity"] = float(quantity.text)
+                    data_point["quantity"] = float(quantity.text) # type: ignore
                     data_point["psr_type"] = psr_type
 
                 data.append(data_point)
@@ -393,6 +420,70 @@ class ENTSOEDataFetcher:
             print(f"Deleting cache directory: {self.CACHE_DIR}")
             shutil.rmtree(self.CACHE_DIR)
             os.makedirs(self.CACHE_DIR)  # Recreate empty cache dir
+
+    async def get_data_for_pattern(self, pattern: dict) -> Data:
+        """Fetch data according to a time pattern."""
+        # Parse pattern into intervals
+        parser = TimePatternParser()
+        intervals = parser.parse_pattern(
+            years=pattern.get('years', ''),
+            months=pattern.get('months', ''),
+            days=pattern.get('days', ''),
+            hours=pattern.get('hours', '')
+        )
+        
+        if not intervals:
+            raise ValueError("No valid time intervals generated from pattern")
+
+        # Get the latest date needed (exclusive)
+        latest_needed_exclusive = max(end for _, end in intervals)
+        
+        # Check if we need to fetch more data
+        cache_metadata = self._get_cache_metadata()
+        if not self._is_date_covered_by_cache(latest_needed_exclusive, cache_metadata):
+            # Single fetch for all missing data
+            cache_end_exclusive = cache_metadata.get('end_date_exclusive')
+            start_date = cache_end_exclusive if cache_end_exclusive else min(start for start, _ in intervals)
+            await self.get_data(start_date=start_date, end_date=latest_needed_exclusive)
+            self.cached_data = self._load_cached_data() #Reload cached data
+
+        # Return filtered data for requested intervals
+        return self._get_data_for_intervals(intervals)
+
+    def _is_date_covered_by_cache(self, date_exclusive: datetime, cache_metadata: dict) -> bool:
+        """Check if a date (exclusive) is covered by the cache."""
+        if not cache_metadata or 'end_date_exclusive' not in cache_metadata:
+            return False
+        return pd.to_datetime(cache_metadata['end_date_exclusive']) >= date_exclusive
+
+    def _get_data_for_intervals(self, intervals: List[Tuple[datetime, datetime]]) -> Data:
+        """Get data from cache for specific intervals."""
+        # Create mask for requested intervals
+        mask = pd.Series(False, index=self.cached_data.index)
+        for start, end in intervals:  # end is exclusive
+            mask |= (self.cached_data.index >= start) & (self.cached_data.index < end)
+        
+        # Filter and return data
+        filtered_data = self.cached_data[mask].copy()
+        generation_pt = filtered_data[filtered_data.columns[filtered_data.columns.str.contains("10YPT-REN------W")]]
+        generation_es = filtered_data[filtered_data.columns[filtered_data.columns.str.contains("10YES-REE------0")]]
+        flow_pt_to_es = filtered_data[filtered_data.columns[filtered_data.columns.str.contains("10YPT-REN------W_10YES-REE------0")]]
+        flow_es_to_pt = filtered_data[filtered_data.columns[filtered_data.columns.str.contains("10YES-REE------0_10YPT-REN------W")]]
+        return Data(generation_pt=generation_pt, generation_es=generation_es, flow_pt_to_es=flow_pt_to_es, flow_es_to_pt=flow_es_to_pt)
+
+    def _get_cache_metadata(self) -> Optional[dict]:
+        """Gets metadata from the latest cache file."""
+        try:
+            cache_files = [f for f in os.listdir(self.CACHE_DIR) if f.endswith("_metadata.json")]
+            if not cache_files:
+                return None
+            latest_metadata_file = max(cache_files, key=lambda x: os.path.getmtime(os.path.join(self.CACHE_DIR, x)))
+            filepath = os.path.join(self.CACHE_DIR, latest_metadata_file)
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error getting cache metadata: {e}")
+            return None
 
     ########## For testing ###########
 

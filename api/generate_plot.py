@@ -5,7 +5,11 @@ import sys
 import gc
 import os
 from datetime import datetime
-from bokeh.embed import json_item  # Add this import
+from bokeh.embed import json_item  # type: ignore # Add this import
+from src.time_pattern import TimePatternParser
+import asyncio
+
+from src.utils import AdvancedPattern, DataRequest, SimpleInterval # Added import
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -18,22 +22,30 @@ logger = logging.getLogger(__name__)
 # Add src directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from core import generate_visualization
-from data_fetcher import ENTSOEDataFetcher
+# from core import generate_visualization
+# from data_fetcher import ENTSOEDataFetcher
+from ..src.core import generate_visualization
+# from ..src.data_fetcher import ENTSOEDataFetcher
 
 def handle_request(request_body):
     try:
         # Parse request body
         body = json.loads(request_body)
-        start_date = datetime.fromisoformat(body['start_date'])
-        end_date = datetime.fromisoformat(body['end_date'])
-
-        # Generate visualization
-        fig = generate_visualization(
-            start_date=start_date,
-            end_date=end_date,
-            visualize_type="_plot_internal_bokeh_2"
-        )
+        
+        if body['mode'] == 'simple':
+            # Simple mode - single interval
+            start_date = datetime.fromisoformat(body['start_date'])
+            end_date = datetime.fromisoformat(body['end_date'])
+            data_request = SimpleInterval(start_date, end_date)
+        else:
+            # Advanced mode - pattern-based
+            data_request = AdvancedPattern(
+                years=body["years"],
+                months=body["months"],
+                days=body["days"],
+                hours=body["hours"])
+            
+        fig = generate_visualization(data_request, backend="_plot_internal_bokeh_2")
         
         if fig is None:
             return {
@@ -63,7 +75,6 @@ def handle_request(request_body):
         }
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
-        gc.collect()  # Clean up on error too
         return {
             'statusCode': 500,
             'body': json.dumps({'error': f'An unexpected error occurred: {e}'})

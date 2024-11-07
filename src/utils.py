@@ -1,9 +1,25 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Union
 import pandas as pd
 from config import PSR_TYPE_MAPPING
+from enum import Enum
+from dataclasses import dataclass
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
+
+@dataclass 
+class SimpleInterval:
+    start_date: datetime
+    end_date: datetime
+
+@dataclass
+class AdvancedPattern:
+    years: str
+    months: str
+    days: str
+    hours: str
+
+DataRequest = Union[SimpleInterval, AdvancedPattern]
 
 def current_day_start():
     return datetime.now(timezone.utc).replace(

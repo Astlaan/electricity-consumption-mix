@@ -6,7 +6,7 @@ from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, available_date_end_exclusive
+from utils import RECORDS_START, DataRequest, available_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
@@ -29,10 +29,10 @@ def initialize_cache():
         
         data_fetcher.get_data(RECORDS_START, end, progress_callback=progress_callback)
 
-def generate_visualization(start_date: datetime, 
-                         end_date: datetime, 
-                         visualize_type: str = "simple",
-                         reset_cache: bool = False) -> Optional[object]:
+def generate_visualization(
+        data_request: DataRequest, 
+        backend: str,
+        reset_cache: bool = False) -> Optional[object]:
     """
     Core visualization logic used by both CLI and API.
     Returns a Plotly figure object or None if visualization type is invalid or an error occurs.
@@ -43,7 +43,7 @@ def generate_visualization(start_date: datetime,
         data_fetcher.reset_cache()
 
     try:
-        data = data_fetcher.get_data(start_date, end_date)
+        data = data_fetcher.get_data(data_request)
         if (data is None or 
             data.generation_pt.empty or 
             data.generation_es.empty or 
@@ -53,7 +53,7 @@ def generate_visualization(start_date: datetime,
             return None
         
 
-        fig = analyzer.plot(data, visualize_type)
+        fig = analyzer.plot(data, backend)
         return fig
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
