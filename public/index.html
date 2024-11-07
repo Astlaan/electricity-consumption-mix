@@ -18,12 +18,16 @@
             border-radius: 5px;
         }
         .error-message {
-            color: red;
-            margin-top: 10px;
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            display: none;
         }
         .error-item {
-            display: block;
-            margin-bottom: 5px;
+            margin: 5px 0;
         }
         .loading {
             display: none;
@@ -245,44 +249,18 @@
     <div id="plotContainer"></div>
 
     <script>
-        const form = document.getElementById('plotForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const loading = document.getElementById('loading');
-        const plotContainer = document.getElementById('plotContainer');
-        const cacheWarning = document.getElementById('cacheWarning');
-        // const initializeCacheBtn = document.getElementById('initializeCacheBtn');
-
-        document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const errorMessage = document.getElementById('errorMessage');
-            const submitBtn = document.getElementById('submitBtn');
-
-            if (this.value === 'simple') {
-                // Run validation when switching to simple mode
-                validateDates();
-            } else {
-                // Clear error messages when switching to advanced
-                errorMessage.style.display = 'none';
-                errorMessage.innerHTML = '';
-                submitBtn.disabled = false;
-            }
-
-            // Toggle display of controls
-            document.getElementById('simpleControls').style.display = 
-                this.value === 'simple' ? 'block' : 'none';
-            document.getElementById('advancedControls').style.display = 
-                this.value === 'advanced' ? 'block' : 'none';
-            });
-        });
-
-        form.addEventListener('submit', async (e) => {
+        async function submitForm(e) {
             e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            const loading = document.getElementById('loading');
+            const submitBtn = document.getElementById('submitBtn');
+            const plotContainer = document.getElementById('plotContainer');
             
             errorMessage.style.display = 'none';
             loading.style.display = 'block';
             submitBtn.disabled = true;
-
+            
             try {
                 const mode = document.querySelector('input[name="timeMode"]:checked').value;
                 let requestData;
@@ -318,23 +296,29 @@
                 }
 
                 if (data.plot) {
-                    // Clear previous plot
+                    // Clear previous plot and error
                     plotContainer.innerHTML = '';
+                    errorMessage.style.display = 'none';
                     // Render the Bokeh plot
                     Bokeh.embed.embed_item(data.plot, 'plotContainer');
                 } else {
-                    plotContainer.textContent = 'Failed to generate visualization';
+                    throw new Error('No plot data received');
                 }
 
             } catch (error) {
-                errorMessage.textContent = error.message;
+                // Display error message
+                errorMessage.innerHTML = `<div class="error-item">${error.message}</div>`;
                 errorMessage.style.display = 'block';
+                plotContainer.innerHTML = ''; // Clear any previous plot
                 console.error('Error:', error);
             } finally {
                 loading.style.display = 'none';
                 submitBtn.disabled = false;
             }
-        });
+        }
+
+        // Add event listener for form submission
+        document.getElementById('plotForm').addEventListener('submit', submitForm);
 
         // Add this event listener at the end of your script section
         window.addEventListener('load', function() {

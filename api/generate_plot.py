@@ -6,10 +6,9 @@ import gc
 import os
 from datetime import datetime
 from bokeh.embed import json_item  # type: ignore # Add this import
-from src.time_pattern import TimePatternParser
-import asyncio
-
-from src.utils import AdvancedPattern, DataRequest, SimpleInterval # Added import
+import src.utils as utils
+from src.time_pattern import TimePatternValidator
+from src.utils import SimpleInterval, AdvancedPattern
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -36,21 +35,36 @@ def handle_request(request_body):
             # Simple mode - single interval
             start_date = datetime.fromisoformat(body['start_date'])
             end_date = datetime.fromisoformat(body['end_date'])
-            data_request = SimpleInterval(start_date, end_date)
+            try:
+                data_request = SimpleInterval(start_date, end_date)
+                # Add validation here
+                utils.validate_inputs(start_date, end_date)
+            except AssertionError as e:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'error': 'Invalid date range: Dates must be whole hours and within available range'})
+                }
         else:
             # Advanced mode - pattern-based
-            data_request = AdvancedPattern(
-                years=body["years"],
-                months=body["months"],
-                days=body["days"],
-                hours=body["hours"])
+            try:
+                data_request = AdvancedPattern(
+                    years=body["years"],
+                    months=body["months"],
+                    days=body["days"],
+                    hours=body["hours"])
+                TimePatternValidator.validate_pattern(data_request)
+            except ValueError as e:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'error': str(e)})
+                }
             
         fig = generate_visualization(data_request, backend="_plot_internal_bokeh_2")
         
         if fig is None:
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'Failed to generate visualization'})
+                'body': json.dumps({'error': 'No data available for the specified time range'})
             }
 
         # Convert Bokeh figure to JSON
@@ -65,19 +79,19 @@ def handle_request(request_body):
         logger.exception(f"Invalid JSON request body: {e}")
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Invalid JSON request body: {e}'})
+            'body': json.dumps({'error': f'Invalid JSON format: {str(e)}'})
         }
     except KeyError as e:
         logger.exception(f"Missing required field in request body: {e}")
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Missing required field in request body: {e}'})
+            'body': json.dumps({'error': f'Missing required field: {str(e)}'})
         }
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
+            'body': json.dumps({'error': f'Server error: {str(e)}'})
         }
 
 class handler(BaseHTTPRequestHandler):
