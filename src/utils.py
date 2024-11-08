@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Union
 import pandas as pd
-from src.config import PSR_TYPE_MAPPING
+from config import PSR_TYPE_MAPPING
 from dataclasses import dataclass
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")

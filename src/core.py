@@ -10,9 +10,14 @@ from utils import RECORDS_START, DataRequest, SimpleInterval, available_date_end
 
 logger = logging.getLogger(__name__) # Add logger
 
-def initialize_cache():
+def reset_cache():
     data_fetcher = ENTSOEDataFetcher()
     data_fetcher.reset_cache()
+
+
+def initialize_cache():
+    data_fetcher = ENTSOEDataFetcher()
+    # data_fetcher.reset_cache() // just adds data now
     
     # Calculate total number of years to fetch
     start = RECORDS_START

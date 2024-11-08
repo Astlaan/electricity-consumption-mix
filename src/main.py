@@ -1,27 +1,35 @@
 import logging
+import logging
+import sys
+from pathlib import Path
+
+# Add the project root directory to Python path
+sys.path.append(str(Path(__file__).parent.parent))
 
 from src.utils import SimpleInterval
+from src.core import reset_cache, initialize_cache, generate_visualization
 
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 import argparse
 from datetime import datetime
-import core
 
 def main():
     args = parse_arguments()
 
+    if args.reset_cache:
+        reset_cache()
+
     if args.initialize_cache:
-        core.initialize_cache()
-        return
+        initialize_cache()
 
     if args.start_date is None or args.end_date is None:
-        print("Error: --start_date and --end_date are required when not using --initialize-cache")
+        print("--start_date or --end_date is None. Shutting down...")
         return
     
     data_request = SimpleInterval(args.start_date, args.end_date)
 
-    fig = core.generate_visualization(
+    fig = generate_visualization(
         data_request,
         backend=args.visualize,
         reset_cache=args.reset_cache

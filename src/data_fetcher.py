@@ -10,9 +10,17 @@ import logging
 import shutil
 from dataclasses import dataclass
 import aiofiles
-import utils
-from utils import AdvancedPattern, DataRequest, SimpleInterval
-from src.time_pattern import TimePatternValidator # Changed import
+
+try:
+    # For when running from api/
+    import src.utils as utils
+    from src.utils import AdvancedPattern, DataRequest, SimpleInterval
+    from src.time_pattern import TimePatternValidator
+except ImportError:
+    # For when running from src/
+    import utils
+    from utils import AdvancedPattern, DataRequest, SimpleInterval
+    from time_pattern import TimePatternValidator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -71,10 +79,11 @@ class ENTSOEDataFetcher:
 
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch data according to the request type."""
-        if isinstance(data_request, SimpleInterval):
+        if hasattr(data_request, 'start_date') and hasattr(data_request, 'end_date'):
             utils.validate_inputs(data_request.start_date, data_request.end_date)
             return self._get_data_simple_interval(data_request, progress_callback)
-        elif isinstance(data_request, AdvancedPattern):
+        elif hasattr(data_request, 'years') and hasattr(data_request, 'months') and \
+            hasattr(data_request, 'days') and hasattr(data_request, 'hours'):
             TimePatternValidator.validate_pattern(data_request)
             return self.get_data_for_pattern(data_request)
         else:
@@ -368,7 +377,7 @@ class ENTSOEDataFetcher:
                 "end_date_exclusive": (df["start_time"].max() + self.STANDARD_GRANULARITY).isoformat(),
             }
             metadata.update(params)
-            # await self._save_to_cache(params, df, metadata) ## TODO fix later
+            await self._save_to_cache(params, df, metadata) ## TODO fix later
             logger.debug(f"Saved to cache: {metadata}")
 
         return df[(df["start_time"] >= start_date) & (df["start_time"] < end_date)]
