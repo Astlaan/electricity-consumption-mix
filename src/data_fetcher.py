@@ -197,15 +197,6 @@ class ENTSOEDataFetcher:
                 return None
         return None
 
-    async def _get_latest_cache_date(
-        self, params: Dict[str, Any]
-    ) -> Optional[datetime]:
-        cached_data = await self._load_from_cache(params)
-        if cached_data is not None:
-            df, metadata = cached_data
-            if not df.empty and "start_time" in df.columns:
-                return df["start_time"].max()
-        return None
 
     async def _async_parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
         """Async wrapper for XML parsing"""
@@ -330,9 +321,6 @@ class ENTSOEDataFetcher:
     async def _fetch_data_in_chunks(
         self, params: Dict[str, Any], start_date: datetime, end_date: datetime
     ) -> List[str]:
-        latest_cache_date = await self._get_latest_cache_date(params)
-        if latest_cache_date is not None:
-            start_date = max(start_date, latest_cache_date)
 
         tasks = []
         async with aiohttp.ClientSession() as session:
