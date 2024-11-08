@@ -11,16 +11,10 @@ import shutil
 from dataclasses import dataclass
 import aiofiles
 
-try:
-    # For when running from api/
-    import src.utils as utils
-    from src.utils import AdvancedPattern, DataRequest, SimpleInterval
-    from src.time_pattern import TimePatternValidator
-except ImportError:
-    # For when running from src/
-    import utils
-    from utils import AdvancedPattern, DataRequest, SimpleInterval
-    from time_pattern import TimePatternValidator
+
+import utils
+from utils import AdvancedPattern, DataRequest, SimpleInterval
+from time_pattern import TimePatternValidator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -79,11 +73,10 @@ class ENTSOEDataFetcher:
 
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch data according to the request type."""
-        if hasattr(data_request, 'start_date') and hasattr(data_request, 'end_date'):
+        if isinstance(data_request, SimpleInterval):
             utils.validate_inputs(data_request.start_date, data_request.end_date)
             return self._get_data_simple_interval(data_request, progress_callback)
-        elif hasattr(data_request, 'years') and hasattr(data_request, 'months') and \
-            hasattr(data_request, 'days') and hasattr(data_request, 'hours'):
+        elif isinstance(data_request, AdvancedPattern):
             TimePatternValidator.validate_pattern(data_request)
             return self.get_data_for_pattern(data_request)
         else:

@@ -1,8 +1,7 @@
 from data_fetcher import Data
 import pandas as pd
 import numpy as np
-from typing import Dict
-from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
+from config import PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe
 # import plotly.express as px # Import px (commented for now)
 

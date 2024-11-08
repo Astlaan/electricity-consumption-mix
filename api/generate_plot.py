@@ -6,9 +6,11 @@ import gc
 import os
 from datetime import datetime
 from bokeh.embed import json_item  # type: ignore # Add this import
-import src.utils as utils
-from src.time_pattern import TimePatternValidator
-from src.utils import SimpleInterval, AdvancedPattern
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+import utils as utils
+from time_pattern import TimePatternValidator
+from utils import SimpleInterval, AdvancedPattern
+from core import generate_visualization
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -18,13 +20,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add src directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from core import generate_visualization
-# from data_fetcher import ENTSOEDataFetcher
-# from ..src.core import generate_visualization
-# from ..src.data_fetcher import ENTSOEDataFetcher
 
 def handle_request(request_body):
     try:
