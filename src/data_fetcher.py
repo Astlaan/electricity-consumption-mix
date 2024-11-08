@@ -78,7 +78,7 @@ class ENTSOEDataFetcher:
             TimePatternValidator.validate_pattern(data_request)
             return self.get_data_for_pattern(data_request)
         else:
-            raise ValueError("Invalid data request type")
+            raise ValueError(f"Invalid data request type: {type(data_request)}")
 
     def _get_data_simple_interval(self, interval: SimpleInterval, progress_callback=None) -> Data:
         """Original get_data implementation for simple intervals"""
