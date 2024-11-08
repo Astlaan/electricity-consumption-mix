@@ -6,7 +6,7 @@ from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, DataRequest, available_date_end_exclusive
+from utils import RECORDS_START, DataRequest, SimpleInterval, available_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
@@ -27,7 +27,8 @@ def initialize_cache():
         def progress_callback():
             pbar.update(1)
         
-        data_fetcher.get_data(RECORDS_START, end, progress_callback=progress_callback)
+        data_request = SimpleInterval(start, end)
+        data_fetcher.get_data(data_request, progress_callback=progress_callback)
 
 def generate_visualization(
         data_request: DataRequest, 
