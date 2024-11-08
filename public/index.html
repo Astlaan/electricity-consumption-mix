@@ -155,13 +155,21 @@
             radio.addEventListener('change', function () {
                 const simpleControls = document.getElementById('simpleControls');
                 const advancedControls = document.getElementById('advancedControls');
+                const errorMessage = document.getElementById('errorMessage');
+                const submitBtn = document.getElementById('submitBtn');
 
                 if (this.value === 'simple') {
                     simpleControls.style.display = 'block';
                     advancedControls.style.display = 'none';
+                    // Revalidate simple mode inputs
+                    validateDates();
                 } else {
                     simpleControls.style.display = 'none';
                     advancedControls.style.display = 'block';
+                    // Clear any existing errors and enable submit button
+                    errorMessage.style.display = 'none';
+                    errorMessage.innerHTML = '';
+                    submitBtn.disabled = false;
                 }
             });
         });
