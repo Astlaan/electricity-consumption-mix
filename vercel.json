@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "api/**": {
-      "excludeFiles": "**/tests/**"
+      "excludeFiles": "{**/tests, public}/**",
+      "memory":1024
     }
   }
 }
