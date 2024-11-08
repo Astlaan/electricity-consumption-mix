@@ -125,24 +125,24 @@ class ENTSOEDataFetcher:
         # Apply year filter
         if pattern.years.strip():
             years = [int(x) for x in pattern.years.split(',')]
-            mask &= df.index.year.isin(years)
+            mask &= df.index.year.isin(years) # type: ignore
         
         # Apply month filter
         if pattern.months.strip():
             months = [int(x) for x in pattern.months.split(',')]
-            mask &= df.index.month.isin(months)
+            mask &= df.index.month.isin(months) # type: ignore
         
         # Apply day filter
         if pattern.days.strip():
             days = [int(x) for x in pattern.days.split(',')]
-            mask &= df.index.day.isin(days)
+            mask &= df.index.day.isin(days) # type: ignore
         
         # Apply hour filter
         if pattern.hours.strip():
             hour_mask = pd.Series(False, index=df.index)
             for hour_range in pattern.hours.split(','):
                 start, end = map(int, hour_range.split('-'))
-                hour_mask |= (df.index.hour >= start) & (df.index.hour < end)
+                hour_mask |= (df.index.hour >= start) & (df.index.hour < end) # type: ignore
             mask &= hour_mask
         
         return df[mask]
