@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 # Add src directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-# from core import generate_visualization
+from core import generate_visualization
 # from data_fetcher import ENTSOEDataFetcher
-from ..src.core import generate_visualization
+# from ..src.core import generate_visualization
 # from ..src.data_fetcher import ENTSOEDataFetcher
 
 def handle_request(request_body):
@@ -68,7 +68,7 @@ def handle_request(request_body):
             }
 
         # Convert Bokeh figure to JSON
-        plot_json = json_item(fig)
+        plot_json = json_item(fig) # type: ignore
         
         return {
             'statusCode': 200,
