@@ -455,23 +455,27 @@ class ENTSOEDataFetcher:
             if df.empty:
                 return df
                 
+            # Determine whether to use index or column
+            use_index = isinstance(df.index, pd.DatetimeIndex)
+            times = df.index if use_index else pd.to_datetime(df['start_time'])
+            
             # Create mask based on each component
             mask = pd.Series(True, index=df.index)
             
             # Apply year filter
             if pattern.years.strip():
                 years = [int(x) for x in pattern.years.split(',')]
-                mask &= df.index.year.isin(years)
+                mask &= (times.year if use_index else times.dt.year).isin(years)
             
             # Apply month filter
             if pattern.months.strip():
                 months = [int(x) for x in pattern.months.split(',')]
-                mask &= df.index.month.isin(months)
+                mask &= (times.month if use_index else times.dt.month).isin(months)
             
             # Apply day filter
             if pattern.days.strip():
                 days = [int(x) for x in pattern.days.split(',')]
-                mask &= df.index.day.isin(days)
+                mask &= (times.day if use_index else times.dt.day).isin(days)
             
             # Apply hour filter
             if pattern.hours.strip():
@@ -479,8 +483,8 @@ class ENTSOEDataFetcher:
                 for hour_range in pattern.hours.split(','):
                     start, end = map(int, hour_range.split('-'))
                     hour_mask |= (
-                        (df.index.hour >= start) &
-                        (df.index.hour < end)
+                        ((times.hour if use_index else times.dt.hour) >= start) &
+                        ((times.hour if use_index else times.dt.hour) < end)
                     )
                 mask &= hour_mask
             

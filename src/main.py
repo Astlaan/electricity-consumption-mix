@@ -42,7 +42,7 @@ def main():
         elif str(type(fig).__module__).startswith('bokeh'):
             print("BACKEND: Bokeh")
             from bokeh.plotting import show  # type: ignore
-            show(fig)  # Show Bokeh figure in browser
+            show(fig)  # type: ignore # Show Bokeh figure in browser
         else:
             print("BACKEND: Matplotlib")
             # Save matplotlib figure to HTML and open in browser
