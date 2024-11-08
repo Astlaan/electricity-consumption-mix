@@ -442,60 +442,53 @@ class ENTSOEDataFetcher:
             # Get all data for the time range using existing method
             data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
             
-            # Apply pattern filters to the data
-            return self._apply_pattern_filters(data, pattern)
+            # Apply pattern filters directly to each dataframe
+            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, pattern)
+            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, pattern)
+            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, pattern)
+            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, pattern)
+            
+            return data
             
         except Exception as e:
             logger.error(f"Error processing pattern request: {str(e)}")
             raise ValueError(f"Failed to process pattern request: {str(e)}")
 
-    def _apply_pattern_filters(self, data: Data, pattern: AdvancedPattern) -> Data:
-        """Apply time pattern filters to the data."""
-        def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
-            if df.empty:
-                return df
-                
-            # Determine whether to use index or column
-            use_index = isinstance(df.index, pd.DatetimeIndex)
-            times = df.index if use_index else pd.to_datetime(df['start_time'])
+    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, pattern: AdvancedPattern) -> pd.DataFrame:
+        if df.empty:
+            return df
             
-            # Create mask based on each component
-            mask = pd.Series(True, index=df.index)
-            
-            # Apply year filter
-            if pattern.years.strip():
-                years = [int(x) for x in pattern.years.split(',')]
-                mask &= (times.year if use_index else times.dt.year).isin(years)
-            
-            # Apply month filter
-            if pattern.months.strip():
-                months = [int(x) for x in pattern.months.split(',')]
-                mask &= (times.month if use_index else times.dt.month).isin(months)
-            
-            # Apply day filter
-            if pattern.days.strip():
-                days = [int(x) for x in pattern.days.split(',')]
-                mask &= (times.day if use_index else times.dt.day).isin(days)
-            
-            # Apply hour filter
-            if pattern.hours.strip():
-                hour_mask = pd.Series(False, index=df.index)
-                for hour_range in pattern.hours.split(','):
-                    start, end = map(int, hour_range.split('-'))
-                    hour_mask |= (
-                        ((times.hour if use_index else times.dt.hour) >= start) &
-                        ((times.hour if use_index else times.dt.hour) < end)
-                    )
-                mask &= hour_mask
-            
-            return df[mask]
+        # Ensure start_time is the index
+        if 'start_time' in df.columns:
+            df = df.set_index('start_time')
         
-        return Data(
-            generation_pt=apply_filters(data.generation_pt),
-            generation_es=apply_filters(data.generation_es),
-            flow_pt_to_es=apply_filters(data.flow_pt_to_es),
-            flow_es_to_pt=apply_filters(data.flow_es_to_pt)
-        )
+        # Create mask based on each component
+        mask = pd.Series(True, index=df.index)
+        
+        # Apply year filter
+        if pattern.years.strip():
+            years = [int(x) for x in pattern.years.split(',')]
+            mask &= df.index.year.isin(years)
+        
+        # Apply month filter
+        if pattern.months.strip():
+            months = [int(x) for x in pattern.months.split(',')]
+            mask &= df.index.month.isin(months)
+        
+        # Apply day filter
+        if pattern.days.strip():
+            days = [int(x) for x in pattern.days.split(',')]
+            mask &= df.index.day.isin(days)
+        
+        # Apply hour filter
+        if pattern.hours.strip():
+            hour_mask = pd.Series(False, index=df.index)
+            for hour_range in pattern.hours.split(','):
+                start, end = map(int, hour_range.split('-'))
+                hour_mask |= (df.index.hour >= start) & (df.index.hour < end)
+            mask &= hour_mask
+        
+        return df[mask]
 
     async def _fetch_all_data(self, start_date: datetime, end_date: datetime):
         """Fetches all necessary data for PT and ES."""
