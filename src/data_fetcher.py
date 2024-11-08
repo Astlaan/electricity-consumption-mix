@@ -370,7 +370,8 @@ class ENTSOEDataFetcher:
                 "end_date_exclusive": (df["start_time"].max() + self.STANDARD_GRANULARITY).isoformat(),
             }
             metadata.update(params)
-            await self._save_to_cache(params, df, metadata) ## TODO fix later
+            if not os.getenv("VERCEL_ENV"):
+                await self._save_to_cache(params, df, metadata) ## TODO fix later
             logger.debug(f"Saved to cache: {metadata}")
 
         return df[(df["start_time"] >= start_date) & (df["start_time"] < end_date)]
