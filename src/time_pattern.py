@@ -84,8 +84,8 @@ class TimePatternValidator:
     def _validate_format(pattern: str, component_name: str) -> None:
         if not pattern.strip():
             return
-        if not re.match(r'^[\d,-]+$', pattern):
-            raise ValueError(f"Invalid characters in {component_name}. Only numbers, commas, and dashes allowed.")
+        if not re.match(r'^\d+(-\d+)?(,\d+(-\d+)?)*$', pattern):
+            raise ValueError(f"Invalid format in {component_name}. Only numbers, commas, and dashes allowed in the format 'n' or 'n-m' or 'n,m' or 'n-m,o-p', etc.")
         if ',,' in pattern or '-,' in pattern or ',-' in pattern or pattern.startswith('-') or pattern.endswith('-'):
             raise ValueError(f"Invalid format in {component_name}. Check proper use of commas and dashes.")
 

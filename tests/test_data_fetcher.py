@@ -11,6 +11,9 @@ import os
 import asyncio
 import aiohttp
 from .test_data import test_data
+from utils import AdvancedPattern
+from datetime import datetime, timedelta
+import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
@@ -19,7 +22,136 @@ logger = logging.getLogger(__name__)
 
 
 class TestENTSOEDataFetcher(unittest.TestCase):
+    def test_get_data_for_pattern_cache_hit(self):
+        """Test pattern-based data fetch when all data is in cache"""
+        # Create mock cached data
+        mock_data = pd.DataFrame({
+            'start_time': pd.date_range('2024-01-01', '2024-01-02', freq='H'),
+            '10YPT-REN------W': [100] * 24,  # PT generation
+            '10YES-REE------0': [200] * 24,  # ES generation
+            '10YPT-REN------W_10YES-REE------0': [300] * 24,  # PT to ES flow
+            '10YES-REE------0_10YPT-REN------W': [400] * 24   # ES to PT flow
+        }).set_index('start_time')
+
+        self.fetcher.cached_data = mock_data
+
+        pattern = AdvancedPattern(
+            years="2024",
+            months="1",
+            days="1",
+            hours="0-12"
+        )
+
+        with patch.object(self.fetcher, '_fetch_all_data') as mock_fetch:
+            result = self.fetcher.get_data_for_pattern(pattern)
+
+            # Verify no new data was fetched
+            mock_fetch.assert_not_called()
+
+            # Verify filtered data
+            self.assertEqual(len(result.generation_pt), 12)  # Only 0-12 hours
+            self.assertTrue(all(idx.hour < 12 for idx in result.generation_pt.index))
+
+    def test_get_data_for_pattern_cache_miss(self):
+        """Test pattern-based data fetch when cache needs updating"""
+        # Create mock cached data with older dates
+        mock_data = pd.DataFrame({
+            'start_time': pd.date_range('2023-01-01', '2023-01-02', freq='H'),
+            '10YPT-REN------W': [100] * 24,
+            '10YES-REE------0': [200] * 24,
+            '10YPT-REN------W_10YES-REE------0': [300] * 24,
+            '10YES-REE------0_10YPT-REN------W': [400] * 24
+        }).set_index('start_time')
+
+        self.fetcher.cached_data = mock_data
+
+        pattern = AdvancedPattern(
+            years="2024",  # Request newer data than what's in cache
+            months="1",
+            days="1",
+            hours="0-23"
+        )
+
+        with patch.object(self.fetcher, '_fetch_all_data') as mock_fetch:
+            with patch.object(self.fetcher, '_load_cached_data') as mock_load:
+                # Setup mock for new data after fetch
+                new_data = pd.DataFrame({
+                    'start_time': pd.date_range('2024-01-01', '2024-01-02', freq='H'),
+                    '10YPT-REN------W': [100] * 24,
+                    '10YES-REE------0': [200] * 24,
+                    '10YPT-REN------W_10YES-REE------0': [300] * 24,
+                    '10YES-REE------0_10YPT-REN------W': [400] * 24
+                }).set_index('start_time')
+                mock_load.return_value = new_data
+
+                result = self.fetcher.get_data_for_pattern(pattern)
+
+                # Verify fetch was called
+                mock_fetch.assert_called_once()
+
+                # Verify results match pattern
+                self.assertEqual(len(result.generation_pt), 24)
+                self.assertTrue(all(idx.year == 2024 for idx in result.generation_pt.index))
+
+    def test_get_data_for_pattern_complex(self):
+        """Test pattern-based data fetch with complex pattern"""
+        mock_data = pd.DataFrame({
+            'start_time': pd.date_range('2024-01-01', '2024-02-28', freq='H'),
+            '10YPT-REN------W': [100] * (24 * 59),
+            '10YES-REE------0': [200] * (24 * 59),
+            '10YPT-REN------W_10YES-REE------0': [300] * (24 * 59),
+            '10YES-REE------0_10YPT-REN------W': [400] * (24 * 59)
+        }).set_index('start_time')
+
+        self.fetcher.cached_data = mock_data
+
+        pattern = AdvancedPattern(
+            years="2024",
+            months="1,2",
+            days="1,15",
+            hours="9-17"  # Business hours
+        )
+
+        result = self.fetcher.get_data_for_pattern(pattern)
+
+        # Verify filtered data matches pattern
+        for idx in result.generation_pt.index:
+            self.assertEqual(idx.year, 2024)
+            self.assertIn(idx.month, [1, 2])
+            self.assertIn(idx.day, [1, 15])
+            self.assertTrue(9 <= idx.hour < 17)
+
+    def test_get_data_for_pattern_empty_result(self):
+        """Test pattern-based data fetch when no data matches pattern"""
+        mock_data = pd.DataFrame({
+            'start_time': pd.date_range('2023-01-01', '2023-01-02', freq='H'),
+            '10YPT-REN------W': [100] * 24,
+            '10YES-REE------0': [200] * 24,
+            '10YPT-REN------W_10YES-REE------0': [300] * 24,
+            '10YES-REE------0_10YPT-REN------W': [400] * 24
+        }).set_index('start_time')
+
+        self.fetcher.cached_data = mock_data
+
+        pattern = AdvancedPattern(
+            years="2025",  # Year not in cache
+            months="1",
+            days="1",
+            hours="0-23"
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.fetcher.get_data_for_pattern(pattern)
+
+        self.assertIn("No data found", str(context.exception))
+
     def setUp(self):
+        self.fetcher = ENTSOEDataFetcher()
+        # Clear the cache before each test
+        if os.path.exists(self.fetcher.CACHE_DIR):
+            shutil.rmtree(self.fetcher.CACHE_DIR)
+        os.makedirs(self.fetcher.CACHE_DIR)
+        os.environ["ENTSOE_TESTING"] = "true"
         self.fetcher = ENTSOEDataFetcher()
         # Clear the cache before each test
         if os.path.exists(self.fetcher.CACHE_DIR):
