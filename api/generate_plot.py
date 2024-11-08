@@ -88,6 +88,18 @@ def handle_request(request_body):
             'statusCode': 500,
             'body': json.dumps({'error': f'Server error: {str(e)}'})
         }
+    except ValueError as e:
+        logger.exception(f"Error processing data request: {e}")
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': str(e)}) # Return the detailed ValueError message
+        }
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred: {e}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': f'Server error: {str(e)}'})
+        }
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):

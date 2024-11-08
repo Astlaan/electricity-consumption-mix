@@ -432,35 +432,66 @@ class ENTSOEDataFetcher:
     def get_data_for_pattern(self, pattern: AdvancedPattern) -> Data:
         """Fetch data according to a time pattern."""
         try:
-            cache_metadata = self._get_cache_metadata()
-            cache_end = None
-            if cache_metadata and 'end_date_exclusive' in cache_metadata:
-                cache_end = pd.to_datetime(cache_metadata['end_date_exclusive'])
-
-            # Validate pattern and check data availability
+            # Validate the pattern
             TimePatternValidator.validate_pattern(pattern)
-            if not TimePatternValidator.validate_pattern_availability(pattern, cache_end):
-                # Fetch missing data
-                latest_time = TimePatternValidator._get_latest_time(pattern)
-                fetch_start = cache_end if cache_end else utils.RECORDS_START
-                
-                # Create or get event loop to run async function
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(self._fetch_all_data(fetch_start, latest_time))
-                finally:
-                    loop.close()
-                
-                # Reload cached data after fetching
-                self.cached_data = self._load_cached_data()
-
-            # Get and return filtered data
-            return self._get_data_for_pattern(pattern)
+            
+            # Get the full time range needed for this pattern
+            start_time = TimePatternValidator._get_earliest_time(pattern)
+            end_time = TimePatternValidator._get_latest_time(pattern)
+            
+            # Get all data for the time range using existing method
+            data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
+            
+            # Apply pattern filters to the data
+            return self._apply_pattern_filters(data, pattern)
             
         except Exception as e:
             logger.error(f"Error processing pattern request: {str(e)}")
             raise ValueError(f"Failed to process pattern request: {str(e)}")
+
+    def _apply_pattern_filters(self, data: Data, pattern: AdvancedPattern) -> Data:
+        """Apply time pattern filters to the data."""
+        def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
+            if df.empty:
+                return df
+                
+            # Create mask based on each component
+            mask = pd.Series(True, index=df.index)
+            
+            # Apply year filter
+            if pattern.years.strip():
+                years = [int(x) for x in pattern.years.split(',')]
+                mask &= df.index.year.isin(years)
+            
+            # Apply month filter
+            if pattern.months.strip():
+                months = [int(x) for x in pattern.months.split(',')]
+                mask &= df.index.month.isin(months)
+            
+            # Apply day filter
+            if pattern.days.strip():
+                days = [int(x) for x in pattern.days.split(',')]
+                mask &= df.index.day.isin(days)
+            
+            # Apply hour filter
+            if pattern.hours.strip():
+                hour_mask = pd.Series(False, index=df.index)
+                for hour_range in pattern.hours.split(','):
+                    start, end = map(int, hour_range.split('-'))
+                    hour_mask |= (
+                        (df.index.hour >= start) &
+                        (df.index.hour < end)
+                    )
+                mask &= hour_mask
+            
+            return df[mask]
+        
+        return Data(
+            generation_pt=apply_filters(data.generation_pt),
+            generation_es=apply_filters(data.generation_es),
+            flow_pt_to_es=apply_filters(data.flow_pt_to_es),
+            flow_es_to_pt=apply_filters(data.flow_es_to_pt)
+        )
 
     async def _fetch_all_data(self, start_date: datetime, end_date: datetime):
         """Fetches all necessary data for PT and ES."""
@@ -471,65 +502,6 @@ class ENTSOEDataFetcher:
             self._async_get_physical_flows("10YPT-REN------W", "10YES-REE------0", start_date, end_date),
         )
 
-    def _get_data_for_pattern(self, pattern: AdvancedPattern) -> Data:
-        """Get data from cache using pattern conditions directly."""
-        if self.cached_data.empty:
-            raise ValueError("No cached data available")
-        
-        # Create mask based on each component
-        mask = pd.Series(True, index=self.cached_data.index)
-        
-        # Apply year filter
-        if pattern.years.strip():
-            years = [int(x) for x in pattern.years.split(',')]
-            mask &= self.cached_data.index.year.isin(years)  # type: ignore
-        
-        # Apply month filter
-        if pattern.months.strip():
-            months = [int(x) for x in pattern.months.split(',')]
-            mask &= self.cached_data.index.month.isin(months)  # type: ignore
-        
-        # Apply day filter
-        if pattern.days.strip():
-            days = [int(x) for x in pattern.days.split(',')]
-            mask &= self.cached_data.index.day.isin(days)  # type: ignore
-        
-        # Apply hour filter
-        if pattern.hours.strip():
-            hour_mask = pd.Series(False, index=self.cached_data.index)
-            for hour_range in pattern.hours.split(','):
-                start, end = map(int, hour_range.split('-'))
-                hour_mask |= (
-                    (self.cached_data.index.hour >= start) &  # type: ignore
-                    (self.cached_data.index.hour < end)  # type: ignore
-                )
-            mask &= hour_mask
-        
-        # Check if we have any data matching the pattern
-        if not mask.any():
-            raise ValueError("No data found for the specified time pattern")
-        
-        # Filter and return data
-        filtered_data = self.cached_data[mask].copy()
-        
-        # Split data into respective components
-        def get_columns_for_pattern(pattern):
-            return filtered_data.filter(regex=pattern).copy()
-        
-        generation_pt = get_columns_for_pattern("10YPT-REN------W(?!.*10YES-REE------0)")
-        generation_es = get_columns_for_pattern("10YES-REE------0(?!.*10YPT-REN------W)")
-        flow_pt_to_es = get_columns_for_pattern("10YPT-REN------W.*10YES-REE------0")
-        flow_es_to_pt = get_columns_for_pattern("10YES-REE------0.*10YPT-REN------W")
-        
-        if generation_pt.empty or generation_es.empty or flow_pt_to_es.empty or flow_es_to_pt.empty:
-            raise ValueError("Missing required data components for the specified time pattern")
-        
-        return Data(
-            generation_pt=generation_pt,
-            generation_es=generation_es,
-            flow_pt_to_es=flow_pt_to_es,
-            flow_es_to_pt=flow_es_to_pt
-        )
 
     def _get_cache_metadata(self) -> Optional[dict]:
         """Gets metadata from the latest cache file."""
