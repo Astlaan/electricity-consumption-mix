@@ -56,7 +56,7 @@ class ENTSOEDataFetcher:
             return self._get_data_simple_interval(data_request, progress_callback)
         elif isinstance(data_request, AdvancedPattern):
             TimePatternValidator.validate_pattern(data_request)
-            return self.get_data_for_pattern(data_request)
+            return self._get_data_advanced_pattern(data_request)
         else:
             raise ValueError(f"Invalid data request type: {type(data_request)}")
 
@@ -85,6 +85,67 @@ class ENTSOEDataFetcher:
             flow_es_to_pt=results[2],
             flow_pt_to_es=results[3],
         )
+    
+    def _get_data_advanced_pattern(self, pattern: AdvancedPattern) -> Data:
+        """Fetch data according to a time pattern."""
+        try:
+            # Validate the pattern
+            TimePatternValidator.validate_pattern(pattern)
+            
+            # Get the full time range needed for this pattern
+            start_time = TimePatternValidator._get_earliest_time(pattern)
+            end_time = TimePatternValidator._get_latest_time(pattern)
+            
+            # Get all data for the time range using existing method
+            data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
+            
+            # Apply pattern filters directly to each dataframe
+            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, pattern)
+            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, pattern)
+            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, pattern)
+            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, pattern)
+            
+            return data
+            
+        except Exception as e:
+            logger.error(f"Error processing pattern request: {str(e)}")
+            raise ValueError(f"Failed to process pattern request: {str(e)}")
+
+    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, pattern: AdvancedPattern) -> pd.DataFrame:
+        if df.empty:
+            return df
+            
+        # Ensure start_time is the index
+        if 'start_time' in df.columns:
+            df = df.set_index('start_time')
+        
+        # Create mask based on each component
+        mask = pd.Series(True, index=df.index)
+        
+        # Apply year filter
+        if pattern.years.strip():
+            years = [int(x) for x in pattern.years.split(',')]
+            mask &= df.index.year.isin(years)
+        
+        # Apply month filter
+        if pattern.months.strip():
+            months = [int(x) for x in pattern.months.split(',')]
+            mask &= df.index.month.isin(months)
+        
+        # Apply day filter
+        if pattern.days.strip():
+            days = [int(x) for x in pattern.days.split(',')]
+            mask &= df.index.day.isin(days)
+        
+        # Apply hour filter
+        if pattern.hours.strip():
+            hour_mask = pd.Series(False, index=df.index)
+            for hour_range in pattern.hours.split(','):
+                start, end = map(int, hour_range.split('-'))
+                hour_mask |= (df.index.hour >= start) & (df.index.hour < end)
+            mask &= hour_mask
+        
+        return df[mask]
         
     async def _save_to_cache(
         self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]
@@ -390,67 +451,6 @@ class ENTSOEDataFetcher:
             print(f"Deleting cache directory: {self.CACHE_DIR}")
             shutil.rmtree(self.CACHE_DIR)
             os.makedirs(self.CACHE_DIR)  # Recreate empty cache dir
-
-    def get_data_for_pattern(self, pattern: AdvancedPattern) -> Data:
-        """Fetch data according to a time pattern."""
-        try:
-            # Validate the pattern
-            TimePatternValidator.validate_pattern(pattern)
-            
-            # Get the full time range needed for this pattern
-            start_time = TimePatternValidator._get_earliest_time(pattern)
-            end_time = TimePatternValidator._get_latest_time(pattern)
-            
-            # Get all data for the time range using existing method
-            data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
-            
-            # Apply pattern filters directly to each dataframe
-            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, pattern)
-            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, pattern)
-            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, pattern)
-            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, pattern)
-            
-            return data
-            
-        except Exception as e:
-            logger.error(f"Error processing pattern request: {str(e)}")
-            raise ValueError(f"Failed to process pattern request: {str(e)}")
-
-    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, pattern: AdvancedPattern) -> pd.DataFrame:
-        if df.empty:
-            return df
-            
-        # Ensure start_time is the index
-        if 'start_time' in df.columns:
-            df = df.set_index('start_time')
-        
-        # Create mask based on each component
-        mask = pd.Series(True, index=df.index)
-        
-        # Apply year filter
-        if pattern.years.strip():
-            years = [int(x) for x in pattern.years.split(',')]
-            mask &= df.index.year.isin(years)
-        
-        # Apply month filter
-        if pattern.months.strip():
-            months = [int(x) for x in pattern.months.split(',')]
-            mask &= df.index.month.isin(months)
-        
-        # Apply day filter
-        if pattern.days.strip():
-            days = [int(x) for x in pattern.days.split(',')]
-            mask &= df.index.day.isin(days)
-        
-        # Apply hour filter
-        if pattern.hours.strip():
-            hour_mask = pd.Series(False, index=df.index)
-            for hour_range in pattern.hours.split(','):
-                start, end = map(int, hour_range.split('-'))
-                hour_mask |= (df.index.hour >= start) & (df.index.hour < end)
-            mask &= hour_mask
-        
-        return df[mask]
 
 
     ########## For testing ###########
