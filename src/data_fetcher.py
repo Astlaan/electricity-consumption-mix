@@ -47,28 +47,6 @@ class ENTSOEDataFetcher:
             )
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
-        self.cached_data: pd.DataFrame = self._load_cached_data()
-        # Note: cached_data is guaranteed to have DatetimeIndex after _load_cached_data
-
-
-    def _load_cached_data(self) -> pd.DataFrame:
-        """Loads all cached data into a single DataFrame."""
-        try:
-            all_data = []
-            for filename in os.listdir(self.CACHE_DIR):
-                if filename.endswith(f".{self.CACHE_EXTENSION}"):
-                    filepath = os.path.join(self.CACHE_DIR, filename)
-                    df = pd.read_pickle(filepath, compression={'method': self.COMPRESSION_METHOD})
-                    all_data.append(df)
-            if all_data:
-                combined_df = pd.concat(all_data, ignore_index=True)
-                combined_df = combined_df.sort_values('start_time').set_index('start_time')
-                return combined_df
-            else:
-                return pd.DataFrame()
-        except Exception as e:
-            logger.error(f"Error loading cached data: {e}")
-            return pd.DataFrame()
 
 
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
@@ -489,15 +467,6 @@ class ENTSOEDataFetcher:
             mask &= hour_mask
         
         return df[mask]
-
-    async def _fetch_all_data(self, start_date: datetime, end_date: datetime):
-        """Fetches all necessary data for PT and ES."""
-        await asyncio.gather(
-            self._async_get_generation_data("10YPT-REN------W", start_date, end_date),
-            self._async_get_generation_data("10YES-REE------0", start_date, end_date),
-            self._async_get_physical_flows("10YES-REE------0", "10YPT-REN------W", start_date, end_date),
-            self._async_get_physical_flows("10YPT-REN------W", "10YES-REE------0", start_date, end_date),
-        )
 
 
     def _get_cache_metadata(self) -> Optional[dict]:
