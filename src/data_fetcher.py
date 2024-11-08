@@ -383,22 +383,6 @@ class ENTSOEDataFetcher:
             progress_callback()
         return df
 
-    def _validate_cached_data(self) -> bool:
-        """Validate that cached data contains all required components"""
-        if self.cached_data.empty:
-            return False
-            
-        required_patterns = [
-            "10YPT-REN------W(?!.*10YES-REE------0)",  # PT generation
-            "10YES-REE------0(?!.*10YPT-REN------W)",  # ES generation
-            "10YPT-REN------W.*10YES-REE------0",      # PT to ES flow
-            "10YES-REE------0.*10YPT-REN------W"       # ES to PT flow
-        ]
-        
-        return all(
-            any(self.cached_data.columns.str.match(pattern)) 
-            for pattern in required_patterns
-        )
 
     def reset_cache(self):
         """Delete all cached data."""
@@ -468,20 +452,6 @@ class ENTSOEDataFetcher:
         
         return df[mask]
 
-
-    def _get_cache_metadata(self) -> Optional[dict]:
-        """Gets metadata from the latest cache file."""
-        try:
-            cache_files = [f for f in os.listdir(self.CACHE_DIR) if f.endswith("_metadata.json")]
-            if not cache_files:
-                return None
-            latest_metadata_file = max(cache_files, key=lambda x: os.path.getmtime(os.path.join(self.CACHE_DIR, x)))
-            filepath = os.path.join(self.CACHE_DIR, latest_metadata_file)
-            with open(filepath, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error getting cache metadata: {e}")
-            return None
 
     ########## For testing ###########
 
