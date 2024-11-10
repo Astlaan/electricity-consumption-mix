@@ -6,7 +6,7 @@ from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, DataRequest, SimpleInterval, available_date_end_exclusive
+from utils import RECORDS_START, DataRequest, SimpleInterval, maximum_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
@@ -21,7 +21,7 @@ def initialize_cache():
     
     # Calculate total number of years to fetch
     start = RECORDS_START
-    end = available_date_end_exclusive()
+    end = maximum_date_end_exclusive()
     total_years = (end.year - start.year) + 1
     
     logger.info(f"Initializing cache from {start.date()} to {end.date()}")

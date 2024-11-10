@@ -24,10 +24,10 @@ def current_day_start():
     return datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
 
-def available_date_end_exclusive():
-    """Returns the current UTC hour as a naive datetime"""
+def maximum_date_end_exclusive():
+    """Returns the current UTC hour minus 1 hour as a naive datetime"""
     now = datetime.utcnow()  # Use utcnow() instead of now(timezone.utc)
-    return now.replace(minute=0, second=0, microsecond=0)
+    return now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
 
 
 def validate_inputs(start_date, end_date):
@@ -42,7 +42,7 @@ def validate_inputs(start_date, end_date):
 
     # Assert within records
     assert(RECORDS_START <= start_date)
-    assert(end_date <= available_date_end_exclusive())
+    assert(end_date <= maximum_date_end_exclusive())
 
 
 def get_active_psr_in_dataframe(df):

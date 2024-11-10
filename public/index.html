@@ -243,7 +243,7 @@
 
             const minStartDate = new Date('2015-01-15T00:00');
             const minEndDate = new Date(minStartDate);
-            minEndDate.setTime(minEndDate.getTime() + (60 * 60 * 1000)); // One hour after min start date            
+            minEndDate.setTime(minEndDate.getTime()); // + (60 * 60 * 1000) One hour after min start date            
             const maxEndDate = getCurrentUTCHour();
             const maxStartDate = new Date(maxEndDate);
             maxStartDate.setTime(maxStartDate.getTime() - (60 * 60 * 1000));
