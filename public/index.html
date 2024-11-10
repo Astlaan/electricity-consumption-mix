@@ -174,33 +174,30 @@
             });
         });
 
-        // Function to round time to nearest hour
-        function roundToHour(dateTimeInput) {
-            const date = new Date(dateTimeInput.value);
-            date.setMinutes(0);
-            date.setSeconds(0);
-            date.setMilliseconds(0);
-            dateTimeInput.value = date.toISOString().slice(0, 16);
+
+        function getDateBounds(dateTimeInput) {
+            const minStartDate = new Date('2015-01-15T00:00Z');
+            const maxEndDate = new Date();
+            maxEndDate.setUTCHours(maxEndDate.getUTCHours() - 1, 0, 0, 0);
+
+            const minEndDate = new Date(minStartDate);
+            minEndDate.setUTCHours(minEndDate.getUTCHours() + 1);
+            const maxStartDate = new Date(maxEndDate);
+            maxStartDate.setUTCHours(maxStartDate.getUTCHours() - 1);
+            return [minStartDate, minEndDate, maxStartDate, maxEndDate];
         }
 
-        function getCurrentUTCHour() {
-            const now = new Date();
-            now.setUTCMinutes(0);     // Set minutes to 0
-            now.setUTCSeconds(0);     // Set seconds to 0
-            now.setUTCMilliseconds(0);
-            return now;
-        }
 
         // Add this function after getCurrentUTCHour()
-        function setMaxDates() {
-            const maxEndDate = getCurrentUTCHour();
-            const maxStartDate = new Date(maxEndDate);
-            maxStartDate.setTime(maxStartDate.getTime() - (60 * 60 * 1000)); // One hour before max end date
+        function setFormDateBounds() {
+            const [minStartDate, minEndDate, maxStartDate, maxEndDate] = getDateBounds();
 
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');
 
             // Format dates to ISO string and slice to get the format required by datetime-local
+            startDateInput.min = minStartDate.toISOString().slice(0, 16);
+            endDateInput.min = minEndDate.toISOString().slice(0, 16);
             startDateInput.max = maxStartDate.toISOString().slice(0, 16);
             endDateInput.max = maxEndDate.toISOString().slice(0, 16);
         }
@@ -211,7 +208,6 @@
             validateDates();
         });
         document.getElementById('start_date').addEventListener('change', function () {
-            // roundToHour(this);
             validateDates();
         });
 
@@ -219,15 +215,14 @@
             validateDates();
         });
         document.getElementById('end_date').addEventListener('change', function () {
-            // roundToHour(this);
             validateDates();
         });
 
         function validateDates() {
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');
-            const startDate = new Date(startDateInput.value);
-            const endDate = new Date(endDateInput.value);
+            const startDate = new Date(startDateInput.value + 'Z');
+            const endDate = new Date(endDateInput.value + 'Z');
 
             let errors = [];
 
@@ -241,26 +236,35 @@
                 return false;
             }
 
-            const minStartDate = new Date('2015-01-15T00:00');
-            const minEndDate = new Date(minStartDate);
-            minEndDate.setTime(minEndDate.getTime()); // + (60 * 60 * 1000) One hour after min start date            
-            const maxEndDate = getCurrentUTCHour();
-            const maxStartDate = new Date(maxEndDate);
-            maxStartDate.setTime(maxStartDate.getTime() - (60 * 60 * 1000));
+            if (startDate.getUTCMinutes() !== 0) {
+                errors.push("Start time must be on the hour (00 minutes)");
+            }
+            if (endDate.getUTCMinutes() !== 0) {
+                errors.push("End time must be on the hour (00 minutes)");
+            }
+
+            const [minStartDate, minEndDate, maxStartDate, maxEndDate] = getDateBounds();
+
+            console.log('Input start date:', startDate.toISOString());
+            console.log('Min start date:', minStartDate.toISOString());
+            console.log('Start date timestamp:', startDate.getTime());
+            console.log('Min start date timestamp:', minStartDate.getTime());
 
             // Check date ranges
             if (startDate < minStartDate) {
-                errors.push("Start date cannot be earlier than 2015-01-15T00:00");
-            }
-            if (startDate > maxStartDate) {
-                errors.push("Start date cannot be later than one hour before current time");
+                errors.push(`Start date cannot be earlier than ${minStartDate.toUTCString().replace("GMT", "UTC")}`);
             }
 
             if (endDate < minEndDate) {
-                errors.push("End date cannot be earlier than 2015-01-15T01:00");
+                errors.push(`End date cannot be earlier than ${minEndDate.toUTCString().replace("GMT", "UTC")}`);
             }
+
+            if (startDate > maxStartDate) {
+                errors.push(`Start date cannot be later than ${maxStartDate.toUTCString().replace("GMT", "UTC")}`);
+            }
+
             if (endDate > maxEndDate) {
-                errors.push("End date cannot be later than current time");
+                errors.push(`End date cannot be later than ${maxEndDate.toUTCString().replace("GMT", "UTC")}`);
             }
 
             // Check date order
@@ -360,7 +364,7 @@
 
         // Add this event listener at the end of your script section
         window.addEventListener('load', function () {
-            setMaxDates();
+            setFormDateBounds();
             validateDates();
         });
     </script>

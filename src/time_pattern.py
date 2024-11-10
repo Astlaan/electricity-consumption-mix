@@ -107,7 +107,7 @@ class TimePatternValidator:
                 start, end = map(int, part.split('-'))
                 if start >= end:
                     raise ValueError(f"Invalid year interval: {part}")
-                if start < 2015 or end > availap:
+                if start < 2015 or end > 2100:
                     raise ValueError("Years must be between 1900 and 2100")
             else:
                 year = int(part)
