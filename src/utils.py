@@ -1,24 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 import pandas as pd
 from config import PSR_TYPE_MAPPING
 from dataclasses import dataclass
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
 
-@dataclass 
-class SimpleInterval:
-    start_date: datetime
-    end_date: datetime
 
-@dataclass
-class AdvancedPattern:
-    years: str
-    months: str
-    days: str
-    hours: str
-
-DataRequest = Union[SimpleInterval, AdvancedPattern]
 
 def current_day_start():
     return datetime.now(timezone.utc).replace(
@@ -38,11 +26,11 @@ def validate_inputs(start_date, end_date):
     _assert_whole_hour(end_date)
 
     # Assert minimum interval of 1 hour
-    assert(end_date-start_date >= timedelta(hours=1))
+    assert end_date-start_date >= timedelta(hours=1), "Minimum interval has to be 1 hour"
 
     # Assert within records
-    assert(RECORDS_START <= start_date)
-    assert(end_date <= maximum_date_end_exclusive())
+    assert RECORDS_START <= start_date, f"Earliest date has to be {RECORDS_START}"
+    assert end_date <= maximum_date_end_exclusive(), f"Latest end date has to be {maximum_date_end_exclusive()}"
 
 
 def get_active_psr_in_dataframe(df):

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Union
 import aiohttp
 import asyncio
 import logging
@@ -12,9 +12,9 @@ from dataclasses import dataclass
 import aiofiles
 
 
+from time_pattern import AdvancedPattern, AdvancedPatternRules
+import time_pattern
 import utils
-from utils import AdvancedPattern, DataRequest, SimpleInterval
-from time_pattern import TimePatternValidator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -28,6 +28,16 @@ class Data:
     generation_es: pd.DataFrame
     flow_pt_to_es: pd.DataFrame
     flow_es_to_pt: pd.DataFrame
+
+@dataclass 
+class SimpleInterval:
+    start_date: datetime
+    end_date: datetime
+
+
+DataRequest = Union[SimpleInterval, AdvancedPattern]
+
+
 
 
 class ENTSOEDataFetcher:
@@ -52,16 +62,16 @@ class ENTSOEDataFetcher:
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch data according to the request type."""
         if isinstance(data_request, SimpleInterval):
-            utils.validate_inputs(data_request.start_date, data_request.end_date)
             return self._get_data_simple_interval(data_request, progress_callback)
         elif isinstance(data_request, AdvancedPattern):
-            TimePatternValidator.validate_pattern(data_request)
             return self._get_data_advanced_pattern(data_request)
         else:
             raise ValueError(f"Invalid data request type: {type(data_request)}")
 
     def _get_data_simple_interval(self, interval: SimpleInterval, progress_callback=None) -> Data:
         """Original get_data implementation for simple intervals"""
+        utils.validate_inputs(interval.start_date, interval.end_date)
+
         async def _async_get_data():
             return await asyncio.gather(
                 self._async_get_generation_data(
@@ -90,20 +100,20 @@ class ENTSOEDataFetcher:
         """Fetch data according to a time pattern."""
         try:
             # Validate the pattern
-            TimePatternValidator.validate_pattern(pattern)
+            rules = time_pattern.get_rules_from_pattern(pattern)
             
             # Get the full time range needed for this pattern
-            start_time = TimePatternValidator._get_earliest_time(pattern)
-            end_time = TimePatternValidator._get_latest_time(pattern)
+            start_time = time_pattern.get_earliest_time(pattern)
+            end_time = time_pattern.get_latest_time(pattern)
             
             # Get all data for the time range using existing method
             data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
             
             # Apply pattern filters directly to each dataframe
-            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, pattern)
-            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, pattern)
-            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, pattern)
-            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, pattern)
+            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, rules)
+            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, rules)
+            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, rules)
+            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, rules)
             
             return data
             
@@ -111,7 +121,7 @@ class ENTSOEDataFetcher:
             logger.error(f"Error processing pattern request: {str(e)}")
             raise ValueError(f"Failed to process pattern request: {str(e)}")
 
-    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, pattern: AdvancedPattern) -> pd.DataFrame:
+    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, rules: AdvancedPatternRules) -> pd.DataFrame:
         if df.empty:
             return df
             
@@ -122,28 +132,17 @@ class ENTSOEDataFetcher:
         # Create mask based on each component
         mask = pd.Series(True, index=df.index)
         
-        # Apply year filter
-        if pattern.years.strip():
-            years = [int(x) for x in pattern.years.split(',')]
-            mask &= df.index.year.isin(years) # type: ignore
+        if rules.years:
+            mask &= df.index.year.isin(rules.years) # type: ignore
         
-        # Apply month filter
-        if pattern.months.strip():
-            months = [int(x) for x in pattern.months.split(',')]
+        if rules.months:
             mask &= df.index.month.isin(months) # type: ignore
         
-        # Apply day filter
-        if pattern.days.strip():
-            days = [int(x) for x in pattern.days.split(',')]
+        if rules.days:
             mask &= df.index.day.isin(days) # type: ignore
         
-        # Apply hour filter
-        if pattern.hours.strip():
-            hour_mask = pd.Series(False, index=df.index)
-            for hour_range in pattern.hours.split(','):
-                start, end = map(int, hour_range.split('-'))
-                hour_mask |= (df.index.hour >= start) & (df.index.hour < end) # type: ignore
-            mask &= hour_mask
+        if rules.hours:
+            mask &= df.index.day.isin(hours) # type: ignore
         
         return df[mask]
         

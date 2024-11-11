@@ -1,12 +1,12 @@
 from datetime import datetime
-from data_fetcher import ENTSOEDataFetcher
+from data_fetcher import ENTSOEDataFetcher, SimpleInterval, DataRequest
 import analyzer
 from typing import Optional
 from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, DataRequest, SimpleInterval, maximum_date_end_exclusive
+from utils import RECORDS_START, maximum_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
