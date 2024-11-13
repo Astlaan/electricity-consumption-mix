@@ -7,9 +7,9 @@ import os
 from datetime import datetime
 from bokeh.embed import json_item
 
-from time_pattern import AdvancedPattern  # type: ignore # Add this import
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from data_fetcher import SimpleInterval
+from time_pattern import AdvancedPattern  # type: ignore # Add this import
 import utils as utils
 from core import generate_visualization
 

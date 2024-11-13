@@ -100,11 +100,12 @@ class ENTSOEDataFetcher:
         """Fetch data according to a time pattern."""
         try:
             # Validate the pattern
-            rules = time_pattern.get_rules_from_pattern(pattern)
+            rules = time_pattern.get_rules_from_pattern(pattern) # Also validates pattern
             
             # Get the full time range needed for this pattern
-            start_time = time_pattern.get_earliest_time(pattern)
-            end_time = time_pattern.get_latest_time(pattern)
+            # start_time = time_pattern.get_earliest_time(pattern)
+            start_time = utils.RECORDS_START
+            end_time = time_pattern.get_latest_time(rules)
             
             # Get all data for the time range using existing method
             data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
@@ -136,13 +137,13 @@ class ENTSOEDataFetcher:
             mask &= df.index.year.isin(rules.years) # type: ignore
         
         if rules.months:
-            mask &= df.index.month.isin(months) # type: ignore
+            mask &= df.index.month.isin(rules.months) # type: ignore
         
         if rules.days:
-            mask &= df.index.day.isin(days) # type: ignore
+            mask &= df.index.day.isin(rules.days) # type: ignore
         
         if rules.hours:
-            mask &= df.index.day.isin(hours) # type: ignore
+            mask &= df.index.day.isin(rules.hours) # type: ignore
         
         return df[mask]
         
