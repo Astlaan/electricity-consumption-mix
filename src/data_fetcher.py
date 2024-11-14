@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import aiofiles
 
 
-from time_pattern import AdvancedPattern, AdvancedPatternRules
+from time_pattern import AdvancedPattern, AdvancedPatternRule
 import time_pattern
 import utils
 
@@ -122,7 +122,7 @@ class ENTSOEDataFetcher:
             logger.error(f"Error processing pattern request: {str(e)}")
             raise ValueError(f"Failed to process pattern request: {str(e)}")
 
-    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, rules: AdvancedPatternRules) -> pd.DataFrame:
+    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, rules: AdvancedPatternRule) -> pd.DataFrame:
         if df.empty:
             return df
             
@@ -143,9 +143,17 @@ class ENTSOEDataFetcher:
             mask &= df.index.day.isin(rules.days) # type: ignore
         
         if rules.hours:
-            mask &= df.index.day.isin(rules.hours) # type: ignore
+            mask &= df.index.hour.isin(rules.hours) # type: ignore
         
-        return df[mask]
+        result = df[mask]
+        index_max = result.index.max()
+        index_min = result.index.min()
+        index_length = len(result.index)
+
+        print("Index max:", index_max)
+        print("Index min:", index_min)
+        print("Index length:", index_length)
+        return result
         
     async def _save_to_cache(
         self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]

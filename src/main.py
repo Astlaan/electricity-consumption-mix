@@ -3,11 +3,13 @@ import logging
 import sys
 from pathlib import Path
 
-# Add the project root directory to Python path
-sys.path.append(str(Path(__file__).parent.parent))
+from time_pattern import AdvancedPattern
 
-from src.utils import SimpleInterval
-from src.core import reset_cache, initialize_cache, generate_visualization
+# Add the project root directory to Python path
+sys.path.append(str(Path(__file__).parent))
+
+from data_fetcher import SimpleInterval
+from core import reset_cache, initialize_cache, generate_visualization
 
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
@@ -23,11 +25,14 @@ def main():
     if args.initialize_cache:
         initialize_cache()
 
-    if args.start_date is None or args.end_date is None:
-        print("--start_date or --end_date is None. Shutting down...")
+    if args.start_date and args.end_date:
+        data_request = SimpleInterval(args.start_date, args.end_date)
+    elif args.pattern:
+        data_request = args.pattern
+    else:
+        print("No date parameters provided. Shutting down.")
         return
     
-    data_request = SimpleInterval(args.start_date, args.end_date)
 
     fig = generate_visualization(
         data_request,
@@ -77,6 +82,12 @@ def parse_arguments():
         help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
     parser.add_argument(
+        "--pattern",
+        required=False,
+        type=parse_pattern,
+        help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
+    )
+    parser.add_argument(
         "--visualize",
         # choices=["none", "simple", "country-source", "source-country"],
         default="none",
@@ -101,6 +112,11 @@ def parse_datetime(value):
             raise argparse.ArgumentTypeError(
                 f"Invalid date or datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS."
             )
+        
+def parse_pattern(string):
+    fields = string.split("|")
+    assert len(fields) == 4
+    return AdvancedPattern(*fields)
 
 
 if __name__ == "__main__":

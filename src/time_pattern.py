@@ -14,37 +14,79 @@ class AdvancedPattern:
     hours: str
 
     def map(self, function, *args):
-        return {
-        "years": function(self.years, *args),
-        "months": function(self.months, *args),
-        "days": function(self.days, *args),
-        "hours": function(self.hours, *args),
-        }
+        return {field: function(value, *args) for field, value in self.__dict__.items()}
 
 
 @dataclass
-class AdvancedPatternRules:
+class AdvancedPatternRule:
     years: List[int]
     months: List[int]
     days: List[int]
     hours: List[int]
 
+class ValidationParameters:
+    def __init__(
+        self,
+        bounds: tuple[int, int],
+        require_range: bool = False,
+        allow_adjacent: bool = False,
+        ascending_range: bool = True
+    ):
+        self.bounds = bounds
+        self.require_range = require_range
+        self.allow_adjacent = allow_adjacent
+        self.ascending_range = ascending_range
 
-TIME_BOUNDS = {
-    "year": (2000, 2100),
-    "month": (1, 12),
-    "day": (1, 31),
-    "hour": (0, 23)
+
+VALIDATION_PARAMETERS = {
+    "years": ValidationParameters(
+        bounds=(2000, 2100),
+    ),
+    "months": ValidationParameters(
+        bounds=(1, 12),
+    ),
+    "days": ValidationParameters(
+        bounds=(1, 31),
+    ),
+    "hours": ValidationParameters(
+        bounds=(0, 23),
+    )
 }
 
-def _assert_valid_time_value(name: str, value: int):
-    bounds = TIME_BOUNDS[name]
-    if not (bounds[0] <= value <= bounds[1]):
-            raise ValueError(f"Invalid {name}: {name}")
+    
+
+def _validate_pattern_values(pattern: str, field_name: str) -> None:
+    """Generic validation function for any pattern field"""
+    if not pattern.strip():
+        return
+        
+    pars = VALIDATION_PARAMETERS[field_name]
+    ranges = []
+    
+    # Validate format first
+    _validate_pattern_format(pattern, pars.require_range)
+    
+    # Parse and validate individual parts
+    for part in pattern.split(','):
+        if '-' in part:
+            start, end = map(int, part.split('-'))
+            if pars.ascending_range and start >= end:
+                raise ValueError(f"Invalid {field_name} interval: {start}-{end}, left bound must be less than the right now")
+            
+            if not ((pars.bounds[0] <= start <= pars.bounds[1] and 
+                   pars.bounds[0] <= end <= pars.bounds[1])):
+                raise ValueError(f"Invalid {field_name} values: must be between {pars.bounds[0]} and {pars.bounds[1]}")
+                
+            ranges.append((start, end))
+        else:
+            value = int(part)
+            if not (pars.bounds[0] <= value <= pars.bounds[1]):
+                raise ValueError(f"Invalid {field_name} value: must be between {pars.bounds[0]} and {pars.bounds[1]}")
+            ranges.append((value, value))
     
 
 
-def get_rules_from_pattern(pattern: AdvancedPattern) -> AdvancedPatternRules:
+def get_rules_from_pattern(pattern: AdvancedPattern) -> AdvancedPatternRule:
     _validate_pattern(pattern)
 
     def _get_rules_from_pattern_field(string: str) -> List[int]:
@@ -55,19 +97,17 @@ def get_rules_from_pattern(pattern: AdvancedPattern) -> AdvancedPatternRules:
             if '-' in part:
                 start, end = map(int, part.split('-'))
                 values.extend(range(start, end + 1)) # include right bound
-            else:
+            elif part:
                 values.append(int(part))
         return values
 
-    return AdvancedPatternRules(
-        years = _get_rules_from_pattern_field(pattern.years),
-        months = _get_rules_from_pattern_field(pattern.months),
-        days = _get_rules_from_pattern_field(pattern.days),
-        hours = _get_rules_from_pattern_field(pattern.hours)
-    )
+    return AdvancedPatternRule(**pattern.map(_get_rules_from_pattern_field))
 
 
-def _assert_valid_pattern_entry(string: str, range_only = False):
+def _validate_pattern_format(string: str, range_only = False):
+    if not string.strip():
+        return
+    
     int_pattern = r'\d+'
     range_pattern = r'\d+\s*-\s*\d+'
     entry_pattern = range_pattern if range_only else f'(?:{range_pattern}|{int_pattern})'
@@ -81,133 +121,21 @@ def _assert_valid_pattern_entry(string: str, range_only = False):
 def _validate_pattern(pattern: AdvancedPattern) -> None:
     """Validate all components of a time pattern"""
 
-    _assert_valid_pattern_entry(pattern.years)
-    _assert_valid_pattern_entry(pattern.months)
-    _assert_valid_pattern_entry(pattern.days)
-    _assert_valid_pattern_entry(pattern.hours)
-
-    _validate_years(pattern.years)
-    _validate_months(pattern.months)
-    _validate_days(pattern.days)
-    _validate_hours(pattern.hours)
+    for field_name, field_value in pattern.__dict__.items():
+        _validate_pattern_format(field_value)
+        _validate_pattern_values(field_value, field_name)
 
 
-def get_latest_time(pattern_rules: AdvancedPatternRules) -> datetime: # TODO fix
+def get_latest_time(pattern_rules: AdvancedPatternRule) -> datetime: # TODO fix
     """Gets latest datetime encoded in pattern"""
     # Handle empty patterns with defaults
     max_date = maximum_date_end_exclusive()
     year = max(pattern_rules.years) if pattern_rules.years else max_date.year
-    month = max(pattern_rules.months) if pattern_rules.months else TIME_BOUNDS['month'][1]
-    day = max(pattern_rules.days) if pattern_rules.days else TIME_BOUNDS['day'][1]
+    month = max(pattern_rules.months) if pattern_rules.months else VALIDATION_PARAMETERS['months'].bounds[1]
+    day = max(pattern_rules.days) if pattern_rules.days else VALIDATION_PARAMETERS['days'].bounds[1]
     hour = max(pattern_rules.hours) if pattern_rules.hours else max_date.hour
 
     max_encoded_end_date = datetime(year, month, day, hour) + timedelta(hours=1)
 
     return max(RECORDS_START, min(max_date, max_encoded_end_date)) # Clamps date between minimum and maximum allowed dates
 
-
-def _validate_years(pattern: str) -> None:
-    """Validate year pattern.
-    Empty pattern means all years from 2015 to current year.
-    Years must be between 1900 and 2100.
-    Can be specified as single years (2020) or ranges (2020-2024).
-    Multiple values separated by commas.
-    Ranges must have start < end and cannot overlap.
-    """
-    if not pattern.strip():
-        return
-    _validate_overlaps(pattern, "years")
-
-    for part in pattern.split(','):
-        if '-' in part:
-            start, end = map(int, part.split('-'))
-            if start >= end:
-                raise ValueError(f"Invalid year interval: {part}")
-            _assert_valid_time_value("year", start)
-            _assert_valid_time_value("year", end)
-        else:
-            _assert_valid_time_value("year", int(part))
-            
-
-def _validate_months(pattern: str) -> None:
-    if not pattern.strip():
-        return
-    _validate_overlaps(pattern, "months")
-
-    for part in pattern.split(','):
-        if '-' in part:
-            start, end = map(int, part.split('-'))
-            _assert_valid_time_value("month", start)
-            _assert_valid_time_value("month", end)
-        else:
-            month = int(part)
-            _assert_valid_time_value("month", month)
-
-def _validate_days(pattern: str) -> None:
-    if not pattern.strip():
-        return
-    _validate_overlaps(pattern, "days")
-
-    for part in pattern.split(','):
-        if '-' in part:
-            start, end = map(int, part.split('-'))
-            if start >= end:
-                raise ValueError(f"Invalid day interval: {part}")
-            _assert_valid_time_value("day", start)
-            _assert_valid_time_value("day", end)
-        else:
-            day = int(part)
-            _assert_valid_time_value("day", day)
-
-
-def _validate_hours(pattern: str) -> None:
-    if not pattern.strip():
-        return
-    _validate_overlaps(pattern, "hours")
-    for part in pattern.split(','):
-        # if '-' not in part:
-            # raise ValueError("Hours must be specified as intervals (e.g., '9-17')")
-        if '-' not in part:
-            start, end = map(int, part.split('-'))
-            if not (0 <= start <= 23 and 0 <= end <= 23):
-                raise ValueError("Hours must be between 0 and 23")
-            if start >= end:
-                raise ValueError(f"Invalid hour interval: start ({start}) must be less than end ({end})") # TODO fix
-
-def _validate_overlaps(pattern: str, component_name: str) -> None:
-    """Validate that ranges don't overlap.
-    For hours, adjacent ranges are allowed (e.g., 0-8,8-16).
-    For other components, ranges must not overlap or be adjacent.
-    """
-    if not pattern.strip():
-        return
-
-    ranges = []
-    for part in pattern.split(','):
-        if '-' in part:
-            start, end = map(int, part.split('-'))
-            ranges.append((start, end))
-        else:
-            num = int(part)
-            ranges.append((num, num))
-
-    # Sort ranges by start value
-    ranges.sort()
-
-    # Check for overlaps
-    for i in range(len(ranges) - 1):
-        curr_end = ranges[i][1]
-        next_start = ranges[i + 1][0]
-
-        if component_name == "hours":
-            # For hours, adjacent ranges are allowed (end == next_start)
-            if curr_end > next_start:
-                raise ValueError(
-                    f"Overlapping hour ranges: {ranges[i]} and {ranges[i+1]}"
-                )
-        else:
-            # For other components, ranges must be separated
-            if curr_end >= next_start:
-                raise ValueError(
-                    f"Overlapping or adjacent {component_name} ranges: {ranges[i]} and {ranges[i+1]}"
-                )
