@@ -26,8 +26,11 @@ logger = logging.getLogger(__name__)
 class Data:
     generation_pt: pd.DataFrame
     generation_es: pd.DataFrame
+    generation_fr: pd.DataFrame
     flow_pt_to_es: pd.DataFrame
     flow_es_to_pt: pd.DataFrame
+    flow_fr_to_es: pd.DataFrame
+    flow_es_to_fr: pd.DataFrame
 
 @dataclass 
 class SimpleInterval:
@@ -80,11 +83,20 @@ class ENTSOEDataFetcher:
                 self._async_get_generation_data(
                     "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
                 ),
+                self._async_get_generation_data(
+                    "10YFR-RTE------C", interval.start_date, interval.end_date, progress_callback
+                ),
                 self._async_get_physical_flows(
                     "10YES-REE------0", "10YPT-REN------W", interval.start_date, interval.end_date, progress_callback
                 ),
                 self._async_get_physical_flows(
                     "10YPT-REN------W", "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
+                self._async_get_physical_flows(
+                    "10YFR-RTE------C", "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
+                self._async_get_physical_flows(
+                    "10YES-REE------0", "10YFR-RTE------C", interval.start_date, interval.end_date, progress_callback
                 ),
             )
 
@@ -92,8 +104,11 @@ class ENTSOEDataFetcher:
         return Data(
             generation_pt=results[0],
             generation_es=results[1],
-            flow_es_to_pt=results[2],
-            flow_pt_to_es=results[3],
+            generation_fr=results[2],
+            flow_es_to_pt=results[3],
+            flow_pt_to_es=results[4],
+            flow_fr_to_es=results[5],
+            flow_es_to_fr=results[6],
         )
     
     def _get_data_advanced_pattern(self, pattern: AdvancedPattern) -> Data:
@@ -113,8 +128,11 @@ class ENTSOEDataFetcher:
             # Apply pattern filters directly to each dataframe
             data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, rules)
             data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, rules)
+            data.generation_fr = self._apply_pattern_filters_to_df(data.generation_fr, rules)
             data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, rules)
             data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, rules)
+            data.flow_fr_to_es = self._apply_pattern_filters_to_df(data.flow_fr_to_es, rules)
+            data.flow_es_to_fr = self._apply_pattern_filters_to_df(data.flow_es_to_fr, rules)
             
             return data
             
