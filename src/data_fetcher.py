@@ -190,38 +190,43 @@ class ENTSOEDataFetcher:
         logger.debug("Successfully saved cache files")
 
     async def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
-        cache_name = utils.get_cache_filename(params)
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
-        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
+        try:
+            cache_name = utils.get_cache_filename(params)
+            cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
+            metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
 
-        if os.path.exists(cache_file) and os.path.exists(metadata_file):
-            # Use asyncio.to_thread for the pandas operation since it's CPU-bound
-            try:
-                async with aiofiles.open(metadata_file, "r") as f:
-                    metadata = json.loads(await f.read())
+            if os.path.exists(cache_file) and os.path.exists(metadata_file):
+                # Use asyncio.to_thread for the pandas operation since it's CPU-bound
+                try:
+                    async with aiofiles.open(metadata_file, "r") as f:
+                        metadata = json.loads(await f.read())
 
-                data = await asyncio.to_thread(pd.read_pickle, cache_file)
+                    data = await asyncio.to_thread(pd.read_pickle, cache_file)
 
-                # Convert string representation back to Timedelta if necessary
-                if "resolution" in metadata and isinstance(metadata["resolution"], str):
-                    metadata["resolution"] = pd.Timedelta(metadata["resolution"])
+                    # Convert string representation back to Timedelta if necessary
+                    if "resolution" in metadata and isinstance(metadata["resolution"], str):
+                        metadata["resolution"] = pd.Timedelta(metadata["resolution"])
 
-                # Convert cached dates to naive datetime objects
-                metadata["start_date_inclusive"] = pd.to_datetime(
-                    metadata["start_date_inclusive"]
-                ).tz_localize(None)
-                metadata["end_date_exclusive"] = pd.to_datetime(
-                    metadata["end_date_exclusive"]
-                ).tz_localize(None)
+                    # Convert cached dates to naive datetime objects
+                    metadata["start_date_inclusive"] = pd.to_datetime(
+                        metadata["start_date_inclusive"]
+                    ).tz_localize(None)
+                    metadata["end_date_exclusive"] = pd.to_datetime(
+                        metadata["end_date_exclusive"]
+                    ).tz_localize(None)
 
-                return data, metadata
-            except json.JSONDecodeError as e:
-                logger.error(f"Error decoding JSON from cache: {str(e)}")
-                # Remove the corrupted cache files
-                os.remove(cache_file)
-                os.remove(metadata_file)
-                return None
-        return None
+                    return data, metadata
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error decoding JSON from cache: {str(e)}")
+                    # Remove the corrupted cache files
+                    os.remove(cache_file)
+                    os.remove(metadata_file)
+                    return None
+            return None
+        except ValueError as e:
+            logger.warning(f"Cache filename generation failed: {str(e)}. Will fetch data instead.")
+            return None
+
 
 
     async def _async_parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
