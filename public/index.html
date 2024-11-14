@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,22 +29,34 @@
             margin: 0 auto;
             padding: 20px;
         }
+
         .form-container {
             margin-bottom: 20px;
             padding: 20px;
             background-color: #f5f5f5;
             border-radius: 5px;
         }
+
         .error-message {
-            color: red;
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
             display: none;
-            margin-top: 10px;
         }
+
+        .error-item {
+            margin: 5px 0;
+        }
+
         .loading {
             display: none;
             margin-top: 10px;
             color: #666;
         }
+
         button {
             padding: 10px 20px;
             background-color: #007bff;
@@ -52,18 +65,41 @@
             border-radius: 5px;
             cursor: pointer;
         }
+
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
         input[type="datetime-local"] {
             padding: 5px;
             margin-right: 10px;
         }
+
         #plotContainer img {
             max-width: 100%;
             height: auto;
             margin: 20px 0;
+        }
+
+        .time-field {
+            margin: 10px 0;
+        }
+
+        .help-text {
+            font-size: 0.8em;
+            color: #666;
+            display: block;
+            /* margin-left: 10px; */
+        }
+
+        .mode-selector {
+            margin-bottom: 20px;
+        }
+
+        #advancedControls .time-field input {
+            width: 300px;
+            padding: 5px;
         }
     </style>
     <!-- Add these in the <head> section -->
@@ -72,19 +108,54 @@
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.js"></script>
 </head>
+
 <body>
     <h1>Portugal Electricity Consumption Mix</h1>
-    
+
     <div class="form-container">
+        <div class="mode-selector">
+            <input type="radio" id="simpleMode" name="timeMode" value="simple" checked>
+            <label for="simpleMode">Simple Interval</label>
+            <input type="radio" id="advancedMode" name="timeMode" value="advanced">
+            <label for="advancedMode">Advanced Pattern</label>
+        </div>
+
         <form id="plotForm">
-            <label for="start_date">Start Date:</label>
-            <input type="datetime-local" id="start_date" required 
-                value="2024-01-01T00:00" step="3600">
-            
-            <label for="end_date">End Date:</label>
-            <input type="datetime-local" id="end_date" required
-                value="2024-01-01T01:00" step="3600">
-            
+            <div id="simpleControls">
+                <label for="start_date">Start Date (UTC):</label>
+                <input type="datetime-local" id="start_date" required value="2024-01-01T00:00" step="3600"
+                    min="2015-01-15T00:00">
+
+                <label for="end_date">End Date (UTC):</label>
+                <input type="datetime-local" id="end_date" required value="2024-01-01T01:00" step="3600"
+                    min="2015-01-15T01:00">
+            </div>
+
+            <div id="advancedControls" style="display: none;">
+                <div class="time-field">
+                    <label for="years">Years:</label>
+                    <input type="text" id="years" placeholder="e.g., 2015,2017, 2020-2023" value="2024">
+                    <span class="help-text">Single year, range (2020-2023), or list (2020,2022,2023), empty means all
+                        years</span>
+                </div>
+                <div class="time-field">
+                    <label for="months">Months:</label>
+                    <input type="text" id="months" placeholder="e.g., 1-3, 3,6,9" value="1">
+                    <span class="help-text">Empty means all months</span>
+                </div>
+                <div class="time-field">
+                    <label for="days">Days:</label>
+                    <input type="text" id="days" placeholder="e.g., 1-15, 1,15,30" value="1">
+                    <span class="help-text">Empty means all days of the month</span>
+                </div>
+                <div class="time-field">
+                    <label for="hours">Hours:</label>
+                    <input type="text" id="hours" placeholder="e.g., 20-23, 23-2" value="0-1">
+                    <span class="help-text">Intervals are required. Eg. 0-8 (midnight to 8 am), 16-0 (4 pm to
+                        midnight).<br>Can wrap around midnight, eg. 23-2 for 11pm-2am.<br>Multiple intervals may be
+                        specified, separated by commas.</span>
+                </div>
+            </div>
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
         <div id="errorMessage" class="error-message"></div>
@@ -95,36 +166,138 @@
     </div>
 
     <script>
-        // Function to round time to nearest hour
-        function roundToHour(dateTimeInput) {
-            const date = new Date(dateTimeInput.value);
-            date.setMinutes(0);
-            date.setSeconds(0);
-            date.setMilliseconds(0);
-            dateTimeInput.value = date.toISOString().slice(0, 16);
+
+        // Add radio button change event handlers
+        document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const simpleControls = document.getElementById('simpleControls');
+                const advancedControls = document.getElementById('advancedControls');
+                const errorMessage = document.getElementById('errorMessage');
+                const submitBtn = document.getElementById('submitBtn');
+
+                if (this.value === 'simple') {
+                    simpleControls.style.display = 'block';
+                    advancedControls.style.display = 'none';
+                    // Revalidate simple mode inputs
+                    validateDates();
+                } else {
+                    simpleControls.style.display = 'none';
+                    advancedControls.style.display = 'block';
+                    // Clear any existing errors and enable submit button
+                    errorMessage.style.display = 'none';
+                    errorMessage.innerHTML = '';
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+
+
+        function getDateBounds(dateTimeInput) {
+            const minStartDate = new Date('2015-01-15T00:00Z');
+            const maxEndDate = new Date();
+            maxEndDate.setUTCHours(maxEndDate.getUTCHours() - 1, 0, 0, 0);
+
+            const minEndDate = new Date(minStartDate);
+            minEndDate.setUTCHours(minEndDate.getUTCHours() + 1);
+            const maxStartDate = new Date(maxEndDate);
+            maxStartDate.setUTCHours(maxStartDate.getUTCHours() - 1);
+            return [minStartDate, minEndDate, maxStartDate, maxEndDate];
         }
 
-        // Add listeners to both inputs
-        document.getElementById('start_date').addEventListener('change', function() {
-            roundToHour(this);
+
+        // Add this function after getCurrentUTCHour()
+        function setFormDateBounds() {
+            const [minStartDate, minEndDate, maxStartDate, maxEndDate] = getDateBounds();
+
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+
+            // Format dates to ISO string and slice to get the format required by datetime-local
+            startDateInput.min = minStartDate.toISOString().slice(0, 16);
+            endDateInput.min = minEndDate.toISOString().slice(0, 16);
+            startDateInput.max = maxStartDate.toISOString().slice(0, 16);
+            endDateInput.max = maxEndDate.toISOString().slice(0, 16);
+        }
+
+
+        // Modify the event listeners section to include 'input' events
+        document.getElementById('start_date').addEventListener('input', function () {
+            validateDates();
+        });
+        document.getElementById('start_date').addEventListener('change', function () {
             validateDates();
         });
 
-        document.getElementById('end_date').addEventListener('change', function() {
-            roundToHour(this);
+        document.getElementById('end_date').addEventListener('input', function () {
+            validateDates();
+        });
+        document.getElementById('end_date').addEventListener('change', function () {
             validateDates();
         });
 
         function validateDates() {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            const startDate = new Date(startDateInput.value + 'Z');
+            const endDate = new Date(endDateInput.value + 'Z');
+
+            let errors = [];
+
+            // Check if either date is invalid (NaN)
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                errors.push("Please insert valid dates");
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.innerHTML = errors.map(error => `<div class="error-item">${error}</div>`).join('');
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = true;
+                return false;
+            }
+
+            if (startDate.getUTCMinutes() !== 0) {
+                errors.push("Start time must be on the hour (00 minutes)");
+            }
+            if (endDate.getUTCMinutes() !== 0) {
+                errors.push("End time must be on the hour (00 minutes)");
+            }
+
+            const [minStartDate, minEndDate, maxStartDate, maxEndDate] = getDateBounds();
+
+            console.log('Input start date:', startDate.toISOString());
+            console.log('Min start date:', minStartDate.toISOString());
+            console.log('Start date timestamp:', startDate.getTime());
+            console.log('Min start date timestamp:', minStartDate.getTime());
+
+            // Check date ranges
+            if (startDate < minStartDate) {
+                errors.push(`Start date cannot be earlier than ${minStartDate.toUTCString().replace("GMT", "UTC")}`);
+            }
+
+            if (endDate < minEndDate) {
+                errors.push(`End date cannot be earlier than ${minEndDate.toUTCString().replace("GMT", "UTC")}`);
+            }
+
+            if (startDate > maxStartDate) {
+                errors.push(`Start date cannot be later than ${maxStartDate.toUTCString().replace("GMT", "UTC")}`);
+            }
+
+            if (endDate > maxEndDate) {
+                errors.push(`End date cannot be later than ${maxEndDate.toUTCString().replace("GMT", "UTC")}`);
+            }
+
+            // Check date order
             if (startDate >= endDate) {
-                errorMessage.textContent = "End date must be after start date.";
+                errors.push("End date must be after start date");
+            }
+
+            // Display errors or hide error container
+            const errorMessage = document.getElementById('errorMessage');
+            if (errors.length > 0) {
+                errorMessage.innerHTML = errors.map(error => `<div class="error-item">${error}</div>`).join('');
                 errorMessage.style.display = 'block';
                 submitBtn.disabled = true;
                 return false;
             } else {
-                // Clear error if validation passes
+                errorMessage.innerHTML = '';
                 errorMessage.style.display = 'none';
                 submitBtn.disabled = false;
                 return true;
@@ -135,35 +308,44 @@
     <div id="plotContainer"></div>
 
     <script>
-        const form = document.getElementById('plotForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const loading = document.getElementById('loading');
-        const plotContainer = document.getElementById('plotContainer');
-        const cacheWarning = document.getElementById('cacheWarning');
-        // const initializeCacheBtn = document.getElementById('initializeCacheBtn');
-
-        form.addEventListener('submit', async (e) => {
+        async function submitForm(e) {
             e.preventDefault();
-            
-            // Clear previous error message and show loading
+
+            const errorMessage = document.getElementById('errorMessage');
+            const loading = document.getElementById('loading');
+            const submitBtn = document.getElementById('submitBtn');
+            const plotContainer = document.getElementById('plotContainer');
+
             errorMessage.style.display = 'none';
             loading.style.display = 'block';
             submitBtn.disabled = true;
 
             try {
-                const startDate = document.getElementById('start_date').value;
-                const endDate = document.getElementById('end_date').value;
+                const mode = document.querySelector('input[name="timeMode"]:checked').value;
+                let requestData;
+
+                if (mode === 'simple') {
+                    requestData = {
+                        mode: 'simple',
+                        start_date: document.getElementById('start_date').value,
+                        end_date: document.getElementById('end_date').value
+                    };
+                } else {
+                    requestData = {
+                        mode: 'advanced',
+                        years: document.getElementById('years').value,
+                        months: document.getElementById('months').value,
+                        days: document.getElementById('days').value,
+                        hours: document.getElementById('hours').value
+                    };
+                }
 
                 const response = await fetch('/api/generate_plot', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        start_date: startDate,
-                        end_date: endDate
-                    })
+                    body: JSON.stringify(requestData)
                 });
 
                 const data = await response.json();
@@ -173,66 +355,36 @@
                 }
 
                 if (data.plot) {
-                    // Clear previous plot
+                    // Clear previous plot and error
                     plotContainer.innerHTML = '';
+                    errorMessage.style.display = 'none';
                     // Render the Bokeh plot
                     Bokeh.embed.embed_item(data.plot, 'plotContainer');
                 } else {
-                    plotContainer.textContent = 'Failed to generate visualization';
+                    throw new Error('No plot data received');
                 }
 
             } catch (error) {
-                errorMessage.textContent = error.message;
+                // Display error message
+                errorMessage.innerHTML = `<div class="error-item">${error.message}</div>`;
                 errorMessage.style.display = 'block';
+                plotContainer.innerHTML = ''; // Clear any previous plot
                 console.error('Error:', error);
             } finally {
                 loading.style.display = 'none';
                 submitBtn.disabled = false;
             }
+        }
+
+        // Add event listener for form submission
+        document.getElementById('plotForm').addEventListener('submit', submitForm);
+
+        // Add this event listener at the end of your script section
+        window.addEventListener('load', function () {
+            setFormDateBounds();
+            validateDates();
         });
-
-        // Check cache status on page load
-        // window.addEventListener('load', async () => {
-        //     console.log("Checking cache status...");
-        //     try {
-        //         const response = await fetch('/api/check_cache');
-        //         console.log("Cache check response:", response);
-        //         if (!response.ok) {
-        //             throw new Error(`HTTP error! status: ${response.status}`);
-        //         }
-        //         const data = await response.json();
-        //         console.log("Cache status data:", data);
-                
-        //         if (data.is_empty) {
-        //             console.log("Cache is empty, showing warning");
-        //             cacheWarning.style.display = 'block';
-        //             submitBtn.disabled = true;
-        //         } else {
-        //             console.log("Cache is not empty");
-        //             submitBtn.disabled = false;
-        //             validateDates();
-        //         }
-        //     } catch (error) {
-        //         console.error('Error checking cache status:', error);
-        //         // Optionally show error to user
-        //         errorMessage.textContent = 'Failed to check cache status: ' + error.message;
-        //         errorMessage.style.display = 'block';
-        //     }
-        // });
-
-        // initializeCacheBtn.addEventListener('click', async () => {
-        //     try {
-        //         const response = await fetch('/api/initialize_cache', { method: 'POST' });
-        //         if (!response.ok) {
-        //             throw new Error(await response.text());
-        //         }
-        //         cacheWarning.style.display = 'none';
-        //         submitBtn.disabled = false;
-        //         alert("Cache initialization started.  Please refresh the page after a few minutes.");
-        //     } catch (error) {
-        //         alert(`Error initializing cache: ${error}`);
-        //     }
-        // });
     </script>
 </body>
+
 </html>

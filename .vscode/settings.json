@@ -1,0 +1,9 @@
+{
+    "python.analysis.extraPaths": [
+        "./src"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "eslint.validate": ["javascript"]
+}

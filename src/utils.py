@@ -1,33 +1,36 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 import pandas as pd
 from config import PSR_TYPE_MAPPING
+from dataclasses import dataclass
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
+
+
 
 def current_day_start():
     return datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
 
+def maximum_date_end_exclusive():
+    """Returns the current UTC hour minus 1 hour as a naive datetime"""
+    now = datetime.utcnow()  # Use utcnow() instead of now(timezone.utc)
+    return now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
+
+
 def validate_inputs(start_date, end_date):
-    def _assert_exact_hour(date):
+    def _assert_whole_hour(date):
         assert(date.minute == 0 and date.second == 0 and date.microsecond == 0)
+ 
+    _assert_whole_hour(start_date)
+    _assert_whole_hour(end_date)
 
-    def _assert_within_records(date):
-        assert(RECORDS_START <= date)
+    # Assert minimum interval of 1 hour
+    assert end_date-start_date >= timedelta(hours=1), "Minimum interval has to be 1 hour"
 
-    def _assert_less_or_equal_than_current_day_start(date):
-        assert(date <= current_day_start())
-
-
-
-    _assert_exact_hour(start_date)
-    _assert_exact_hour(end_date)
-    _assert_within_records(start_date)
-    _assert_within_records(end_date)
-    _assert_less_or_equal_than_current_day_start(start_date)
-    _assert_less_or_equal_than_current_day_start(end_date)
-    assert(end_date-start_date >= timedelta(hours=1))
+    # Assert within records
+    assert RECORDS_START <= start_date, f"Earliest date has to be {RECORDS_START}"
+    assert end_date <= maximum_date_end_exclusive(), f"Latest end date has to be {maximum_date_end_exclusive()}"
 
 
 def get_active_psr_in_dataframe(df):

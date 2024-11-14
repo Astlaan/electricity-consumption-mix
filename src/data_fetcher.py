@@ -3,13 +3,17 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple, Union
 import aiohttp
 import asyncio
 import logging
 import shutil
 from dataclasses import dataclass
 import aiofiles
+
+
+from time_pattern import AdvancedPattern, AdvancedPatternRule
+import time_pattern
 import utils
 
 logging.basicConfig(level=logging.DEBUG)
@@ -24,6 +28,16 @@ class Data:
     generation_es: pd.DataFrame
     flow_pt_to_es: pd.DataFrame
     flow_es_to_pt: pd.DataFrame
+
+@dataclass 
+class SimpleInterval:
+    start_date: datetime
+    end_date: datetime
+
+
+DataRequest = Union[SimpleInterval, AdvancedPattern]
+
+
 
 
 class ENTSOEDataFetcher:
@@ -44,47 +58,103 @@ class ENTSOEDataFetcher:
         self.is_initialized = {}
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
-    def get_data(self, start_date: datetime, end_date: datetime, progress_callback=None) -> Data:
-        """Fetch all required data for Portugal and Spain in parallel.
 
-        Args:
-            start_date: Start of period (inclusive)
-            end_date: End of period (exclusive)
-            progress_callback: Optional callback function to report progress
+    def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
+        """Fetch data according to the request type."""
+        if isinstance(data_request, SimpleInterval):
+            return self._get_data_simple_interval(data_request, progress_callback)
+        elif isinstance(data_request, AdvancedPattern):
+            return self._get_data_advanced_pattern(data_request)
+        else:
+            raise ValueError(f"Invalid data request type: {type(data_request)}")
 
-        Returns:
-            Data object containing all required dataframes
-        """
-
-        utils.validate_inputs(start_date, end_date)
+    def _get_data_simple_interval(self, interval: SimpleInterval, progress_callback=None) -> Data:
+        """Original get_data implementation for simple intervals"""
+        utils.validate_inputs(interval.start_date, interval.end_date)
 
         async def _async_get_data():
             return await asyncio.gather(
                 self._async_get_generation_data(
-                    "10YPT-REN------W", start_date, end_date, progress_callback
-                ),  # PT generation
+                    "10YPT-REN------W", interval.start_date, interval.end_date, progress_callback
+                ),
                 self._async_get_generation_data(
-                    "10YES-REE------0", start_date, end_date, progress_callback
-                ),  # ES generation
+                    "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
                 self._async_get_physical_flows(
-                    "10YES-REE------0", "10YPT-REN------W", start_date, end_date, progress_callback
-                ),  # ES->PT flow
+                    "10YES-REE------0", "10YPT-REN------W", interval.start_date, interval.end_date, progress_callback
+                ),
                 self._async_get_physical_flows(
-                    "10YPT-REN------W", "10YES-REE------0", start_date, end_date, progress_callback
-                ),  # PT->ES flow
+                    "10YPT-REN------W", "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
             )
 
-        # Run the async operations
         results = asyncio.run(_async_get_data())
-
-        # Pack results into Data object
         return Data(
             generation_pt=results[0],
             generation_es=results[1],
             flow_es_to_pt=results[2],
             flow_pt_to_es=results[3],
         )
+    
+    def _get_data_advanced_pattern(self, pattern: AdvancedPattern) -> Data:
+        """Fetch data according to a time pattern."""
+        try:
+            # Validate the pattern
+            rules = time_pattern.get_rules_from_pattern(pattern) # Also validates pattern
+            
+            # Get the full time range needed for this pattern
+            # start_time = time_pattern.get_earliest_time(pattern)
+            start_time = utils.RECORDS_START
+            end_time = time_pattern.get_latest_time(rules)
+            
+            # Get all data for the time range using existing method
+            data = self._get_data_simple_interval(SimpleInterval(start_time, end_time))
+            
+            # Apply pattern filters directly to each dataframe
+            data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, rules)
+            data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, rules)
+            data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, rules)
+            data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, rules)
+            
+            return data
+            
+        except Exception as e:
+            logger.error(f"Error processing pattern request: {str(e)}")
+            raise ValueError(f"Failed to process pattern request: {str(e)}")
 
+    def _apply_pattern_filters_to_df(self, df: pd.DataFrame, rules: AdvancedPatternRule) -> pd.DataFrame:
+        if df.empty:
+            return df
+            
+        # Ensure start_time is the index
+        if 'start_time' in df.columns:
+            df = df.set_index('start_time')
+        
+        # Create mask based on each component
+        mask = pd.Series(True, index=df.index)
+        
+        if rules.years:
+            mask &= df.index.year.isin(rules.years) # type: ignore
+        
+        if rules.months:
+            mask &= df.index.month.isin(rules.months) # type: ignore
+        
+        if rules.days:
+            mask &= df.index.day.isin(rules.days) # type: ignore
+        
+        if rules.hours:
+            mask &= df.index.hour.isin(rules.hours) # type: ignore
+        
+        result = df[mask]
+        index_max = result.index.max()
+        index_min = result.index.min()
+        index_length = len(result.index)
+
+        print("Index max:", index_max)
+        print("Index min:", index_min)
+        print("Index length:", index_length)
+        return result
+        
     async def _save_to_cache(
         self, params: Dict[str, Any], data: pd.DataFrame, metadata: Dict[str, Any]
     ):
@@ -92,8 +162,6 @@ class ENTSOEDataFetcher:
         cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
         logger.debug(f"Attempting to save cache file: {cache_name}")
 
-        # # Save column order in metadata
-        # metadata["column_order"] = data.columns.tolist()
 
         # Use asyncio.to_thread for the pandas operation since it's CPU-bound
         await asyncio.to_thread(data.to_pickle, cache_file, compression={'method': self.COMPRESSION_METHOD, 'compresslevel': 1, "mtime": 0})
@@ -116,10 +184,6 @@ class ENTSOEDataFetcher:
 
                 data = await asyncio.to_thread(pd.read_pickle, cache_file)
 
-                # # Restore column order from metadata if available
-                # if "column_order" in metadata:
-                #     data = data[metadata["column_order"]]
-
                 # Convert string representation back to Timedelta if necessary
                 if "resolution" in metadata and isinstance(metadata["resolution"], str):
                     metadata["resolution"] = pd.Timedelta(metadata["resolution"])
@@ -141,15 +205,6 @@ class ENTSOEDataFetcher:
                 return None
         return None
 
-    async def _get_latest_cache_date(
-        self, params: Dict[str, Any]
-    ) -> Optional[datetime]:
-        cached_data = await self._load_from_cache(params)
-        if cached_data is not None:
-            df, metadata = cached_data
-            if not df.empty and "start_time" in df.columns:
-                return df["start_time"].max()
-        return None
 
     async def _async_parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:
         """Async wrapper for XML parsing"""
@@ -198,8 +253,8 @@ class ENTSOEDataFetcher:
             if start_time is None or resolution is None:
                 continue
 
-            start_time = pd.to_datetime(start_time.text).tz_localize(None)
-            resolution = pd.Timedelta(resolution.text)
+            start_time = pd.to_datetime(start_time.text).tz_localize(None) # type: ignore
+            resolution = pd.Timedelta(resolution.text) # type: ignore
 
             for point in period.findall(point_path, namespace):
                 position = point.find(position_path, namespace)
@@ -208,7 +263,7 @@ class ENTSOEDataFetcher:
                 if position is None or quantity is None:
                     continue
 
-                point_start_time = start_time + resolution * (int(position.text) - 1)
+                point_start_time = start_time + resolution * (int(position.text) - 1) # type: ignore
                 # point_end_time = point_start_time + resolution
 
                 data_point = {
@@ -219,9 +274,9 @@ class ENTSOEDataFetcher:
 
                 # Use 'Power' column name for flow data, otherwise use quantity with psr_type
                 if is_flow_data:
-                    data_point["Power"] = float(quantity.text)
+                    data_point["Power"] = float(quantity.text) # type: ignore
                 else:
-                    data_point["quantity"] = float(quantity.text)
+                    data_point["quantity"] = float(quantity.text) # type: ignore
                     data_point["psr_type"] = psr_type
 
                 data.append(data_point)
@@ -274,9 +329,6 @@ class ENTSOEDataFetcher:
     async def _fetch_data_in_chunks(
         self, params: Dict[str, Any], start_date: datetime, end_date: datetime
     ) -> List[str]:
-        latest_cache_date = await self._get_latest_cache_date(params)
-        if latest_cache_date is not None:
-            start_date = max(start_date, latest_cache_date)
 
         tasks = []
         async with aiohttp.ClientSession() as session:
@@ -353,7 +405,8 @@ class ENTSOEDataFetcher:
                 "end_date_exclusive": (df["start_time"].max() + self.STANDARD_GRANULARITY).isoformat(),
             }
             metadata.update(params)
-            # await self._save_to_cache(params, df, metadata) ## TODO fix later
+            if not os.getenv("VERCEL_ENV"):
+                await self._save_to_cache(params, df, metadata) ## TODO fix later
             logger.debug(f"Saved to cache: {metadata}")
 
         return df[(df["start_time"] >= start_date) & (df["start_time"] < end_date)]
@@ -387,12 +440,14 @@ class ENTSOEDataFetcher:
             progress_callback()
         return df
 
+
     def reset_cache(self):
         """Delete all cached data."""
         if os.path.exists(self.CACHE_DIR):
             print(f"Deleting cache directory: {self.CACHE_DIR}")
             shutil.rmtree(self.CACHE_DIR)
             os.makedirs(self.CACHE_DIR)  # Recreate empty cache dir
+
 
     ########## For testing ###########
 
@@ -427,78 +482,3 @@ class ENTSOEDataFetcher:
         )
         return generation
 
-    # def check_data_gaps(self, df: pd.DataFrame, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-    #     """Check for gaps in time series data.
-
-    #     Args:
-    #         df: DataFrame with time series data
-    #         start_date: Start of period to check (inclusive)
-    #         end_date: End of period to check (exclusive)
-
-    #     Returns:
-    #         Dict containing:
-    #             has_gaps (bool): Whether gaps were found
-    #             gap_periods (List[Dict]): List of gap periods with start/end times
-    #             total_gaps (int): Number of missing intervals
-    #             coverage_percentage (float): Percentage of intervals with data
-    #     """
-    #     if df.empty:
-    #         return {
-    #             'has_gaps': True,
-    #             'gap_periods': [{
-    #                 'start': start_date,
-    #                 'end': end_date,
-    #                 'duration': end_date - start_date
-    #             }],
-    #             'total_gaps': int((end_date - start_date) / self.STANDARD_GRANULARITY),
-    #             'coverage_percentage': 0.0
-    #         }
-
-    #     # Create a complete time index at standard granularity
-    #     # Note: end_date - 1 second to exclude the end_date itself since it's exclusive
-    #     expected_index = pd.date_range(
-    #         start=start_date,
-    #         end=end_date - timedelta(seconds=1),
-    #         freq=self.STANDARD_GRANULARITY
-    #     )
-
-    #     # Get unique timestamps from the data
-    #     actual_times = pd.DatetimeIndex(df['start_time'].unique())
-
-    #     # Find missing timestamps
-    #     missing_times = expected_index.difference(actual_times)
-
-    #     # Group consecutive missing timestamps into periods
-    #     gap_periods = []
-    #     if len(missing_times) > 0:
-    #         gap_start = missing_times[0]
-    #         prev_time = gap_start
-
-    #         for time in missing_times[1:]:
-    #             if time - prev_time > self.STANDARD_GRANULARITY:
-    #                 # Gap ends, record it
-    #                 gap_periods.append({
-    #                     'start': gap_start,
-    #                     'end': prev_time + self.STANDARD_GRANULARITY,
-    #                     'duration': prev_time + self.STANDARD_GRANULARITY - gap_start
-    #                 })
-    #                 gap_start = time
-    #             prev_time = time
-
-    #         # Add final gap period
-    #         gap_periods.append({
-    #             'start': gap_start,
-    #             'end': prev_time + self.STANDARD_GRANULARITY,
-    #             'duration': prev_time + self.STANDARD_GRANULARITY - gap_start
-    #         })
-
-    #     expected_intervals = len(expected_index)
-    #     actual_intervals = len(actual_times)
-
-    #     return {
-    #         'has_gaps': len(missing_times) > 0,
-    #         'gap_periods': gap_periods,
-    #         'total_gaps': len(missing_times),
-    #         'coverage_percentage': (actual_intervals / expected_intervals) * 100 if expected_intervals > 0 else 0.0,
-    #         'missing_times': missing_times.tolist()  # For detailed analysis if needed
-    #     }

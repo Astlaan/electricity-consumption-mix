@@ -1,22 +1,27 @@
 from datetime import datetime
-from data_fetcher import ENTSOEDataFetcher
+from data_fetcher import ENTSOEDataFetcher, SimpleInterval, DataRequest
 import analyzer
 from typing import Optional
 from tqdm import tqdm  # Add this import
 import asyncio  # Add this import
 import logging
 
-from utils import RECORDS_START, current_day_start
+from utils import RECORDS_START, maximum_date_end_exclusive
 
 logger = logging.getLogger(__name__) # Add logger
 
-def initialize_cache():
+def reset_cache():
     data_fetcher = ENTSOEDataFetcher()
     data_fetcher.reset_cache()
+
+
+def initialize_cache():
+    data_fetcher = ENTSOEDataFetcher()
+    # data_fetcher.reset_cache() // just adds data now
     
     # Calculate total number of years to fetch
     start = RECORDS_START
-    end = current_day_start()
+    end = maximum_date_end_exclusive()
     total_years = (end.year - start.year) + 1
     
     logger.info(f"Initializing cache from {start.date()} to {end.date()}")
@@ -27,12 +32,13 @@ def initialize_cache():
         def progress_callback():
             pbar.update(1)
         
-        data_fetcher.get_data(RECORDS_START, current_day_start(), progress_callback=progress_callback)
+        data_request = SimpleInterval(start, end)
+        data_fetcher.get_data(data_request, progress_callback=progress_callback)
 
-def generate_visualization(start_date: datetime, 
-                         end_date: datetime, 
-                         visualize_type: str = "simple",
-                         reset_cache: bool = False) -> Optional[object]:
+def generate_visualization(
+        data_request: DataRequest, 
+        backend: str,
+        reset_cache: bool = False) -> Optional[object]:
     """
     Core visualization logic used by both CLI and API.
     Returns a Plotly figure object or None if visualization type is invalid or an error occurs.
@@ -43,7 +49,7 @@ def generate_visualization(start_date: datetime,
         data_fetcher.reset_cache()
 
     try:
-        data = data_fetcher.get_data(start_date, end_date)
+        data = data_fetcher.get_data(data_request)
         if (data is None or 
             data.generation_pt.empty or 
             data.generation_es.empty or 
@@ -53,7 +59,7 @@ def generate_visualization(start_date: datetime,
             return None
         
 
-        fig = analyzer.plot(data, visualize_type)
+        fig = analyzer.plot(data, backend)
         return fig
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback

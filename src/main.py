@@ -1,41 +1,57 @@
 import logging
+import logging
+import sys
+from pathlib import Path
+
+from time_pattern import AdvancedPattern
+
+# Add the project root directory to Python path
+sys.path.append(str(Path(__file__).parent))
+
+from data_fetcher import SimpleInterval
+from core import reset_cache, initialize_cache, generate_visualization
 
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 import argparse
 from datetime import datetime
-import core
 
 def main():
     args = parse_arguments()
 
-    if args.initialize_cache:
-        core.initialize_cache()
-        return
+    if args.reset_cache:
+        reset_cache()
 
-    if args.start_date is None or args.end_date is None:
-        print("Error: --start_date and --end_date are required when not using --initialize-cache")
+    if args.initialize_cache:
+        initialize_cache()
+
+    if args.start_date and args.end_date:
+        data_request = SimpleInterval(args.start_date, args.end_date)
+    elif args.pattern:
+        data_request = args.pattern
+    else:
+        print("No date parameters provided. Shutting down.")
         return
     
-    fig = core.generate_visualization(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        visualize_type=args.visualize,
+
+    fig = generate_visualization(
+        data_request,
+        backend=args.visualize,
         reset_cache=args.reset_cache
     )
     
     if fig is not None:
         if str(type(fig).__module__).startswith('plotly'):
             print("BACKEND: Plotly")
-            fig.show()  # Show Plotly figure in browser
+            fig.show()  # type: ignore # Show Plotly figure in browser
         elif str(type(fig).__module__).startswith('bokeh'):
             print("BACKEND: Bokeh")
-            from bokeh.plotting import show 
-            show(fig)  # Show Bokeh figure in browser
+            from bokeh.plotting import show  # type: ignore
+            show(fig)  # type: ignore # Show Bokeh figure in browser
         else:
             print("BACKEND: Matplotlib")
             # Save matplotlib figure to HTML and open in browser
-            import mpld3
+            import mpld3 # type: ignore
             import webbrowser
             import tempfile
             import os
@@ -66,6 +82,12 @@ def parse_arguments():
         help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
     parser.add_argument(
+        "--pattern",
+        required=False,
+        type=parse_pattern,
+        help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
+    )
+    parser.add_argument(
         "--visualize",
         # choices=["none", "simple", "country-source", "source-country"],
         default="none",
@@ -90,6 +112,11 @@ def parse_datetime(value):
             raise argparse.ArgumentTypeError(
                 f"Invalid date or datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS."
             )
+        
+def parse_pattern(string):
+    fields = string.split("|")
+    assert len(fields) == 4
+    return AdvancedPattern(*fields)
 
 
 if __name__ == "__main__":

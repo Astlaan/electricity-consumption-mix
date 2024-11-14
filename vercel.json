@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ]
+  "functions": {
+    "api/**": {
+      "excludeFiles": "{**/tests, public}/**",
+      "memory":1024
+    }
+  }
 }

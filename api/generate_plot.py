@@ -5,7 +5,13 @@ import sys
 import gc
 import os
 from datetime import datetime
-from bokeh.embed import json_item  # Add this import
+from bokeh.embed import json_item
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+from data_fetcher import SimpleInterval
+from time_pattern import AdvancedPattern  # type: ignore # Add this import
+import utils as utils
+from core import generate_visualization
 
 # Configure logging to write to stderr which Vercel can capture
 logging.basicConfig(
@@ -15,59 +21,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add src directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from core import generate_visualization
-from data_fetcher import ENTSOEDataFetcher
 
 def handle_request(request_body):
-    try:
-        # Parse request body
-        body = json.loads(request_body)
-        start_date = datetime.fromisoformat(body['start_date'])
-        end_date = datetime.fromisoformat(body['end_date'])
+    # Parse request body
+    body = json.loads(request_body)
+    
+    if body['mode'] == 'simple':
+        data_request = SimpleInterval(
+            start_date=datetime.fromisoformat(body['start_date']), 
+            end_date=datetime.fromisoformat(body['end_date'])
+            )
+    else:
+        data_request = AdvancedPattern(
+            years=body["years"],
+            months=body["months"],
+            days=body["days"],
+            hours=body["hours"])
 
-        # Generate visualization
-        fig = generate_visualization(
-            start_date=start_date,
-            end_date=end_date,
-            visualize_type="_plot_internal_bokeh_2"
-        )
-        
-        if fig is None:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({'error': 'Failed to generate visualization'})
-            }
-
-        # Convert Bokeh figure to JSON
-        plot_json = json_item(fig)
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'plot': plot_json})
-        }
-
-    except json.JSONDecodeError as e:
-        logger.exception(f"Invalid JSON request body: {e}")
+    try:    
+        fig = generate_visualization(data_request, backend="_plot_internal_bokeh_2")
+    except AssertionError as e: # TODO fix
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Invalid JSON request body: {e}'})
+            'body': json.dumps({'error': 'Invalid date range: Dates must be whole hours and within available range'})
         }
-    except KeyError as e:
-        logger.exception(f"Missing required field in request body: {e}")
+    
+    if fig is None: # TODO fix
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Missing required field in request body: {e}'})
+            'body': json.dumps({'error': 'No data available for the specified time range'})
         }
-    except Exception as e:
-        logger.exception(f"An unexpected error occurred: {e}")
-        gc.collect()  # Clean up on error too
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': f'An unexpected error occurred: {e}'})
-        }
+
+    # Convert Bokeh figure to JSON
+    plot_json = json_item(fig) # type: ignore
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'plot': plot_json})
+    }
+
+
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
