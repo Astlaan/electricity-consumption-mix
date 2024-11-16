@@ -136,7 +136,7 @@ def _plot_internal_matplotlib_0(df: pd.DataFrame):
             autotexts[i].set_position((1.5 * autotexts[i].get_position()[0], 
                                      1.5 * autotexts[i].get_position()[1]))
 
-    plt.title("Electricity Mix by Source Type", pad=20)
+    plt.title("Electricity Mix by Source Type (Averaged Power)", pad=20)
     
     # Add source annotation at bottom
     plt.annotate(
@@ -180,7 +180,7 @@ def _plot_internal_matplotlib_1(df: pd.DataFrame):
 
     plt.pie(df, labels=df.index, colors=colors,
             autopct='%1.1f%%', textprops={'fontsize': 8})
-    plt.title("Electricity Mix by Source Type")
+    plt.title("Electricity Mix by Source Type (Averaged Power)")
     plt.axis('equal')
     plt.tight_layout()
     result = fig
@@ -251,7 +251,7 @@ def _plot_internal_matplotlib_2(df: pd.DataFrame):
         title_fontsize=12  # Added explicit title font size
     )
 
-    plt.title("Electricity Mix by Source Type", pad=20, fontsize=14) #Increased title font size
+    plt.title("Electricity Mix by Source Type (Averaged Power)", pad=20, fontsize=14) #Increased title font size
     
     # Add source annotation at bottom
     plt.annotate(
@@ -292,7 +292,7 @@ def _plot_internal_plotly(df: pd.DataFrame) -> None:
     # fig = px.pie(
     #     values=df.values,
     #     names=df.index,
-    #     title="Electricity Mix by Source Type",
+    #     title="Electricity Mix by Source Type (Averaged Power)",
     #     color_discrete_sequence=px.colors.qualitative.Set3,
     #     hole=.2
     # )
@@ -354,7 +354,7 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
     fig = px.pie(
         values=df.values,
         names=df.index,
-        title="Electricity Mix by Source Type",
+        title="Electricity Mix by Source Type (Averaged Power)",
         color_discrete_sequence=px.colors.qualitative.Set3,
         hole=.2
     )
@@ -449,7 +449,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.outline_line_color = None
     
     # Add title
-    p.add_layout(Title(text="Electricity Mix by Source Type", text_font_size="16px"), 'above')
+    p.add_layout(Title(text="Electricity Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
     
     # Add source attribution
     source_label = Label(x=0, y=-1.5, text="Source: ENTSO-E",  # Changed y from -1.3 to -1.5
