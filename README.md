@@ -1,7 +1,6 @@
 ## Important note
 1) Right now the data-fetcher is not capable of pulling data older than what it has cached, only more recent data.
-This is fine for now since the goal is to initialize the database with the entirety of past data 
-when it is plugged into the website.
+This is fine for now since the goal is to initialize the cache (with `main.py --initialize-cache`) with the entirety of past data when it is plugged into the website.
 
 2) REPHRASE: Currently, cross-border physical flows are being accounted for in a net way. It appears that often, net flow matches the physical flows. However, this could be improved in the future to account for the actual physical flows.
 
@@ -28,13 +27,11 @@ when it is plugged into the website.
 
 - Put data-cache in blob instead of root/.data_cache. Use an environment variable to specify the alternate location (ex. blob) of data cache
 - How will the asynchronous read/writes on the blob work? Will it be a problem?
-  - Desativar save_to_disk por agora
 
 - Mostrar MWh em vez de MW
-- Constrangir datas no frontend.
 - Meter warning se cache não detetada
-
-  
+- Change to pipfile
+- UPDATE DESCRIPTIONS OF ADVANCED PATTERN FIELDS IN THE FRONTEND
 
 
 ## To-Do Features:

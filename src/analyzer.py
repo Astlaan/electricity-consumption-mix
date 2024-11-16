@@ -2,7 +2,7 @@ from data_fetcher import Data
 import pandas as pd
 import numpy as np
 from config import PSR_TYPE_MAPPING
-from utils import get_active_psr_in_dataframe
+from utils import get_active_psr_in_dataframe, apply_to_fields
 # import plotly.express as px # Import px (commented for now)
 
 pd.set_option('display.max_columns', None)  # Show all columns
@@ -17,12 +17,12 @@ def _format_date_range(df: pd.DataFrame) -> str:
     end_date = df.index.max()
     return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
 
-def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
+def _time_aggregation(df: pd.DataFrame) -> pd.DataFrame: # aggregate_by_source_type
     """Aggregate data by source type only."""
     # Remove columns where all values are 0
     df = df.loc[:, (df != 0).any()]
     # Fill any NaN values with 0
-    df = df.fillna(0)
+    df = df.fillna(0) # TODO fix
 
     # Group by source type (in case multiple B-codes map to same source)
     grouped_data = df.mean()
@@ -39,18 +39,8 @@ def ensure_index_and_sorting(data: Data):
         df = df[~df.index.duplicated(keep='last')] # Remove duplicates keeping last value
         return df
 
-    data.generation_pt = _ensure_index_and_sorting(data.generation_pt)
-    data.generation_es = _ensure_index_and_sorting(data.generation_es)
-    data.flow_pt_to_es = _ensure_index_and_sorting(data.flow_pt_to_es)
-    data.flow_es_to_pt = _ensure_index_and_sorting(data.flow_es_to_pt)
-
-    # Verify all dataframes have identical indexes
-    ref_index = data.generation_pt.index
-    for df_name, df in [('generation_es', data.generation_es),
-                       ('flow_pt_to_es', data.flow_pt_to_es),
-                       ('flow_es_to_pt', data.flow_es_to_pt)]:
-        if not df.index.equals(ref_index):
-            raise ValueError(f"Index mismatch in {df_name} compared to generation_pt")
+    apply_to_fields(data, _ensure_index_and_sorting)
+    data.assert_equal_length()
 
     return data
 
@@ -67,12 +57,26 @@ def plot(data: Data, mode: str):
     # If start_time is a column, set it as index. If it's already the index, nothing changes
     data = ensure_index_and_sorting(data)
 
-    G_pt = data.generation_pt[data.generation_pt.columns.intersection(PSR_TYPE_MAPPING.keys())]
-    G_es = data.generation_es[data.generation_es.columns.intersection(PSR_TYPE_MAPPING.keys())]
+    G_pt = data.generation_pt[data.generation_pt.columns.intersection(list(PSR_TYPE_MAPPING.keys()))]
+    G_es = data.generation_es[data.generation_es.columns.intersection(list(PSR_TYPE_MAPPING.keys()))]
+    G_fr = data.generation_fr[data.generation_fr.columns.intersection(list(PSR_TYPE_MAPPING.keys()))]
     F_pt_es = data.flow_pt_to_es["Power"].values[:, None]
     F_es_pt = data.flow_es_to_pt["Power"].values[:, None]
+    F_fr_es = data.flow_fr_to_es["Power"].values[:, None]
+    F_es_fr = data.flow_es_to_fr["Power"].values[:, None]
+
+    # Without france
+    # flow_per_source_pt_es = F_pt_es * (G_pt/G_pt.sum(axis=1).values[0])
+    # flow_per_source_es_pt = F_es_pt * (G_es/G_es.sum(axis=1).values[0])
+    # consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
+
+    # With France
+    flow_per_source_fr_es = F_fr_es * (G_fr/G_fr.sum(axis=1).values[0])
+    flow_per_source_es_fr = F_es_fr * (G_es/G_es.sum(axis=1).values[0])
+    G_es_prime = G_es.sub(flow_per_source_es_fr, fill_value=0).add(flow_per_source_fr_es, fill_value=0)
+
     flow_per_source_pt_es = F_pt_es * (G_pt/G_pt.sum(axis=1).values[0])
-    flow_per_source_es_pt = F_es_pt * (G_es / G_es.sum(axis = 1).values[0])
+    flow_per_source_es_pt = F_es_pt * (G_es_prime/G_es_prime.sum(axis=1).values[0])
     consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
 
     plot_func = globals()[f'{mode}']

@@ -8,7 +8,7 @@ import aiohttp
 import asyncio
 import logging
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import aiofiles
 
 
@@ -26,8 +26,24 @@ logger = logging.getLogger(__name__)
 class Data:
     generation_pt: pd.DataFrame
     generation_es: pd.DataFrame
+    generation_fr: pd.DataFrame
     flow_pt_to_es: pd.DataFrame
     flow_es_to_pt: pd.DataFrame
+    flow_fr_to_es: pd.DataFrame
+    flow_es_to_fr: pd.DataFrame
+
+    def assert_equal_length(self) -> None:
+        """Validate that all dataframes in this Data instance have matching indices."""
+        # Get the first dataframe to use as reference
+        first_field = fields(self)[0]
+        ref_df = getattr(self, first_field.name)
+        ref_index = ref_df.index
+        
+        # Compare all other dataframes to the reference
+        for field in fields(self)[1:]:
+            df = getattr(self, field.name)
+            if not df.index.equals(ref_index):
+                raise ValueError(f"Index mismatch in {field.name} compared to {first_field.name}")
 
 @dataclass 
 class SimpleInterval:
@@ -80,11 +96,20 @@ class ENTSOEDataFetcher:
                 self._async_get_generation_data(
                     "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
                 ),
+                self._async_get_generation_data(
+                    "10YFR-RTE------C", interval.start_date, interval.end_date, progress_callback
+                ),
                 self._async_get_physical_flows(
                     "10YES-REE------0", "10YPT-REN------W", interval.start_date, interval.end_date, progress_callback
                 ),
                 self._async_get_physical_flows(
                     "10YPT-REN------W", "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
+                self._async_get_physical_flows(
+                    "10YFR-RTE------C", "10YES-REE------0", interval.start_date, interval.end_date, progress_callback
+                ),
+                self._async_get_physical_flows(
+                    "10YES-REE------0", "10YFR-RTE------C", interval.start_date, interval.end_date, progress_callback
                 ),
             )
 
@@ -92,8 +117,11 @@ class ENTSOEDataFetcher:
         return Data(
             generation_pt=results[0],
             generation_es=results[1],
-            flow_es_to_pt=results[2],
-            flow_pt_to_es=results[3],
+            generation_fr=results[2],
+            flow_es_to_pt=results[3],
+            flow_pt_to_es=results[4],
+            flow_fr_to_es=results[5],
+            flow_es_to_fr=results[6],
         )
     
     def _get_data_advanced_pattern(self, pattern: AdvancedPattern) -> Data:
@@ -113,8 +141,11 @@ class ENTSOEDataFetcher:
             # Apply pattern filters directly to each dataframe
             data.generation_pt = self._apply_pattern_filters_to_df(data.generation_pt, rules)
             data.generation_es = self._apply_pattern_filters_to_df(data.generation_es, rules)
+            data.generation_fr = self._apply_pattern_filters_to_df(data.generation_fr, rules)
             data.flow_pt_to_es = self._apply_pattern_filters_to_df(data.flow_pt_to_es, rules)
             data.flow_es_to_pt = self._apply_pattern_filters_to_df(data.flow_es_to_pt, rules)
+            data.flow_fr_to_es = self._apply_pattern_filters_to_df(data.flow_fr_to_es, rules)
+            data.flow_es_to_fr = self._apply_pattern_filters_to_df(data.flow_es_to_fr, rules)
             
             return data
             
@@ -172,38 +203,43 @@ class ENTSOEDataFetcher:
         logger.debug("Successfully saved cache files")
 
     async def _load_from_cache(self, params: Dict[str, Any]) -> Optional[tuple]:
-        cache_name = utils.get_cache_filename(params)
-        cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
-        metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
+        try:
+            cache_name = utils.get_cache_filename(params)
+            cache_file = os.path.join(self.CACHE_DIR, f"{cache_name}.{self.CACHE_EXTENSION}")
+            metadata_file = os.path.join(self.CACHE_DIR, f"{cache_name}_metadata.json")
 
-        if os.path.exists(cache_file) and os.path.exists(metadata_file):
-            # Use asyncio.to_thread for the pandas operation since it's CPU-bound
-            try:
-                async with aiofiles.open(metadata_file, "r") as f:
-                    metadata = json.loads(await f.read())
+            if os.path.exists(cache_file) and os.path.exists(metadata_file):
+                # Use asyncio.to_thread for the pandas operation since it's CPU-bound
+                try:
+                    async with aiofiles.open(metadata_file, "r") as f:
+                        metadata = json.loads(await f.read())
 
-                data = await asyncio.to_thread(pd.read_pickle, cache_file)
+                    data = await asyncio.to_thread(pd.read_pickle, cache_file)
 
-                # Convert string representation back to Timedelta if necessary
-                if "resolution" in metadata and isinstance(metadata["resolution"], str):
-                    metadata["resolution"] = pd.Timedelta(metadata["resolution"])
+                    # Convert string representation back to Timedelta if necessary
+                    if "resolution" in metadata and isinstance(metadata["resolution"], str):
+                        metadata["resolution"] = pd.Timedelta(metadata["resolution"])
 
-                # Convert cached dates to naive datetime objects
-                metadata["start_date_inclusive"] = pd.to_datetime(
-                    metadata["start_date_inclusive"]
-                ).tz_localize(None)
-                metadata["end_date_exclusive"] = pd.to_datetime(
-                    metadata["end_date_exclusive"]
-                ).tz_localize(None)
+                    # Convert cached dates to naive datetime objects
+                    metadata["start_date_inclusive"] = pd.to_datetime(
+                        metadata["start_date_inclusive"]
+                    ).tz_localize(None)
+                    metadata["end_date_exclusive"] = pd.to_datetime(
+                        metadata["end_date_exclusive"]
+                    ).tz_localize(None)
 
-                return data, metadata
-            except json.JSONDecodeError as e:
-                logger.error(f"Error decoding JSON from cache: {str(e)}")
-                # Remove the corrupted cache files
-                os.remove(cache_file)
-                os.remove(metadata_file)
-                return None
-        return None
+                    return data, metadata
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error decoding JSON from cache: {str(e)}")
+                    # Remove the corrupted cache files
+                    os.remove(cache_file)
+                    os.remove(metadata_file)
+                    return None
+            return None
+        except ValueError as e:
+            logger.warning(f"Cache filename generation failed: {str(e)}. Will fetch data instead.")
+            return None
+
 
 
     async def _async_parse_xml_to_dataframe(self, xml_data: str) -> pd.DataFrame:

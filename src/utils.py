@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 import pandas as pd
 from config import PSR_TYPE_MAPPING
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
 
@@ -38,23 +38,33 @@ def get_active_psr_in_dataframe(df):
 
 
 def get_cache_filename(params: Dict[str, Any]) -> str:
-    """Generate cache filename based on data type and countries."""
+    """Generate a unique filename for caching based on the request parameters."""
     document_type = params.get("documentType")
-    in_domain = params.get("in_Domain", "")
-    out_domain = params.get("out_Domain", "")
-
+    
     if document_type == "A75":  # Generation data
-        if "PT" in in_domain:
-            return "generation_pt"
-        elif "ES" in in_domain:
-            return "generation_es"
+        country_code = params.get("in_Domain")
+        if not country_code:
+            raise ValueError("Missing in_Domain for generation data")
+        
+        # Strip any special characters and use just the country part
+        country = country_code.split('-')[0][-2:]  # Extract 'PT', 'ES', 'FR', etc.
+        return f"generation_{country.lower()}"
+        
     elif document_type == "A11":  # Flow data
-        if "PT" in out_domain and "ES" in in_domain:
-            return "flow_pt_to_es"
-        elif "ES" in out_domain and "PT" in in_domain:
-            return "flow_es_to_pt"
+        in_domain = params.get("in_Domain")
+        out_domain = params.get("out_Domain")
+        if not in_domain or not out_domain:
+            raise ValueError("Missing in_Domain or out_Domain for flow data")
+            
+        # Extract country codes from the domain IDs
+        in_country = in_domain.split('-')[0][-2:]  # Extract 'PT', 'ES', 'FR', etc.
+        out_country = out_domain.split('-')[0][-2:]  # Extract 'PT', 'ES', 'FR', etc.
+        
+        return f"flow_{out_country.lower()}_to_{in_country.lower()}"
+        
+    else:
+        raise ValueError(f"Unsupported document type: {document_type}")
 
-    raise ValueError(f"Unsupported combination of document type and domains")
 
 
 def resample_to_standard_granularity(df: pd.DataFrame, granularity: timedelta) -> pd.DataFrame:
@@ -83,3 +93,11 @@ def resample_to_standard_granularity(df: pd.DataFrame, granularity: timedelta) -
     resampled = resampled.reset_index()
 
     return resampled
+
+
+def apply_to_fields(data, func):
+    for field in fields(data):
+        attr_name = field.name
+        attr_value = getattr(data, attr_name)
+        # Apply the transformation if it's necessary
+        setattr(data, attr_name, func(attr_value))
