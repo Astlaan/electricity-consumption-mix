@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 import pandas as pd
 from config import PSR_TYPE_MAPPING
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 RECORDS_START = datetime.fromisoformat("2015-01-10 00:00:00")
 
@@ -93,3 +93,11 @@ def resample_to_standard_granularity(df: pd.DataFrame, granularity: timedelta) -
     resampled = resampled.reset_index()
 
     return resampled
+
+
+def apply_to_fields(data, func):
+    for field in fields(data):
+        attr_name = field.name
+        attr_value = getattr(data, attr_name)
+        # Apply the transformation if it's necessary
+        setattr(data, attr_name, func(attr_value))
