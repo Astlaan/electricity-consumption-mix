@@ -101,6 +101,17 @@
             width: 300px;
             padding: 5px;
         }
+
+        .plot-type-selector {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
+        .plot-type-selector label {
+            margin-right: 15px;
+        }
     </style>
     <!-- Add these in the <head> section -->
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.css" rel="stylesheet">
@@ -118,6 +129,13 @@
             <label for="simpleMode">Simple Interval</label>
             <input type="radio" id="advancedMode" name="timeMode" value="advanced">
             <label for="advancedMode">Advanced Pattern</label>
+        </div>
+
+        <div class="plot-type-selector">
+            <input type="radio" id="simplePlot" name="plotType" value="plot" checked>
+            <label for="simplePlot">Simple Plot</label>
+            <input type="radio" id="discriminatePlot" name="plotType" value="plot_discriminate_by_country">
+            <label for="discriminatePlot">Discriminate by Country</label>
         </div>
 
         <form id="plotForm">
@@ -324,17 +342,20 @@
 
             try {
                 const mode = document.querySelector('input[name="timeMode"]:checked').value;
+                const plotType = document.querySelector('input[name="plotType"]:checked').value;
                 let requestData;
 
                 if (mode === 'simple') {
                     requestData = {
                         mode: 'simple',
+                        plot_type: plotType,
                         start_date: document.getElementById('start_date').value,
                         end_date: document.getElementById('end_date').value
                     };
                 } else {
                     requestData = {
                         mode: 'advanced',
+                        plot_type: plotType,
                         years: document.getElementById('years').value,
                         months: document.getElementById('months').value,
                         days: document.getElementById('days').value,

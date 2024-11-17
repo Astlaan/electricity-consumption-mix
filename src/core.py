@@ -38,6 +38,7 @@ def initialize_cache():
 def generate_visualization(
         data_request: DataRequest, 
         backend: str,
+        plot_type: str = "plot",
         reset_cache: bool = False) -> Optional[object]:
     """
     Core visualization logic used by both CLI and API.
@@ -58,10 +59,15 @@ def generate_visualization(
             logger.warning("No data found for the specified date range.")
             return None
         
-
-        fig = analyzer.plot(data, backend)
+        if plot_type == "plot":
+            fig = analyzer.plot(data, backend)
+        elif plot_type == "plot_discriminate_by_country":
+            fig = analyzer.plot_discriminate_by_country(data, backend)
+        else:
+            logger.warning(f"Invalid plot type: {plot_type}")
+            return None
+            
         return fig
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
         return None
-

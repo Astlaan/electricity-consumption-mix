@@ -39,7 +39,11 @@ def handle_request(request_body):
             hours=body["hours"])
 
     try:    
-        fig = generate_visualization(data_request, backend="_plot_internal_bokeh_2")
+        fig = generate_visualization(
+            data_request, 
+            backend="_plot_internal_bokeh_2",
+            plot_type=body.get('plot_type', 'plot')  # Default to 'plot' if not specified
+        )
     except AssertionError as e: # TODO fix
         return {
             'statusCode': 400,
@@ -82,4 +86,3 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         self.wfile.write(b"Hello, World!") # Placeholder for GET request
-
