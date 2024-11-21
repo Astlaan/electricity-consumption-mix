@@ -113,14 +113,20 @@
             margin-right: 15px;
         }
     </style>
-    <!-- Add these in the <head> section -->
+    <!-- Comment out Bokeh scripts and styles -->
+    <!--
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.css" rel="stylesheet">
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.css" rel="stylesheet">
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.js"></script>
+    -->
+
+    <!-- Add Plotly script -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
+    <div id="header"></div>
     <h1>Portugal Electricity Consumption Mix</h1>
 
     <div class="form-container">
@@ -132,9 +138,9 @@
         </div>
 
         <div class="plot-type-selector">
-            <input type="radio" id="simplePlot" name="plotType" value="plot" checked>
+            <input type="radio" id="simplePlot" name="plotCalcFunction" value="plot" checked>
             <label for="simplePlot">Simple Plot</label>
-            <input type="radio" id="discriminatePlot" name="plotType" value="plot_discriminate_by_country">
+            <input type="radio" id="discriminatePlot" name="plotCalcFunction" value="plot_discriminate_by_country">
             <label for="discriminatePlot">Discriminate by Country</label>
         </div>
 
@@ -328,6 +334,13 @@
     <div id="plotContainer"></div>
 
     <script>
+        // Load and insert the header
+        fetch('/header.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('header').innerHTML = html;
+            });
+
         async function submitForm(e) {
             e.preventDefault();
 
@@ -342,20 +355,20 @@
 
             try {
                 const mode = document.querySelector('input[name="timeMode"]:checked').value;
-                const plotType = document.querySelector('input[name="plotType"]:checked').value;
+                const plotCalcFunction = document.querySelector('input[name="plotCalcFunction"]:checked').value;
                 let requestData;
 
                 if (mode === 'simple') {
                     requestData = {
                         mode: 'simple',
-                        plot_type: plotType,
+                        plot_calc_function: plotCalcFunction,
                         start_date: document.getElementById('start_date').value,
                         end_date: document.getElementById('end_date').value
                     };
                 } else {
                     requestData = {
                         mode: 'advanced',
-                        plot_type: plotType,
+                        plot_calc_function: plotCalcFunction,
                         years: document.getElementById('years').value,
                         months: document.getElementById('months').value,
                         days: document.getElementById('days').value,
@@ -381,8 +394,12 @@
                     // Clear previous plot and error
                     plotContainer.innerHTML = '';
                     errorMessage.style.display = 'none';
-                    // Render the Bokeh plot
-                    Bokeh.embed.embed_item(data.plot, 'plotContainer');
+                    // Bokeh version
+                    // Bokeh.embed.embed_item(data.plot, 'plotContainer');
+                    
+                    // Plotly version
+                    const plotData = JSON.parse(data.plot);
+                    Plotly.newPlot('plotContainer', plotData.data, plotData.layout);
                 } else {
                     throw new Error('No plot data received');
                 }

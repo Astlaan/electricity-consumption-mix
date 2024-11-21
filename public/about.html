@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Portugal Electricity Consumption Mix</title>
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Add marked library for markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- KATEX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    ></script>
+        <!-- onload="renderMathInElement(document.body);"></script> -->
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .content {
+            line-height: 1.6;
+        }
+
+        .content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .content code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .content pre {
+            background-color: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+
+    <div class="content" id="content">
+        <!-- Markdown content will be inserted here -->
+    </div>
+
+    <script>
+        // Load and insert the header
+        fetch('/header.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('header').innerHTML = html;
+            });
+
+        // Load and render the markdown content
+        fetch('/about.md')
+            .then(response => response.text())
+            .then(markdown => {
+                const html = marked.parse(markdown);
+                document.getElementById('content').innerHTML = html;
+                
+                // Render LaTeX after markdown is loaded
+                renderMathInElement(document.getElementById('content'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ]
+                });
+            });
+    </script>
+</body>
+</html>

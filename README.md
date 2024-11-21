@@ -2,8 +2,6 @@
 1) Right now the data-fetcher is not capable of pulling data older than what it has cached, only more recent data.
 This is fine for now since the goal is to initialize the cache (with `main.py --initialize-cache`) with the entirety of past data when it is plugged into the website.
 
-2) REPHRASE: Currently, cross-border physical flows are being accounted for in a net way. It appears that often, net flow matches the physical flows. However, this could be improved in the future to account for the actual physical flows.
-
 
 ## To-Do Fixes:
 - Data is provided in MW. I have to calculate by the granularity in order to obtain MWh
@@ -33,6 +31,11 @@ This is fine for now since the goal is to initialize the cache (with `main.py --
 - Change to pipfile
 - UPDATE DESCRIPTIONS OF ADVANCED PATTERN FIELDS IN THE FRONTEND
 
+- Charting: Select and use custom colors ( https://plotly.com/python/discrete-color/ )
+
+- Check code TODOs
+
+- Check why 2015-2024 Portugal consumption has more wind than hydro
 
 ## To-Do Features:
 - Charting:
@@ -41,6 +44,7 @@ This is fine for now since the goal is to initialize the cache (with `main.py --
   - Chart with the sources group by country, and each subslice represents a type of source
 - Allow the user to specify multiple intervals (eg, 1T from years 2024, 2023, 2022..., 17h-23h daily yearly, or by trimester, etc)
 - Chart the Carbon/Carbon Intensity pie graph
+- Use preset colors for each source (both Aggregated plot and Hierarchical)
 
-## To-Do Interface:
-- Don't forget to strain that times are UTC
+## Possible future features:
+- Sankey/Treemap diagrams

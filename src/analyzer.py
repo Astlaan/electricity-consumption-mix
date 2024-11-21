@@ -1,7 +1,7 @@
 from data_fetcher import Data
 import pandas as pd
 import numpy as np
-from config import PSR_TYPE_MAPPING
+from config import PSR_COLORS, PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe, apply_to_fields
 
 pd.set_option('display.max_columns', None)  # Show all columns
@@ -16,7 +16,7 @@ def _format_date_range(df: pd.DataFrame) -> str:
     end_date = df.index.max()
     return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
 
-def _time_aggregation(df: pd.DataFrame) -> pd.DataFrame: # aggregate_by_source_type
+def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
     """Aggregate data by source type only."""
     # Remove columns where all values are 0
     df = df.loc[:, (df != 0).any()]
@@ -85,7 +85,7 @@ def plot(data: Data, mode: str):
     fig = plot_func(consumption_per_source)
     return fig
 
-def plot_discriminate_by_country(data: Data, mode: str):
+def plot_discriminate_by_country(data: Data, mode: str, plot_type: str):
     """
     Computes the consumption per source by isolating contributions from
     Portuguese (PT), Spanish (ES), and French (FR) generations, according to the given mathematical expression.
@@ -116,6 +116,15 @@ def plot_discriminate_by_country(data: Data, mode: str):
     F_es_pt = data.flow_es_to_pt["Power"].values[:, None]    # Flow from ES to PT
     F_fr_es = data.flow_fr_to_es["Power"].values[:, None]    # Flow from FR to ES
     F_es_fr = data.flow_es_to_fr["Power"].values[:, None]    # Flow from ES to FR
+
+    # Should be equivalent to this:
+    # flow_per_source_fr_es = F_fr_es * (G_fr.div(G_fr.sum(axis=1), axis=0))
+    # flow_per_source_es_fr = F_es_fr * (G_es.div(G_es.sum(axis=1), axis=0))
+    # G_es_prime = G_es.sub(flow_per_source_es_fr, fill_value=0).add(flow_per_source_fr_es, fill_value=0)
+
+    # flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
+    # flow_per_source_es_pt = F_es_pt * (G_es_prime.div(G_es_prime.sum(axis=1), axis=0))
+    # consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
 
     # Compute total generation for normalization
     sum_G_pt = G_pt.sum(axis=1).values[:, None] 
@@ -179,7 +188,7 @@ def plot_discriminate_by_country(data: Data, mode: str):
     # ------------------------------
     plot_func = globals().get(f'{mode}', None)
     if plot_func:
-        fig = plot_func(consumption_per_source)
+        fig = plot_func(consumption_per_source, contributions)
     else:
         raise ValueError(f"Plotting function '{mode}' not found in globals.")
 
@@ -187,55 +196,71 @@ def plot_discriminate_by_country(data: Data, mode: str):
 
 
 
-def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
+def _plot_internal_plotly_2(df: pd.DataFrame, *_):
     import plotly.express as px
-    df = _time_aggregation(df)
+    data = _time_aggregation(df)
 
+    
     # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
+    mask = data > 0
+    data = data[mask]
 
-    if df.empty:
+    if data.empty:
         print("No non-zero data to plot")
         return
-
-    # Calculate percentages
-    percentages = df / df.sum() * 100
     
-    # Determine which slices should have outside labels (e.g., less than 5%)
-    threshold = 5
-    pull_values = [0.0 if p >= threshold else 0.2 for p in percentages]
-    text_positions = ['inside' if p >= threshold else 'outside' for p in percentages]
+    threshold = 3
+    total = data.sum()
+    slice_percentages = (data / total) * 100
+    
+    pull_values = [0.0 if p >= threshold else 0.2 for p in slice_percentages]
+    text_positions = ['inside' if p >= threshold else 'outside' for p in slice_percentages]
 
+    # Apply PSR_TYPE_MAPPING to the names
+    names = data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+    colors = [PSR_COLORS.get(psr_type_name, '#808080') for psr_type_name in names] 
+    
+    # Create a DataFrame with our calculated percentages
+    plot_df = pd.DataFrame({
+        'names': names,
+        'values': data.values,
+        'percentages': slice_percentages
+    })
+    
     fig = px.pie(
-        values=df.values,
-        names=df.index,
+        plot_df,
+        values='values',
+        names='names',
         title="Electricity Mix by Source Type (Averaged Power)",
         color_discrete_sequence=px.colors.qualitative.Set3,
-        hole=.2
+        # color_discrete_sequence=colors,
+        hole=.2,
+        custom_data=['percentages']  # Include our calculated percentages
     )
     
-    # Update traces with more sophisticated label positioning
     fig.update_traces(
-        textinfo='percent+label+value',
+        textinfo='percent+label',
         textposition=text_positions,
         pull=pull_values,
-        texttemplate='%{label}<br>%{value:,.2f}<br>%{percent:.1f}%',
+        # marker=dict(colors=colors), # TODO use custom colors
+        texttemplate='%{label}<br> %{customdata[0]:.1f}% | %{value:.1f} MW',  # Use our calculated percentages
+        hovertemplate="%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW<extra></extra>",
         textfont=dict(size=10),
-        insidetextorientation='horizontal'
+        insidetextorientation='auto',
+        # insidetextanchor="start"
     )
     
     fig.update_layout(
-        showlegend=True,  # Enable legend for better readability
-        width=900,        # Slightly wider to accommodate outside labels
-        height=700,
+        showlegend=True,
+        width=1200,
+        height=900,
         title_x=0.5,
         legend=dict(
             orientation="v",
             yanchor="middle",
             y=0.5,
             xanchor="right",
-            x=1.1
+            x=1.9
         ),
         annotations=[dict(
             text="Source: Energy Data",
@@ -250,31 +275,130 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
     return fig
 
 
-def _plot_internal_bokeh_2(df: pd.DataFrame):
+def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool|str] = None):
+    import plotly.express as px
+    """Creates a sunburst chart with hierarchy determined by 'by' parameter."""
+
+    # Time-aggregate each country's data first
+    total_hours = len(data_aggregated)
+    data_by_country_time_aggregated = {
+        country: _time_aggregation(df) for country, df in data_by_country.items()
+    }
+
+    # Calculate the total power for percentage calculations
+    total_power = sum(series.sum() for series in data_by_country_time_aggregated.values())
+    print(f"{total_hours=}")
+    print(f"{total_power=}")
+    # Create records for the hierarchical structure
+    records = []
+
+    # Add country and source records
+    for country, series in data_by_country_time_aggregated.items():
+        country_power = series.sum()
+        country_energy = country_power * total_hours
+        # print("COUNTRY:", country)
+        # print("COUNTRY POWER:", country_power)
+        # print("TOTAL POWER:", total_power)
+        # print(f"PERCENTAGE:", country_power/total_power)
+        # print(f"PERCENTAGE: {(country_power / total_power):.1f}")
+        # Add country level
+        records.append({
+            'id': country,
+            'parent': '',
+            'label': country,
+            'power': country_power,
+            'is_leaf': False,
+            'hover_text': (
+                f"<b>{country}</b><br>"
+                f"{(country_power / total_power * 100):.1f}% of total<br>"
+                f"{country_power:.0f} MW (average)<br>"
+                f"{_calc_energy_string(country_energy)}"
+            )
+        })
+
+        # Add source level for each country
+        for source_type, power in series.items():
+            if power > 0:  # Only add non-zero values
+                source_name = PSR_TYPE_MAPPING.get(source_type, source_type)
+                energy = power * total_hours
+                id = f"{country}/{source_name}"
+                records.append({
+                    'id': f"{country}/{source_name}",
+                    'parent': country,
+                    'label': source_name,
+                    'power': power,
+                    'is_leaf': True,
+                    'hover_text': (
+                        f"<b>{id}</b><br>"
+                        f"{(power / country_power * 100):.1f}% of {country}<br>"
+                        f"{(power / total_power * 100):.1f}% of total<br>"
+                        f"{power:.0f} MW (average)<br>"
+                        f"{_calc_energy_string(energy)}"
+                    )
+                })
+    print(records)
+
+    # Convert records to DataFrame
+    df = pd.DataFrame(records)
+
+    # Create sunburst chart
+    fig = px.sunburst(
+        df,
+        ids='id',
+        names='label',
+        parents='parent',
+        values='power',
+        custom_data=['hover_text']
+    )
+
+    # Update hover template for all traces
+    fig.update_traces(
+        insidetextorientation='radial',    
+        # textinfo='label+percent parent',  # Don't use percent, since it is relative to parent and not total
+        # texttemplate='%{customdata[1]}',  # Use the custom_text for display
+        hovertemplate='%{customdata[0]}<extra></extra>',
+        branchvalues='total'
+    )
+
+    # Customize layout
+    # fig.update_layout(
+    #     width=800,
+    #     height=800,
+    #     title={
+    #         'text': "Energy Distribution by Country and Source",
+    #         'x': 0.5,
+    #         'xanchor': 'center'
+    #     }
+    # )
+
+    return fig
+
+
+def _plot_internal_bokeh_2(df: pd.DataFrame, *_):
     from bokeh.plotting import figure
     from bokeh.transform import cumsum
     from bokeh.palettes import Set3
     from math import pi
     from bokeh.models import ColumnDataSource, Title, Label
 
-    df = _time_aggregation(df)
+    data = _time_aggregation(df)
     
     # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
+    mask = data > 0
+    data = data[mask]
 
-    if df.empty:
+    if data.empty:
         print("No non-zero data to plot")
         return
 
     # Prepare data
-    total = df.sum()
+    total = data.sum()
     source_data = pd.DataFrame({
-        'source': df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
-        'value': df.values,
-        'percentage': df / total * 100,
-        'angle': df.values / total * 2 * pi,
-        'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]
+        'source': data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
+        'value': data.values,
+        'percentage': data / total * 100,
+        'angle': data.values / total * 2 * pi,
+        'color': Set3[12][:len(data)] if len(data) <= 12 else (Set3[8] * (len(data) // 8 + 1))[:len(data)]
     })
     
     source_data['start_angle'] = source_data['angle'].cumsum().shift(fill_value=0)
@@ -302,7 +426,7 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     # Customize appearance
     p.axis.visible = False
     p.grid.grid_line_color = None
-    p.outline_line_color = None
+    p.outline_line_color = None # type: ignore
     
     # Add title
     p.add_layout(Title(text="Electricity Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
@@ -323,3 +447,30 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.legend.margin = 20  # Add margin to move legend further right
 
     return p
+
+
+def _calc_energy_string(energy_in_MWh: float) -> str:
+        # Define conversion factors
+        GWh_FACTOR = 1000
+        TWh_FACTOR = 1000000
+        
+        # Determine the appropriate unit
+        if energy_in_MWh >= TWh_FACTOR:
+            # Convert to TWh
+            value = energy_in_MWh / TWh_FACTOR
+            unit = "TWh"
+        elif energy_in_MWh >= GWh_FACTOR:
+            # Convert to GWh
+            value = energy_in_MWh / GWh_FACTOR
+            unit = "GWh"
+        else:
+            # Keep in MWh
+            value = energy_in_MWh
+            unit = "MWh"
+        
+        # Format the value to ensure at least 4 significant figures
+        # We use .4g for general format with at least 4 significant digits
+        formatted_value = format(value, '.4g')
+        
+        # Return the formatted string
+        return f"{formatted_value} {unit}"

@@ -5,7 +5,6 @@ import sys
 import gc
 import os
 from datetime import datetime
-from bokeh.embed import json_item
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from data_fetcher import SimpleInterval
@@ -23,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def handle_request(request_body):
+    backend="_plot_internal_plotly_2"
     # Parse request body
     body = json.loads(request_body)
     
@@ -41,8 +41,9 @@ def handle_request(request_body):
     try:    
         fig = generate_visualization(
             data_request, 
-            backend="_plot_internal_bokeh_2",
-            plot_type=body.get('plot_type', 'plot')  # Default to 'plot' if not specified
+            backend=backend,
+            plot_calc_function=body["plot_calc_function"])  # Default to 'plot' if not specified
+            plot_mode=body["plot_mode"]  # Default to 'plot' if not specified
         )
     except AssertionError as e: # TODO fix
         return {
@@ -56,8 +57,14 @@ def handle_request(request_body):
             'body': json.dumps({'error': 'No data available for the specified time range'})
         }
 
-    # Convert Bokeh figure to JSON
-    plot_json = json_item(fig) # type: ignore
+    # Convert Plotly figure to JSON
+    if "bokeh" in backend:
+        from bokeh.embed import json_item
+        plot_json = json_item(fig)
+    elif "plotly" in backend:
+        plot_json = fig.to_json()
+    else:
+        raise ValueError(f"Backend {backend} not supported")
     
     return {
         'statusCode': 200,

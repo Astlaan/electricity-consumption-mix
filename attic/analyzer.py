@@ -323,3 +323,70 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     p.legend.margin = 20  # Add margin to move legend further right
 
     return p
+
+def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool|str] = None):
+    import plotly.express as px
+    """Creates a sunburst chart with hierarchy determined by 'by' parameter."""
+
+    # Time-aggregate each country's data first
+    
+    total_hours = len(data_aggregated)
+    data_by_country_time_aggregated = {
+        country: _time_aggregation(df) 
+        for country, df in data_by_country.items()
+    }
+
+    # Convert dictionary of Series into a single DataFrame
+    df_list = []
+    for country, series in data_by_country_time_aggregated.items():
+        # Convert series to DataFrame
+        df = pd.DataFrame({
+            'power': series,
+            'country': country,
+            'source': series.index
+        })
+        df_list.append(df)
+
+    # Concatenate all DataFrames and calculate extras
+    combined_df = pd.concat(df_list, ignore_index=True)
+    combined_df['source'] = combined_df['source'].map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+    combined_df['national_percentage'] = combined_df.groupby('country')['power'].transform(lambda x: x/x.sum() * 100)
+    combined_df['global_percentage'] = combined_df['power']/combined_df['power'].sum() * 100
+    combined_df['energy'] = combined_df['power'] * total_hours
+    combined_df['energy_string'] = combined_df['energy'].map(_calc_energy_string)
+
+    
+    print(combined_df)
+
+
+    fig = px.sunburst(combined_df, path=['country', 'source'], values='power', custom_data=['power', 'global_percentage', 'national_percentage', 'energy_string'])
+
+    # Add a second hover template for child nodes only
+    fig.update_traces(insidetextorientation='radial')
+
+
+    # fig.update_traces(
+    #     hovertemplate='<b>%{id}</b><br>' +
+    #                   '%{customdata[2]:.1f}% of %{parent}<br>' +
+    #                   '%{customdata[1]:.1f}% of total<br>' +
+    #                   '%{customdata[0]:.0f} MW (average)<br>' +
+    #                   '%{customdata[3]}' +
+    #                   '<extra></extra>',
+    #     level = 0
+    # )    
+
+    # fig.update_traces(
+    #     hovertemplate='<b>%{id}</b><br>' +
+    #                   '%{customdata[1]:.1f}% of total<br>' +
+    #                   '%{customdata[0]:.0f} MW (average)<br>' +
+    #                   '%{customdata[3]}' +
+    #                   '<extra></extra>',
+    #     level = 1
+    # )
+    
+    fig.update_traces(hovertemplate=hovertemplate)
+
+    
+    # import sys
+    # sys.exit()
+    return fig
