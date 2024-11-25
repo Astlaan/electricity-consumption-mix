@@ -6,7 +6,10 @@ import gc
 import os
 from datetime import datetime
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 from data_fetcher import SimpleInterval
 from time_pattern import AdvancedPattern  # type: ignore # Add this import
 import utils as utils
