@@ -10,6 +10,7 @@ import logging
 import shutil
 from dataclasses import dataclass, fields
 import aiofiles
+import time
 
 
 from time_pattern import AdvancedPattern, AdvancedPatternRule
@@ -77,10 +78,15 @@ class ENTSOEDataFetcher:
 
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch data according to the request type."""
+        start_time = time.time()
         if isinstance(data_request, SimpleInterval):
-            return self._get_data_simple_interval(data_request, progress_callback)
+            result = self._get_data_simple_interval(data_request, progress_callback)
+            print(f"[get_data] total duration: {time.time() - start_time}s")
+            return result
         elif isinstance(data_request, AdvancedPattern):
-            return self._get_data_advanced_pattern(data_request)
+            result = self._get_data_advanced_pattern(data_request)
+            print(f"[get_data] total duration: {time.time() - start_time}s")
+            return result
         else:
             raise ValueError(f"Invalid data request type: {type(data_request)}")
 
@@ -355,7 +361,7 @@ class ENTSOEDataFetcher:
     async def _make_request_async(
         self, session: aiohttp.ClientSession, params: Dict[str, Any]
     ) -> str:
-        logger.debug(f"[_make_request_async]: {params}")
+        logger.debug(f"[_make_request_async]({datetime.now().strftime("%H:%M:%S")}): {params}")
         params["securityToken"] = self.security_token
 
         async with session.get(self.BASE_URL, params=params) as response:

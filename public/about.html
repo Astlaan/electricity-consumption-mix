@@ -12,12 +12,9 @@
     
     <!-- KATEX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
-    <!-- The loading of KaTeX is deferred to speed up page rendering -->
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
-    <!-- To automatically render math in text elements, include the auto-render extension: -->
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
-    ></script>
-        <!-- onload="renderMathInElement(document.body);"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
     
     <style>
         body {
@@ -57,12 +54,21 @@
         <!-- Markdown content will be inserted here -->
     </div>
 
+    <!-- <div id="footer"></div> -->
+
     <script>
         // Load and insert the header
         fetch('/header.html')
             .then(response => response.text())
             .then(html => {
                 document.getElementById('header').innerHTML = html;
+            });
+
+        // Load and insert the footer
+        fetch('/footer.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('footer').innerHTML = html;
             });
 
         // Load and render the markdown content
@@ -72,11 +78,11 @@
                 const html = marked.parse(markdown);
                 document.getElementById('content').innerHTML = html;
                 
-                // Render LaTeX after markdown is loaded
-                renderMathInElement(document.getElementById('content'), {
+                // Render math with KaTeX
+                renderMathInElement(document.body, {
                     delimiters: [
-                        {left: '$$', right: '$$', display: true},
-                        {left: '$', right: '$', display: false}
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
                     ]
                 });
             });

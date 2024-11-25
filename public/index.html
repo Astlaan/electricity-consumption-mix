@@ -138,10 +138,10 @@
         </div>
 
         <div class="plot-type-selector">
-            <input type="radio" id="simplePlot" name="plotCalcFunction" value="plot" checked>
-            <label for="simplePlot">Simple Plot</label>
-            <input type="radio" id="discriminatePlot" name="plotCalcFunction" value="plot_discriminate_by_country">
-            <label for="discriminatePlot">Discriminate by Country</label>
+            <input type="radio" id="aggregated" name="plotMode" value="aggregated" checked>
+            <label for="aggregated">Simple Plot</label>
+            <input type="radio" id="discriminated" name="plotMode" value="discriminated">
+            <label for="discriminated">Discriminate by Country</label>
         </div>
 
         <form id="plotForm">
@@ -333,12 +333,21 @@
 
     <div id="plotContainer"></div>
 
+    <!-- <div id="footer"></div> -->
+
     <script>
         // Load and insert the header
         fetch('/header.html')
             .then(response => response.text())
             .then(html => {
                 document.getElementById('header').innerHTML = html;
+            });
+
+        // Load and insert the footer
+        fetch('/footer.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('footer').innerHTML = html;
             });
 
         async function submitForm(e) {
@@ -355,20 +364,20 @@
 
             try {
                 const mode = document.querySelector('input[name="timeMode"]:checked').value;
-                const plotCalcFunction = document.querySelector('input[name="plotCalcFunction"]:checked').value;
+                const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
                 let requestData;
 
                 if (mode === 'simple') {
                     requestData = {
                         mode: 'simple',
-                        plot_calc_function: plotCalcFunction,
+                        plot_mode: plotMode,
                         start_date: document.getElementById('start_date').value,
                         end_date: document.getElementById('end_date').value
                     };
                 } else {
                     requestData = {
                         mode: 'advanced',
-                        plot_calc_function: plotCalcFunction,
+                        plot_mode: plotMode,
                         years: document.getElementById('years').value,
                         months: document.getElementById('months').value,
                         days: document.getElementById('days').value,
@@ -384,7 +393,16 @@
                     body: JSON.stringify(requestData)
                 });
 
-                const data = await response.json();
+                const textResponse = await response.text();
+                let data;
+                
+                try {
+                    // Try to parse it as JSON
+                    data = JSON.parse(textResponse);
+                } catch (parseError) {
+                    // If it's not valid JSON, throw an error with the text response
+                    throw new Error(textResponse || 'Invalid server response');
+                }
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to generate visualization');

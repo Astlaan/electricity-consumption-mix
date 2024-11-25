@@ -1,6 +1,7 @@
 # src/config.py
 try:
-    from plotly.express.colors.qualitative import Set3
+    from plotly.colors import qualitative
+    Set3 = qualitative.Set3
 except ImportError:
     from bokeh.palettes import Set3_12 as Set3
 

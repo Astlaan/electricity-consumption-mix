@@ -250,31 +250,31 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
     return fig
 
 
-def _plot_internal_bokeh_2(df: pd.DataFrame):
+def _plot_internal_bokeh_2(df: pd.DataFrame, *_):
     from bokeh.plotting import figure
     from bokeh.transform import cumsum
     from bokeh.palettes import Set3
     from math import pi
     from bokeh.models import ColumnDataSource, Title, Label
 
-    df = _time_aggregation(df)
+    data = _time_aggregation(df)
     
     # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
+    mask = data > 0
+    data = data[mask]
 
-    if df.empty:
+    if data.empty:
         print("No non-zero data to plot")
         return
 
     # Prepare data
-    total = df.sum()
+    total = data.sum()
     source_data = pd.DataFrame({
-        'source': df.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
-        'value': df.values,
-        'percentage': df / total * 100,
-        'angle': df.values / total * 2 * pi,
-        'color': Set3[12][:len(df)] if len(df) <= 12 else (Set3[8] * (len(df) // 8 + 1))[:len(df)]
+        'source': data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
+        'value': data.values,
+        'percentage': data / total * 100,
+        'angle': data.values / total * 2 * pi,
+        'color': Set3[12][:len(data)] if len(data) <= 12 else (Set3[8] * (len(data) // 8 + 1))[:len(data)]
     })
     
     source_data['start_angle'] = source_data['angle'].cumsum().shift(fill_value=0)
@@ -302,10 +302,10 @@ def _plot_internal_bokeh_2(df: pd.DataFrame):
     # Customize appearance
     p.axis.visible = False
     p.grid.grid_line_color = None
-    p.outline_line_color = None
+    p.outline_line_color = None # type: ignore
     
     # Add title
-    p.add_layout(Title(text="Electricity Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
+    p.add_layout(Title(text="Portugal Electricity Consumption Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
     
     # Add source attribution
     source_label = Label(x=0, y=-1.5, text="Source: ENTSO-E",  # Changed y from -1.3 to -1.5

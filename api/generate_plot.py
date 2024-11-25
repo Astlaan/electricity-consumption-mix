@@ -21,50 +21,70 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+
+
+def sanitize_exception(e):
+    # Convert exception to string
+    error_message = str(e)
+    # Check if the API key is in the error message
+    api_key = os.getenv("ENTSOE_API_KEY") 
+    if api_key:
+        if api_key in error_message:
+            error_message = error_message.replace(api_key, '<API-KEY>')
+    return error_message
+
+
 def handle_request(request_body):
-    backend="_plot_internal_plotly_2"
-    # Parse request body
     body = json.loads(request_body)
     
-    if body['mode'] == 'simple':
-        data_request = SimpleInterval(
-            start_date=datetime.fromisoformat(body['start_date']), 
-            end_date=datetime.fromisoformat(body['end_date'])
-            )
-    else:
-        data_request = AdvancedPattern(
-            years=body["years"],
-            months=body["months"],
-            days=body["days"],
-            hours=body["hours"])
-
     try:    
+        if body['mode'] == 'simple':
+            data_request = SimpleInterval(
+                start_date=datetime.fromisoformat(body['start_date']), 
+                end_date=datetime.fromisoformat(body['end_date'])
+                )
+        else:
+            data_request = AdvancedPattern(
+                years=body["years"],
+                months=body["months"],
+                days=body["days"],
+                hours=body["hours"])
+
         fig = generate_visualization(
-            data_request, 
-            backend=backend,
-            plot_calc_function=body["plot_calc_function"])  # Default to 'plot' if not specified
-            plot_mode=body["plot_mode"]  # Default to 'plot' if not specified
-        )
-    except AssertionError as e: # TODO fix
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'error': 'Invalid date range: Dates must be whole hours and within available range'})
-        }
+                data_request, 
+                config=body  # Default to 'plot' if not specified
+            )
+    except Exception as e:
+            # Sanitize the exception message
+            sanitized_error = sanitize_exception(e)
+            logger.error("An unexpected error occurred: %s", sanitized_error, exc_info=True)
+            
+            # Return the sanitized error to the client
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': f'Error: {sanitized_error}'
+                })
+            }
     
     if fig is None: # TODO fix
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': 'No data available for the specified time range'})
+            'body': json.dumps({'error': 'No data available for the specified time interval(s)'})
         }
 
     # Convert Plotly figure to JSON
-    if "bokeh" in backend:
-        from bokeh.embed import json_item
-        plot_json = json_item(fig)
-    elif "plotly" in backend:
+    if "backend" in body:
+        if "bokeh" in body["backend"]:
+            from bokeh.embed import json_item
+            plot_json = json_item(fig)  # type: ignore
+        elif "plotly" in body["backend"]:
+            plot_json = fig.to_json()
+        else:
+            raise ValueError(f"Backend {body["backend"]} not supported")
+    else: # Assume plotly
         plot_json = fig.to_json()
-    else:
-        raise ValueError(f"Backend {backend} not supported")
+
     
     return {
         'statusCode': 200,

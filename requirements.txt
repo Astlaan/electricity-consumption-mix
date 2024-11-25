@@ -4,5 +4,3 @@ aiohttp
 aiofiles
 tqdm
 plotly
-# matplotlib
-# bokeh

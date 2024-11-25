@@ -26,10 +26,8 @@ This is fine for now since the goal is to initialize the cache (with `main.py --
 - Put data-cache in blob instead of root/.data_cache. Use an environment variable to specify the alternate location (ex. blob) of data cache
 - How will the asynchronous read/writes on the blob work? Will it be a problem?
 
-- Mostrar MWh em vez de MW
 - Meter warning se cache não detetada
 - Change to pipfile
-- UPDATE DESCRIPTIONS OF ADVANCED PATTERN FIELDS IN THE FRONTEND
 
 - Charting: Select and use custom colors ( https://plotly.com/python/discrete-color/ )
 

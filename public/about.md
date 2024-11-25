@@ -1,6 +1,6 @@
-# About Portugal Electricity Consumption Mix
+# About
 
-This tool visualizes Portugal's electricity consumption patterns, taking into account both domestic generation and international exchanges.
+This website allows visualizing Portugal's electricity consumption patterns, taking into account both domestic generation and international exchanges.
 
 ## Why?
 The Portuguese electrical grid operator, [REN](https://ren.pt/), makes available some of the Portuguese electricity consumption data via its [REN Data Hub](https://datahub.ren.pt/) page. This website aims to provide some functionality that the REN Data Hub doesn't provide:
@@ -19,15 +19,10 @@ This is a personal project made in order to obtain some perspectives that are im
 The data is sourced from ENTSO-E, the European Network of Transmission System Operators for Electricity. This website has access to all the data since 15/01/2015 (roughly the legal start of the ENTSO-E data collection program), and is capable of fetching all the data till the present time minus ~2 hours, by making use of the ENTSO-E API.
 
 
-### Calculations
-
-
-
-The consumption mix is calculated using the following formula:
+#### Approximations:
 
 In order to tackle this problem, some approximations were made:
 
-#### Approximations:
 1. **The generated power is assumed to be distributed homogeneously throughout the grid, per country**. For example: taking Spain in isolation, we make the assumption that the mix of electricity provided in any location in the country simply corresponds to the overall mix for the country.
 
    a. **Corollary:** The source mix of a cross-border export is the same as the mix of electricity in the grid of the exporting country. This assumption follows directly from the assumption above.
@@ -39,52 +34,67 @@ In order to tackle this problem, some approximations were made:
    b.  However, Spain $\to$ Portugal flows will consider a recalculated Spanish grid mix that takes the France$\to$Spain flows into account.
 
 3. **Only the contributions of Portugal's, Spain's and France's generation were considered.**
-   a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21-Nov-2024 when total imports reached a staggering 48% of consumption, the french contribution was responsible for <5% of the supply. As such, the approximation is deemed to be reasonable.  
+   a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21/11/2024 when total imports reached a staggering 48% of consumption, the French contribution was responsible for <5% of the supply. As such, the approximation should have a small impact.  
 
 4. **Resampling of Spanish/French generation/cross-border flow data to hourly granularity**, from their original 15 minutes granularity. The need to resample follows from the different `Market Time Unit`(MTU), which define the granularity of data. The MTU is of 1 hour for Portugal, and 15 minutes for Spain and France. The downsampling of Spain/French data was performed by doing a mean aggregation of each hour's four 15 minutes blocks.
 
+### Model and calculation
 
+From the ENTSO-E API it is possible to request data and process it into the following variables:
 
+- $G_{t,s}^{X}$: the generation matrices for Portugal, Spain, and France, respectively. The lines $t$ represent the time (each hour) and the columns $s$ represent the sources. 
+- $F_t^{A \to B}$: A vector representing the (non-netted) cross-border total flows from country A to country B. This vector contains one element for each hour being considered.
+
+We retrieve the generation matrices for Portugal, Spain and France, and the flow vectors for Portugal-Spain and Spain-France (in both direction for each case).
+
+Based on the data above, and on the approximations described in the previous section, we devised a simple model where, for each country:
+
+1. The relative weight of each source is calculated, for each hourly timestamp, calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
+2. The exports per source are calculated by applying the relative weights to the total exports, e.g. $F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}$ in the case of the exports from France to Spain.
+3. The imports per source are calculated in a similar fashion, e.g. $F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}}$ in the case of imports from Spain to France.
+3. The effective source mix on the grid is calculated by subtracting the exports (per source and time) from the country's generation, and the imports are added.
+
+We start by calculating the above for the Spain-France pair, in order to calculate the intermediary grid mix for Spain, $G_{t,s}^{ES'}$ (notice the prime symbol '). We calculate the interactions for Portugal-Spain using that intermediary spanish grid mix. These two steps are represented in the expressions below:
 
 $$
-C^{PT} =
+G_{t,s}^{ES'} = G_{t,s}^{ES} - F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}} + F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}
+$$
+
+$$
+C_{t,s}^{PT} = G_{t,s}^{PT} - F_{t}^{PT \to ES}\frac{G_{t,s}^{PT}}{\sum_{s} G_{t,s}^{PT}} + F_{t}^{ES \to PT}\frac{G_{t,s}^{ES'}}{\sum_{s} G_{t,s}^{ES'}}
+$$
+
+Where $C_{t,s}^{PT}$ is the resulting Portuguese electricity aggregated consumption matrix, indexed by time (hourly) and source. Merging these two expressions, and factorizing the numerator generation terms we get:
+
+$$
 \begin{aligned}
-    &\left( 1 - \frac{F_{t}^{PT \to ES}}{\sum_{s} G_{t,s}^{PT}} \right) G_{t,s}^{PT} \quad \text{(Portuguese Component)} \\
-    &+ \frac{F_{t}^{ES \to PT} \left( 1 - \frac{F_{t}^{ES \to FR}}{\sum_{s} G_{t,s}^{ES}} \right)}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{ES} \quad \text{(Spanish Component)} \\
-    &+ \frac{F_{t}^{ES \to PT} \cdot \frac{F_{t}^{FR \to ES}}{\sum_{s} G_{t,s}^{FR}}}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{FR} \quad \text{(French Component)}
+C_{t,s}^{PT} &= \left( 1 - \frac{F_{t}^{PT \to ES}}{\sum_{s} G_{t,s}^{PT}} \right) G_{t,s}^{PT} & \text{(Portuguese Contribution)} \newline
+   &+ \frac{F_{t}^{ES \to PT} \left( 1 - \frac{F_{t}^{ES \to FR}}{\sum_{s} G_{t,s}^{ES}} \right)}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{ES} & \text{(Spanish Contribution)} \newline
+   &+ \frac{F_{t}^{ES \to PT} \cdot \frac{F_{t}^{FR \to ES}}{\sum_{s} G_{t,s}^{FR}}}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{FR} & \text{(French Contribution)}
 \end{aligned}
 $$
 
-Where:
-- $G_{t,s}^{PT}$, $G_{t,s}^{ES}$, $G_{t,s}^{FR}$ are the generation matrices for Portugal, Spain, and France, respectively. The lines $t$ represent the time (each hour) and the columns $s$ represent the sources. 
-- $F_t^{A \to B}$ represents the (non-netted) cross-border total flows vector from country A to country B. This vector contains one element for each hour being considered. 
+We can then use the whole expression to plot the aggregated electricity consumption mix in Portugal accounting for the exports, or we can use each of the terms in order to plot the Portuguese electricity consumption mix with the discriminated generation contributions from each of the countries. 
+
 
 ## Features
 
-1. **Simple Interval Mode**: Select a specific time range to analyze
-2. **Advanced Pattern Mode**: Analyze patterns across multiple years, months, days, or hours
-3. **Plot Types**:
-   - Simple Plot: Shows the overall consumption mix
-   - Discriminate by Country: Separates domestic generation from international exchanges
+1. **Time intervals definition**:
 
-## Time Patterns
+   a. **Simple Interval Mode**: Select a simple time range for which to retrieve data and analyze.
+   
+   b. **Advanced Pattern Mode**: Allows specifying custom intervals, by applying constrains to data, to the years, months, days and hours fields.
 
-### Simple Interval
-Select a specific start and end date/time to analyze the consumption mix during that period. The tool enforces:
-- Dates must be within available data range (2015-01-15 to present)
-- Times must be on the hour (00 minutes)
-- End date must be after start date
+2. **Plot Types**:
 
-### Advanced Pattern
-Analyze recurring patterns by specifying:
-- Years: e.g., "2020-2023" or "2015, 2017, 2020-2023"
-- Months: e.g., "1-3, 6, 9" (Jan-Mar, Jun, Sep)
-- Days: e.g., "1-15, 20, 22-25"
-- Hours: e.g., "20-23" (8PM-11PM UTC)
+   a. **Aggregated**: Shows the overall consumption mix for Portugal, with the contributions by different countries all aggregated and grouped by source.
+   
+   b. **Discriminated**: Displays the consumption mix grouped by country, and then by source. 
 
-## Technical Details
 
-The application uses:
-- ENTSO-E API for data retrieval
-- Python backend for data processing
-- Plotly for interactive visualizations
+## Notes
+
+- **Hydro Pumped Storage consumption is not accounted for**. For now, only source generation values are represented. This means that, while Hydro Pumped Storage generation is accounted into the graph, the consumption value relative to the upstream pumping of water ("charging the reservoir") is not represented.
+
+- **Missing data handling**
+

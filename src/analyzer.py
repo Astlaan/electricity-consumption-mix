@@ -51,41 +51,41 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 
 
 
-def plot(data: Data, mode: str):
-    print("FUNCTION: plot")
+# def plot_old(data: Data, mode: str):
+#     print("FUNCTION: plot")
 
-    # If start_time is a column, set it as index. If it's already the index, nothing changes
-    data = ensure_index_and_sorting(data)
+#     # If start_time is a column, set it as index. If it's already the index, nothing changes
+#     data = ensure_index_and_sorting(data)
 
-    psr_types = list(PSR_TYPE_MAPPING.keys())
+#     psr_types = list(PSR_TYPE_MAPPING.keys())
 
-    G_pt = data.generation_pt[data.generation_pt.columns.intersection(psr_types)]
-    G_es = data.generation_es[data.generation_es.columns.intersection(psr_types)]
-    G_fr = data.generation_fr[data.generation_fr.columns.intersection(psr_types)]
-    F_pt_es = data.flow_pt_to_es["Power"].values[:, None]
-    F_es_pt = data.flow_es_to_pt["Power"].values[:, None]
-    F_fr_es = data.flow_fr_to_es["Power"].values[:, None]
-    F_es_fr = data.flow_es_to_fr["Power"].values[:, None]
+#     G_pt = data.generation_pt[data.generation_pt.columns.intersection(psr_types)]
+#     G_es = data.generation_es[data.generation_es.columns.intersection(psr_types)]
+#     G_fr = data.generation_fr[data.generation_fr.columns.intersection(psr_types)]
+#     F_pt_es = data.flow_pt_to_es["Power"].values[:, None]
+#     F_es_pt = data.flow_es_to_pt["Power"].values[:, None]
+#     F_fr_es = data.flow_fr_to_es["Power"].values[:, None]
+#     F_es_fr = data.flow_es_to_fr["Power"].values[:, None]
 
-    # Without france
-    # flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
-    # flow_per_source_es_pt = F_es_pt * (G_es.div(G_es.sum(axis=1), axis=0))
-    # consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
+#     # Without france
+#     # flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
+#     # flow_per_source_es_pt = F_es_pt * (G_es.div(G_es.sum(axis=1), axis=0))
+#     # consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
     
-    # With France
-    flow_per_source_fr_es = F_fr_es * (G_fr.div(G_fr.sum(axis=1), axis=0)) # TODO verify [0]!!!!!!!!!!!!!!!!!!!!!!
-    flow_per_source_es_fr = F_es_fr * (G_es.div(G_es.sum(axis=1), axis=0))
-    G_es_prime = G_es.sub(flow_per_source_es_fr, fill_value=0).add(flow_per_source_fr_es, fill_value=0)
+#     # With France
+#     flow_per_source_fr_es = F_fr_es * (G_fr.div(G_fr.sum(axis=1), axis=0)) # TODO verify [0]!!!!!!!!!!!!!!!!!!!!!!
+#     flow_per_source_es_fr = F_es_fr * (G_es.div(G_es.sum(axis=1), axis=0))
+#     G_es_prime = G_es.sub(flow_per_source_es_fr, fill_value=0).add(flow_per_source_fr_es, fill_value=0)
 
-    flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
-    flow_per_source_es_pt = F_es_pt * (G_es_prime.div(G_es_prime.sum(axis=1), axis=0))
-    consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
+#     flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
+#     flow_per_source_es_pt = F_es_pt * (G_es_prime.div(G_es_prime.sum(axis=1), axis=0))
+#     consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
 
-    plot_func = globals()[f'{mode}']
-    fig = plot_func(consumption_per_source)
-    return fig
+#     plot_func = globals()[f'{mode}']
+#     fig = plot_func(consumption_per_source)
+#     return fig
 
-def plot_discriminate_by_country(data: Data, mode: str, plot_type: str):
+def plot(data: Data, config: dict):
     """
     Computes the consumption per source by isolating contributions from
     Portuguese (PT), Spanish (ES), and French (FR) generations, according to the given mathematical expression.
@@ -186,17 +186,19 @@ def plot_discriminate_by_country(data: Data, mode: str, plot_type: str):
     # ------------------------------
     # Plotting (Optional)
     # ------------------------------
-    plot_func = globals().get(f'{mode}', None)
-    if plot_func:
-        fig = plot_func(consumption_per_source, contributions)
-    else:
-        raise ValueError(f"Plotting function '{mode}' not found in globals.")
-
+    
+    match config["plot_mode"]:
+        case "aggregated":
+            fig = _plot_aggregated(consumption_per_source)
+        case "discriminated":
+            fig = _plot_hierarchical(consumption_per_source, contributions, config)
+        case _:
+            raise ValueError(f"plot_mode {config["plot_mode"]} is not supported.")
     return fig
 
 
 
-def _plot_internal_plotly_2(df: pd.DataFrame, *_):
+def _plot_aggregated(df: pd.DataFrame, *_):
     import plotly.express as px
     data = _time_aggregation(df)
 
@@ -275,7 +277,7 @@ def _plot_internal_plotly_2(df: pd.DataFrame, *_):
     return fig
 
 
-def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool|str] = None):
+def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool|str]):
     import plotly.express as px
     """Creates a sunburst chart with hierarchy determined by 'by' parameter."""
 
@@ -361,92 +363,17 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     )
 
     # Customize layout
-    # fig.update_layout(
-    #     width=800,
-    #     height=800,
-    #     title={
-    #         'text': "Energy Distribution by Country and Source",
-    #         'x': 0.5,
-    #         'xanchor': 'center'
-    #     }
-    # )
+    fig.update_layout(
+        width=700,
+        height=800,
+        # title={
+        #     'text': "Energy Distribution by Country and Source",
+        #     'x': 0.5,
+        #     'xanchor': 'center'
+        # }
+    )
 
     return fig
-
-
-def _plot_internal_bokeh_2(df: pd.DataFrame, *_):
-    from bokeh.plotting import figure
-    from bokeh.transform import cumsum
-    from bokeh.palettes import Set3
-    from math import pi
-    from bokeh.models import ColumnDataSource, Title, Label
-
-    data = _time_aggregation(df)
-    
-    # Only plot non-zero values
-    mask = data > 0
-    data = data[mask]
-
-    if data.empty:
-        print("No non-zero data to plot")
-        return
-
-    # Prepare data
-    total = data.sum()
-    source_data = pd.DataFrame({
-        'source': data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
-        'value': data.values,
-        'percentage': data / total * 100,
-        'angle': data.values / total * 2 * pi,
-        'color': Set3[12][:len(data)] if len(data) <= 12 else (Set3[8] * (len(data) // 8 + 1))[:len(data)]
-    })
-    
-    source_data['start_angle'] = source_data['angle'].cumsum().shift(fill_value=0)
-    source_data['end_angle'] = source_data['start_angle'] + source_data['angle']
-    
-    source = ColumnDataSource(source_data)
-
-    # Modify the figure creation to keep original size
-    p = figure(height=700, width=800,  # Return to original dimensions
-              tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
-              x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
-
-    # Draw the outer wedges
-    p.wedge(x=0, y=0,
-            start_angle='start_angle',
-            end_angle='end_angle',
-            radius=1.0,
-            color='color',
-            legend_field='source',
-            source=source)
-    
-    # Draw the inner circle to create the donut hole
-    p.circle(x=0, y=0, radius=0.3, fill_color="white", line_color=None)
-
-    # Customize appearance
-    p.axis.visible = False
-    p.grid.grid_line_color = None
-    p.outline_line_color = None # type: ignore
-    
-    # Add title
-    p.add_layout(Title(text="Electricity Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
-    
-    # Add source attribution
-    source_label = Label(x=0, y=-1.5, text="Source: ENTSO-E",  # Changed y from -1.3 to -1.5
-                        text_align='center', text_baseline='top')
-    p.add_layout(source_label)
-    
-    # Modify the legend settings to move it slightly more to the right
-    p.legend.location = "right"
-    p.legend.click_policy = "hide"
-    p.legend.border_line_color = None
-    p.legend.background_fill_alpha = 0.7
-    p.legend.glyph_height = 20
-    p.legend.glyph_width = 20
-    p.legend.label_text_font_size = '10pt'
-    p.legend.margin = 20  # Add margin to move legend further right
-
-    return p
 
 
 def _calc_energy_string(energy_in_MWh: float) -> str:
