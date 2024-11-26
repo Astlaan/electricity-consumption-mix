@@ -16,13 +16,7 @@ import utils as utils
 from core import generate_visualization
 
 # Configure logging to write to stderr which Vercel can capture
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
-
 
 
 

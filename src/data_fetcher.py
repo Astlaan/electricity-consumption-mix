@@ -17,7 +17,6 @@ from time_pattern import AdvancedPattern, AdvancedPatternRule
 import time_pattern
 import utils
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Note: All datetimes are assumed to be in UTC, even though they're stored as naive datetimes

@@ -3,11 +3,13 @@ import pandas as pd
 import numpy as np
 from config import PSR_COLORS, PSR_TYPE_MAPPING
 from utils import get_active_psr_in_dataframe, apply_to_fields
+import logging
+logger = logging.getLogger(__name__)
 
-pd.set_option('display.max_columns', None)  # Show all columns
-pd.set_option('display.max_rows', None)     # Show all rows
-pd.set_option('display.width', None)        # Set width to expand to full display
-pd.set_option('display.max_colwidth', None)
+# pd.set_option('display.max_columns', None)  # Show all columns
+# pd.set_option('display.max_rows', None)     # Show all rows
+# pd.set_option('display.width', None)        # Set width to expand to full display
+# pd.set_option('display.max_colwidth', None)
 
 
 
@@ -52,7 +54,7 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 
 
 # def plot_old(data: Data, mode: str):
-#     print("FUNCTION: plot")
+#     logger.debug("FUNCTION: plot")
 
 #     # If start_time is a column, set it as index. If it's already the index, nothing changes
 #     data = ensure_index_and_sorting(data)
@@ -99,7 +101,7 @@ def plot(data: Data, config: dict):
     - contributions (dict): Dictionary containing individual contributions from PT, ES, and FR.
     - fig: The generated plot figure.
     """
-    print("FUNCTION: plot_discriminate_by_country")
+    logger.debug("FUNCTION: plot_discriminate_by_country")
     # Ensure 'start_time' is set as index and sorted
     data = ensure_index_and_sorting(data)
 
@@ -208,7 +210,7 @@ def _plot_aggregated(df: pd.DataFrame, *_):
     data = data[mask]
 
     if data.empty:
-        print("No non-zero data to plot")
+        logger.info("No non-zero data to plot")
         return
     
     threshold = 3
@@ -289,8 +291,8 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
 
     # Calculate the total power for percentage calculations
     total_power = sum(series.sum() for series in data_by_country_time_aggregated.values())
-    print(f"{total_hours=}")
-    print(f"{total_power=}")
+    logger.debug(f"{total_hours=}")
+    logger.debug(f"{total_power=}")
     # Create records for the hierarchical structure
     records = []
 
@@ -298,11 +300,11 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     for country, series in data_by_country_time_aggregated.items():
         country_power = series.sum()
         country_energy = country_power * total_hours
-        # print("COUNTRY:", country)
-        # print("COUNTRY POWER:", country_power)
-        # print("TOTAL POWER:", total_power)
-        # print(f"PERCENTAGE:", country_power/total_power)
-        # print(f"PERCENTAGE: {(country_power / total_power):.1f}")
+        # logger.debug("COUNTRY:", country)
+        # logger.debug("COUNTRY POWER:", country_power)
+        # logger.debug("TOTAL POWER:", total_power)
+        # logger.debug(f"PERCENTAGE:", country_power/total_power)
+        # logger.debug(f"PERCENTAGE: {(country_power / total_power):.1f}")
         # Add country level
         records.append({
             'id': country,
@@ -338,7 +340,7 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
                         f"{_calc_energy_string(energy)}"
                     )
                 })
-    print(records)
+    logger.debug(records)
 
     # Convert records to DataFrame
     df = pd.DataFrame(records)
