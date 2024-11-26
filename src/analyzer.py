@@ -368,6 +368,7 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     fig.update_layout(
         width=700,
         height=800,
+        margin=dict(t=10, b=10, l=10, r=10)  
         # title={
         #     'text': "Energy Distribution by Country and Source",
         #     'x': 0.5,
