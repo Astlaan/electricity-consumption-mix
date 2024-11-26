@@ -186,9 +186,9 @@ class ENTSOEDataFetcher:
         index_min = result.index.min()
         index_length = len(result.index)
 
-        print("Index max:", index_max)
-        print("Index min:", index_min)
-        print("Index length:", index_length)
+        logger.debug("Index max:", index_max)
+        logger.debug("Index min:", index_min)
+        logger.debug("Index length:", index_length)
         return result
         
     async def _save_to_cache(
@@ -361,11 +361,15 @@ class ENTSOEDataFetcher:
         self, session: aiohttp.ClientSession, params: Dict[str, Any]
     ) -> str:
         params["securityToken"] = self.security_token
-        start_time = time.time()
+        start_dt = datetime.now()
+        print(f"[_make_request_async (start)]: {start_dt.strftime('%H:%M:%S')}s: {params}")
         async with session.get(self.BASE_URL, params=params) as response:
             response.raise_for_status()
-            return await response.text()
-        print(f"[_make_request_async]({datetime.now().strftime("%H:%M:%S")}, took {time.time()-start_time}s): {params}")
+            text = await response.text()
+            end_dt = datetime.now()
+            elapsed = (end_dt - start_dt).total_seconds()
+            print(f"[_make_request_async (finished)] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: {params}")
+            return text
 
     async def _fetch_data_in_chunks(
         self, params: Dict[str, Any], start_date: datetime, end_date: datetime
@@ -457,13 +461,15 @@ class ENTSOEDataFetcher:
     ) -> pd.DataFrame:
         params = {
             "documentType": "A75",
-            "processType": "A16",
+            "processType": "A16", 
             "in_Domain": country_code,
             "outBiddingZone_Domain": country_code,
         }
-        start_time = time.time()
+        start_dt = datetime.now()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
-        print(f"[async_get_generation_data] (took {time.time()-start_time}): country: {params['in_Domain']}")
+        end_dt = datetime.now()
+        elapsed = (end_dt - start_dt).total_seconds()
+        print(f"[async_get_generation_data] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: country: {params['in_Domain']}")
         if progress_callback:
             progress_callback()
         return df
@@ -476,11 +482,11 @@ class ENTSOEDataFetcher:
             "in_Domain": in_domain,
             "out_Domain": out_domain,
         }
-
-        start_time = time.time()
+        start_dt = datetime.now()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
-        print(f"[async_get_generation_data] (took {time.time()-start_time}): from: {out_domain} to {in_domain}")
-
+        end_dt = datetime.now()
+        elapsed = (end_dt - start_dt).total_seconds()
+        print(f"[async_get_physical_flows] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: from: {out_domain} to {in_domain}")
         if progress_callback:
             progress_callback()
         return df
