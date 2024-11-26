@@ -360,12 +360,12 @@ class ENTSOEDataFetcher:
     async def _make_request_async(
         self, session: aiohttp.ClientSession, params: Dict[str, Any]
     ) -> str:
-        logger.debug(f"[_make_request_async]({datetime.now().strftime("%H:%M:%S")}): {params}")
         params["securityToken"] = self.security_token
-
+        start_time = time.time()
         async with session.get(self.BASE_URL, params=params) as response:
             response.raise_for_status()
             return await response.text()
+        print(f"[_make_request_async]({datetime.now().strftime("%H:%M:%S")}, took {time.time()-start_time}s): {params}")
 
     async def _fetch_data_in_chunks(
         self, params: Dict[str, Any], start_date: datetime, end_date: datetime
@@ -461,8 +461,9 @@ class ENTSOEDataFetcher:
             "in_Domain": country_code,
             "outBiddingZone_Domain": country_code,
         }
-
+        start_time = time.time()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        print(f"[async_get_generation_data] (took {time.time()-start_time}): country: {params['in_Domain']}")
         if progress_callback:
             progress_callback()
         return df
@@ -476,7 +477,10 @@ class ENTSOEDataFetcher:
             "out_Domain": out_domain,
         }
 
+        start_time = time.time()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        print(f"[async_get_generation_data] (took {time.time()-start_time}): from: {out_domain} to {in_domain}")
+
         if progress_callback:
             progress_callback()
         return df

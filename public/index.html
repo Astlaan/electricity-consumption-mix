@@ -4,23 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <!-- Favicon (.ico, 32x32) -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    
+
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="Portugal Electricity Consumption Mix">
     <meta property="og:description" content="Portugal's electricity consumption taking imports into account.">
-    <meta property="og:image" content="https://electricity-consumption-mix.vercel.app/og-image.jpg"> <!-- 1200x630, jpg or png -->
+    <meta property="og:image" content="https://electricity-consumption-mix.vercel.app/og-image.jpg">
+    <!-- 1200x630, jpg or png -->
     <meta property="og:url" content="https://electricity-consumption-mix.vercel.app">
     <meta property="og:type" content="website">
-    
+
     <!-- Twitter Card tags -->
     <!-- <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Portugal Electricity Consumption Mix">
     <meta name="twitter:description" content="Analyze and visualize Portugal's electricity consumption patterns and energy mix">
     <meta name="twitter:image" content="https://your-domain.vercel.app/og-image.png"> -->
-    
+
     <title>Portugal Electricity Consumption Mix</title>
     <style>
         body {
@@ -160,7 +161,8 @@
                     <!-- <span>Empty fields means no constraints (all years considered). Ranges (eg. 2020-2023) are inclusive</span><br><br> -->
                     <label for="years">Years:</label>
                     <input type="text" id="years" placeholder="e.g., 2015, 2017, 2020-2023">
-                    <span class="help-text">Empty means no constraint (all years considered). Ranges (eg. 2020-2023) are inclusive</span>
+                    <span class="help-text">Empty means no constraint (all years considered). Ranges (eg. 2020-2023) are
+                        inclusive</span>
                 </div>
                 <div class="time-field">
                     <label for="months">Months:</label>
@@ -176,8 +178,9 @@
                     <label for="hours">Hours:</label>
                     <input type="text" id="hours" placeholder="e.g., 20-23, 23-2">
                     <span class="help-text">
-                        Valid values: [0, 23]. (UTC timezone!) 
-                        <br>Each selected hour represents the interval from that hour's start, till the start of the next hour. 
+                        Valid values: [0, 23]. (UTC timezone!)
+                        <br>Each selected hour represents the interval from that hour's start, till the start of the
+                        next hour.
                         <br>5 represents the interval from 5am-6am
                         <br>14-17 represents the interval 2pm-6pm.</span>
                 </div>
@@ -395,7 +398,7 @@
 
                 const textResponse = await response.text();
                 let data;
-                
+
                 try {
                     // Try to parse it as JSON
                     data = JSON.parse(textResponse);
@@ -405,6 +408,9 @@
                 }
 
                 if (!response.ok) {
+                    if (response.status == 504) {
+                        throw new Error("Error: Backend timeout");
+                    }
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
@@ -414,7 +420,7 @@
                     errorMessage.style.display = 'none';
                     // Bokeh version
                     // Bokeh.embed.embed_item(data.plot, 'plotContainer');
-                    
+
                     // Plotly version
                     const plotData = JSON.parse(data.plot);
                     Plotly.newPlot('plotContainer', plotData.data, plotData.layout);
