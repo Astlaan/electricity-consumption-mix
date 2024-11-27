@@ -424,6 +424,12 @@
                     // Plotly version
                     const plotData = JSON.parse(data.plot);
                     Plotly.newPlot('plotContainer', plotData.data, plotData.layout);
+                    
+                    // Scroll to center the plot with smooth animation
+                    plotContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center'
+                    });
                 } else {
                     throw new Error('No plot data received');
                 }
