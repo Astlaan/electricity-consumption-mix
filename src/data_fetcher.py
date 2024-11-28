@@ -401,7 +401,8 @@ class ENTSOEDataFetcher:
         logger.debug(f"Requested date range: {start_date} to {end_date}")
 
         fetch_start = start_date
-        fetch_end = end_date
+        # fetch_end = end_date
+        fetch_end = utils.maximum_date_end_exclusive()
 
         if cached_data is not None: # FULL OR PARTIAL HIT
             df, metadata = cached_data
