@@ -96,5 +96,5 @@ We can then use the whole expression to plot the aggregated electricity consumpt
 
 - **Hydro Pumped Storage consumption is not accounted for**. For now, only source generation values are represented. This means that, while Hydro Pumped Storage generation is accounted into the graph, the consumption value relative to the upstream pumping of water ("charging the reservoir") is not represented.
 
-- **Missing data handling**
-
+- **Missing data handling:** there are some hour timestamps where no data was registered, for some 
+sources. Missing data is estimated via linear interpolation.

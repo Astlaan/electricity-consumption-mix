@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 # pd.set_option('display.max_colwidth', None)
 
 
-
 def _format_date_range(df: pd.DataFrame) -> str:
     start_date = df.index.min()
     end_date = df.index.max()
@@ -23,7 +22,13 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
     # Remove columns where all values are 0
     df = df.loc[:, (df != 0).any()]
     # Fill any NaN values with 0
-    df = df.fillna(0) # TODO fix
+    # df = df.fillna(0) # TODO fix
+    # df = df.ffill()
+    df = df.interpolate("linear") 
+    # Interpolate does not remove first NaNs, which is good. 
+    # Removes last NaNs similar to ffill, however, it seems that when a source gets deactivated for 
+    # good (ex. Fossil Hard Coal in PT), it's power becomes 0 instead of NaN in PT, ES, FR
+    # France may have mislabeled a lot of its 0 MW periods as NaNs
 
     # Group by source type (in case multiple B-codes map to same source)
     grouped_data = df.mean()
@@ -217,7 +222,7 @@ def _plot_aggregated(df: pd.DataFrame, *_):
     total = data.sum()
     slice_percentages = (data / total) * 100
     
-    pull_values = [0.0 if p >= threshold else 0.2 for p in slice_percentages]
+    pull_values = [0.0 if p >= threshold else 0.1 for p in slice_percentages]
     text_positions = ['inside' if p >= threshold else 'outside' for p in slice_percentages]
 
     # Apply PSR_TYPE_MAPPING to the names
@@ -235,10 +240,9 @@ def _plot_aggregated(df: pd.DataFrame, *_):
         plot_df,
         values='values',
         names='names',
-        title="Electricity Mix by Source Type (Averaged Power)",
         color_discrete_sequence=px.colors.qualitative.Set3,
         # color_discrete_sequence=colors,
-        hole=.2,
+        hole=0,
         custom_data=['percentages']  # Include our calculated percentages
     )
     
@@ -247,35 +251,37 @@ def _plot_aggregated(df: pd.DataFrame, *_):
         textposition=text_positions,
         pull=pull_values,
         # marker=dict(colors=colors), # TODO use custom colors
-        texttemplate='%{label}<br> %{customdata[0]:.1f}% | %{value:.1f} MW',  # Use our calculated percentages
-        hovertemplate="%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW<extra></extra>",
-        textfont=dict(size=10),
+        texttemplate='%{label}<br> %{customdata[0]:.1f}% | %{value:.1f} ' + "MW",  # Use our calculated percentages
+        hovertemplate="%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} " + "MW",
+        # textfont=dict(size=10),
         insidetextorientation='auto',
+        # insidetextorientation='radial',
         # insidetextanchor="start"
     )
     
     fig.update_layout(
-        showlegend=True,
-        width=1200,
-        height=900,
-        title_x=0.5,
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="right",
-            x=1.9
-        ),
-        annotations=[dict(
-            text="Source: Energy Data",
-            showarrow=False,
-            x=0.5,
-            y=-0.1,
-            xref="paper",
-            yref="paper"
-        )]
+        showlegend=False,
+        # width=1200,
+        # height=900,
+        width=900,
+        height=800,
+        # yaxis=dict(domain=[0.1, 0.9]),
+        title={
+            'text': "Portugal's Electricity Mix by Source Type",
+            'x': 0.45,
+            'y': 0.99
+        },
+        # margin=dict(t=0, b=0, l=0, r=0),  
+        # legend=dict(
+        #     orientation="v",
+        #     yanchor="middle",
+        #     y=0.5,
+        #     xanchor="right",
+        #     x=1.9
+        # ),
     )
-    
+
+    _apply_figure_global_settings(fig)
     return fig
 
 
@@ -315,7 +321,8 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
             'hover_text': (
                 f"<b>{country}</b><br>"
                 f"{(country_power / total_power * 100):.1f}% of total<br>"
-                f"{country_power:.0f} MW (average)<br>"
+                f"{country_power:.0f} " + "_overlined('MW') (average)<br>"
+                # f"{country_power:.0f} " + _overlined('MW')  + "<br>"
                 f"{_calc_energy_string(country_energy)}"
             )
         })
@@ -352,7 +359,8 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
         names='label',
         parents='parent',
         values='power',
-        custom_data=['hover_text']
+        custom_data=['hover_text'],
+        # title="Portugal's Electricity Mix by Source Type",
     )
 
     # Update hover template for all traces
@@ -368,14 +376,14 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     fig.update_layout(
         width=700,
         height=800,
-        margin=dict(t=10, b=10, l=10, r=10)  
-        # title={
-        #     'text': "Energy Distribution by Country and Source",
-        #     'x': 0.5,
-        #     'xanchor': 'center'
-        # }
+        title={
+            'text': "Portugal's Electricity Mix by Source Type",
+            'x': 0.5,
+            'y': 0.99
+        }
     )
 
+    _apply_figure_global_settings(fig)
     return fig
 
 
@@ -404,3 +412,24 @@ def _calc_energy_string(energy_in_MWh: float) -> str:
         
         # Return the formatted string
         return f"{formatted_value} {unit}"
+
+
+def _apply_figure_global_settings(fig):
+    fig.update_layout(
+        autosize = True,
+        margin=dict(t=50, b=100, l=0, r=0),
+        annotations=[dict(
+            text="Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+            showarrow=False,
+            x=0.5,
+            y=-0.1,
+        )]
+    )
+
+def _overlined(string: str):
+    # return f"&#772;{string}"
+    # return f"\\overline{{\\text{{{string}}}}}"
+    # return f"\u0305{string}"
+    # return f"<i>{string}</i>"
+    # return "M\u0305W\u0305" 
+    return f"<span style='text-decoration: overline;'>{string}</span>"

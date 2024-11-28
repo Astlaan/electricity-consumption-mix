@@ -77,11 +77,38 @@
             margin-right: 10px;
         }
 
-        #plotContainer img {
+
+        /* #plotContainer {
+            display: flex;
+            justify-content: center;
             max-width: 100%;
-            height: auto;
+            width: auto;
+            height: 70vh;
+            margin: 20px 0;
+        } */
+
+        #plotContainer {
+            width: 100%;
+            height: 90vh;
+            /* Adjust as needed */
             margin: 20px 0;
         }
+
+        /* #plotContainer>div {
+            width: 100% !important;
+            height: 100% !important;
+        } */
+
+        .plot-container.plotly {
+            justify-items: center;
+        }
+
+        /* #plotContainer img {
+            max-width: 100%;
+            width: auto;
+            height: 80vh;
+            margin: 20px 0;
+        } */
 
         .time-field {
             margin: 10px 0;
@@ -131,6 +158,14 @@
     <h1>Portugal Electricity Consumption Mix</h1>
 
     <div class="form-container">
+        <!-- <div class="plot-type-selector"> -->
+        <div class="mode-selector">
+            <input type="radio" id="aggregated" name="plotMode" value="aggregated" checked>
+            <label for="aggregated">Aggregated by Source</label>
+            <input type="radio" id="discriminated" name="plotMode" value="discriminated">
+            <label for="discriminated">Discriminated by Country</label>
+        </div>
+
         <div class="mode-selector">
             <input type="radio" id="simpleMode" name="timeMode" value="simple" checked>
             <label for="simpleMode">Simple Interval</label>
@@ -138,12 +173,7 @@
             <label for="advancedMode">Advanced Pattern</label>
         </div>
 
-        <div class="plot-type-selector">
-            <input type="radio" id="aggregated" name="plotMode" value="aggregated" checked>
-            <label for="aggregated">Simple Plot</label>
-            <input type="radio" id="discriminated" name="plotMode" value="discriminated">
-            <label for="discriminated">Discriminate by Country</label>
-        </div>
+
 
         <form id="plotForm">
             <div id="simpleControls">
@@ -188,7 +218,8 @@
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
         <div id="errorMessage" class="error-message"></div>
-        <div id="loading" class="loading">Generating visualization...<br>(May take up to 20s if fetching new data is required)</div>
+        <div id="loading" class="loading">Generating visualization...<br>(May take up to 60s if fetching new data is
+            required)</div>
         <!-- <div id="cacheWarning" class="error-message" style="display: none;">
             Warning: Data cache is empty. Please initialize the cache before proceeding.  <button id="initializeCacheBtn">Initialize Cache</button>
         </div> -->
@@ -423,11 +454,21 @@
 
                     // Plotly version
                     const plotData = JSON.parse(data.plot);
-                    Plotly.newPlot('plotContainer', plotData.data, plotData.layout);
-                    
+                    const layout = { ...plotData.layout };
+                    delete layout.height;
+                    delete layout.width;
+                    // delete layout.title.y;
+                    // delete layout.margin;
+                    // plotData.data[0].hole = 0.0;
+                    // layout.margin.b = 100;
+                    // layout.margin.t = 50;
+                    // layout.annotations[0].y = -0.1;
+                    // layout.autosize = true;
+                    Plotly.newPlot('plotContainer', plotData.data, layout, { responsive: false });
+
                     // Scroll to center the plot with smooth animation
-                    plotContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
+                    plotContainer.scrollIntoView({
+                        behavior: 'smooth',
                         block: 'center'
                     });
                 } else {
@@ -454,6 +495,48 @@
             setFormDateBounds();
             validateDates();
         });
+
+        let lastViewportWidth = window.innerWidth;
+        let lastViewportHeight = window.innerHeight;
+        let lastZoomLevel = window.devicePixelRatio;
+
+        window.addEventListener('resize', () => {
+            const currentViewportWidth = window.innerWidth;
+            const currentViewportHeight = window.innerHeight;
+            const currentZoomLevel = window.devicePixelRatio;
+
+            // Check if only the zoom level changed
+            if (currentZoomLevel !== lastZoomLevel) {
+                console.log('Zoom level changed, ignoring resize');
+                lastZoomLevel = currentZoomLevel;
+                return;
+            }
+
+            // Check if the viewport size has actually changed
+            if (currentViewportWidth !== lastViewportWidth || currentViewportHeight !== lastViewportHeight) {
+                console.log('Viewport size changed:', currentViewportWidth, currentViewportHeight);
+
+                const plotContainer = document.getElementById('plotContainer');
+                if (plotContainer.children.length > 0) {
+                    Plotly.Plots.resize('plotContainer');
+                }
+
+                lastViewportWidth = currentViewportWidth;
+                lastViewportHeight = currentViewportHeight;
+            }
+        });
+
+        window.onbeforeunload = function () {
+            window.scrollTo(0, 0);
+        }
+
+        // window.addEventListener('resize', () => {
+        //     const plotContainer = document.getElementById('plotContainer');
+        //     if (plotContainer.children.length > 0) {  // Only resize if there's a plot
+        //         Plotly.Plots.resize('plotContainer');
+        //     }
+        // });
+
     </script>
 </body>
 
