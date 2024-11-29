@@ -15,17 +15,9 @@
     <!-- 1200x630, jpg or png -->
     <meta property="og:url" content="https://portugal-electricity-mix.vercel.app">
     <meta property="og:type" content="website">
-<<<<<<< Updated upstream
-
-=======
-<<<<<<< Updated upstream
-    
-=======
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- <script src="https://d3js.org/d3.v7.min.js"></script> -->
 
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     <!-- Twitter Card tags -->
     <!-- <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Portugal Electricity Consumption Mix">
@@ -157,19 +149,7 @@
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.css" rel="stylesheet">
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.js"></script>
-<<<<<<< Updated upstream
     -->
-
-    <!-- Add Plotly script -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-=======
-<<<<<<< Updated upstream
-=======
-    -->
-
-    <!-- Add Plotly script -->
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 </head>
 
 <body>
@@ -384,18 +364,9 @@
         }
     </script>
 
-<<<<<<< Updated upstream
-    <div id="plotContainer">
-        <div id="plotControls" class="plot-controls" style="display: none;">
-            <h3 style="margin-top: 0;">Plot Controls</h3>
-=======
-<<<<<<< Updated upstream
-    <div id="plotContainer"></div>
-=======
     <div id="plotContainer">
         <div id="plotControls" class="plot-controls" style="display: none;">
             <h3 style="margin-top: 0; margin-bottom: 10px">Plot Controls</h3>
->>>>>>> Stashed changes
             <div>
                 <input type="checkbox" id="plotControlShowDetails" checked>
                 <label for="plotControlShowDetails">Show Details</label>
@@ -410,10 +381,6 @@
     </div>
 
     <!-- <div id="footer"></div> -->
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
     <script>
         // Load and insert the header
@@ -551,11 +518,6 @@
             setFormDateBounds();
             validateDates();
         });
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
 
         let lastViewportWidth = window.innerWidth;
         let lastViewportHeight = window.innerHeight;
@@ -610,8 +572,6 @@
                 data[0].texttemplate = "%{label}";
             }
 
-<<<<<<< Updated upstream
-=======
             // Change color
 
             // if (data[0].type === "sunburst") {
@@ -624,7 +584,7 @@
             //     const colors = {
             //         "PT": "#80b1d3",
             //         "ES": "#fb8072",
-            //         // "FR": "#8dd3c7", 
+            //         // "FR": "#8dd3c7",
             //         "FR": "#b3de69"
             //     };
 
@@ -643,7 +603,6 @@
 
 
 
->>>>>>> Stashed changes
             Plotly.newPlot('plotArea', data, layout, { responsive: false });
         }
 
