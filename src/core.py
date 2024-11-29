@@ -37,16 +37,12 @@ def initialize_cache():
 
 def generate_visualization(
         data_request: DataRequest, 
-        backend: str,
-        reset_cache: bool = False) -> Optional[object]:
+        config: dict):
     """
     Core visualization logic used by both CLI and API.
     Returns a Plotly figure object or None if visualization type is invalid or an error occurs.
     """
     data_fetcher = ENTSOEDataFetcher()
-    
-    if reset_cache:
-        data_fetcher.reset_cache()
 
     try:
         data = data_fetcher.get_data(data_request)
@@ -55,13 +51,20 @@ def generate_visualization(
             data.generation_es.empty or 
             data.flow_pt_to_es.empty or 
             data.flow_es_to_pt.empty):
-            logger.warning("No data found for the specified date range.")
-            return None
+            raise ValueError("No data found for the specified date range.")
         
-
-        fig = analyzer.plot(data, backend)
+        # if plot_calc_function == "plot":
+        #     if plot_type != "simple":
+        #         raise ValueError("plot_calc_function 'plot' only supports plot_type 'simple'")
+        #     fig = analyzer.plot(data, backend)
+        # elif plot_calc_function == "plot_discriminate_by_country":
+        #     fig = analyzer.plot_discriminate_by_country(data, backend, plot_type)
+        # else:
+        #     logger.warning(f"Invalid plot type: {plot_calc_function}")
+        #     return None
+        fig = analyzer.plot(data, config)
+            
         return fig
     except Exception as e:
         logger.exception(f"An error occurred during visualization generation: {e}") # Log the error with traceback
         return None
-

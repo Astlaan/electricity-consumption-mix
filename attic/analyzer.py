@@ -1,18 +1,32 @@
 from data_fetcher import Data
-# import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from typing import Dict
-from config import SOURCE_COLORS, COUNTRY_COLORS, PSR_TYPE_MAPPING
-from utils import get_active_psr_in_dataframe
-import plotly.express as px
+from config import PSR_TYPE_MAPPING
+from utils import get_active_psr_in_dataframe, apply_to_fields
 
 pd.set_option('display.max_columns', None)  # Show all columns
 pd.set_option('display.max_rows', None)     # Show all rows
 pd.set_option('display.width', None)        # Set width to expand to full display
 pd.set_option('display.max_colwidth', None)
 
-# cmap = plt.get_cmap('tab20')
+
+
+def _format_date_range(df: pd.DataFrame) -> str:
+    start_date = df.index.min()
+    end_date = df.index.max()
+    return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
+
+def _time_aggregation(df: pd.DataFrame) -> pd.DataFrame: # aggregate_by_source_type
+    """Aggregate data by source type only."""
+    # Remove columns where all values are 0
+    df = df.loc[:, (df != 0).any()]
+    # Fill any NaN values with 0
+    df = df.fillna(0) # TODO fix
+
+    # Group by source type (in case multiple B-codes map to same source)
+    grouped_data = df.mean()
+
+    return grouped_data
 
 def ensure_index_and_sorting(data: Data):
     # This is handy while the stash fixing saved/loaded indexes is not fixed
@@ -24,18 +38,8 @@ def ensure_index_and_sorting(data: Data):
         df = df[~df.index.duplicated(keep='last')] # Remove duplicates keeping last value
         return df
 
-    data.generation_pt = _ensure_index_and_sorting(data.generation_pt)
-    data.generation_es = _ensure_index_and_sorting(data.generation_es)
-    data.flow_pt_to_es = _ensure_index_and_sorting(data.flow_pt_to_es)
-    data.flow_es_to_pt = _ensure_index_and_sorting(data.flow_es_to_pt)
-
-    # Verify all dataframes have identical indexes
-    ref_index = data.generation_pt.index
-    for df_name, df in [('generation_es', data.generation_es),
-                       ('flow_pt_to_es', data.flow_pt_to_es),
-                       ('flow_es_to_pt', data.flow_es_to_pt)]:
-        if not df.index.equals(ref_index):
-            raise ValueError(f"Index mismatch in {df_name} compared to generation_pt")
+    apply_to_fields(data, _ensure_index_and_sorting)
+    data.assert_equal_length()
 
     return data
 
@@ -47,143 +51,144 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 
 
 
-def plot(data: Data):
+def plot(data: Data, mode: str):
+    print("FUNCTION: plot")
 
     # If start_time is a column, set it as index. If it's already the index, nothing changes
     data = ensure_index_and_sorting(data)
 
+    psr_types = list(PSR_TYPE_MAPPING.keys())
 
-    G_pt = data.generation_pt[data.generation_pt.columns.intersection(PSR_TYPE_MAPPING.keys())]
-    print("G_pt shape:", G_pt.shape)
-    print("G_pt head:\n", G_pt.head())
-
-    G_es = data.generation_es[data.generation_es.columns.intersection(PSR_TYPE_MAPPING.keys())]
-    print("G_es shape:", G_es.shape)
-    print("G_es head:\n", G_es.head())
-
+    G_pt = data.generation_pt[data.generation_pt.columns.intersection(psr_types)]
+    G_es = data.generation_es[data.generation_es.columns.intersection(psr_types)]
+    G_fr = data.generation_fr[data.generation_fr.columns.intersection(psr_types)]
     F_pt_es = data.flow_pt_to_es["Power"].values[:, None]
-    print("F_pt_es shape:", F_pt_es.shape)
-    print("F_pt_es head:\n", F_pt_es[:5])
-
     F_es_pt = data.flow_es_to_pt["Power"].values[:, None]
-    print("F_es_pt shape:", F_es_pt.shape)
-    print("F_es_pt head:\n", F_es_pt[:5])
+    F_fr_es = data.flow_fr_to_es["Power"].values[:, None]
+    F_es_fr = data.flow_es_to_fr["Power"].values[:, None]
 
-    flow_per_source_pt_es = F_pt_es * (G_pt/G_pt.sum(axis=1).values[0])
-    print("flow_per_source_pt_es shape:", flow_per_source_pt_es.shape)
-    print("flow_per_source_pt_es head:\n", flow_per_source_pt_es[:5])
+    # Without france
+    # flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
+    # flow_per_source_es_pt = F_es_pt * (G_es.div(G_es.sum(axis=1), axis=0))
+    # consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
+    
+    # With France
+    flow_per_source_fr_es = F_fr_es * (G_fr.div(G_fr.sum(axis=1), axis=0)) # TODO verify [0]!!!!!!!!!!!!!!!!!!!!!!
+    flow_per_source_es_fr = F_es_fr * (G_es.div(G_es.sum(axis=1), axis=0))
+    G_es_prime = G_es.sub(flow_per_source_es_fr, fill_value=0).add(flow_per_source_fr_es, fill_value=0)
 
-    flow_per_source_es_pt = F_es_pt * (G_es / G_es.sum(axis = 1).values[0])
-    print("flow_per_source_es_pt shape:", flow_per_source_es_pt.shape)
-    print("flow_per_source_es_pt head:\n", flow_per_source_es_pt[:5])
-    print("flow_per_source_es_pt NUCLEAR:\n", flow_per_source_es_pt["B14"])
-
-    print("IS EQUAL?: ", G_pt == G_pt.sub(flow_per_source_pt_es))
-
+    flow_per_source_pt_es = F_pt_es * (G_pt.div(G_pt.sum(axis=1), axis=0))
+    flow_per_source_es_pt = F_es_pt * (G_es_prime.div(G_es_prime.sum(axis=1), axis=0))
     consumption_per_source = G_pt.sub(flow_per_source_pt_es, fill_value=0).add(flow_per_source_es_pt, fill_value=0)
-    print("consumption_per_source shape:", consumption_per_source.shape)
-    print("consumption_per_source head:\n", consumption_per_source.head())
 
+    plot_func = globals()[f'{mode}']
+    fig = plot_func(consumption_per_source)
+    return fig
 
-    fig = _plot_internal(consumption_per_source)
-    # TODO  maybe this doesn't work due to the Power column, that isn't matched in the other dfs?
-    # probably fixed with the .values thing above
+def plot_discriminate_by_country(data: Data, mode: str):
+    """
+    Computes the consumption per source by isolating contributions from
+    Portuguese (PT), Spanish (ES), and French (FR) generations, according to the given mathematical expression.
 
+    Parameters:
+    - data (Data): A data object containing generation and flow information.
+    - mode (str): A string indicating the plotting mode.
 
-    # TODO: maybe this wont work since PT and ES don't have the same number of columns (ex. portugal doesnt have nuclear)
+    Returns:
+    - consumption_per_source (pd.DataFrame): Total consumption per source.
+    - contributions (dict): Dictionary containing individual contributions from PT, ES, and FR.
+    - fig: The generated plot figure.
+    """
+    print("FUNCTION: plot_discriminate_by_country")
+    # Ensure 'start_time' is set as index and sorted
+    data = ensure_index_and_sorting(data)
 
-    return fig # Return the figure object
+    # PSR_TYPE_MAPPING is assumed to be a predefined mapping of types
+    psr_types = list(PSR_TYPE_MAPPING.keys())
 
-
-
-def _plot_internal(df: pd.DataFrame) -> None:
-    # plt.figure(figsize=(10, 8))
-
-    df = _time_aggregation(df)
-
-    # Only plot non-zero values
-    mask = df > 0
-    df = df[mask]
-
-    if df.empty:
-        print("No non-zero data to plot")
-        return
-
-    # Get colors from colormap
-    # colors = cmap(np.linspace(0, 1, len(df)))
-
-    # plt.pie(df, labels=df.index, colors=colors,
-    #         autopct='%1.1f%%', textprops={'fontsize': 8})
-    # plt.title("Electricity Mix by Source Type")
-    # plt.axis('equal')
-    # plt.tight_layout()
-    # plt.show()
-
-    fig = px.pie(
-        values=df.values,
-        names=df.index,
-        title="Electricity Mix by Source Type",
-        #<br><sup>date range</sup>
-        color_discrete_sequence=px.colors.qualitative.Set3,
-        hole=.2 # Original was zero
-    )
+    # Extract generation data for PT, ES, FR
+    G_pt = data.generation_pt[data.generation_pt.columns.intersection(psr_types)]
+    G_es = data.generation_es[data.generation_es.columns.intersection(psr_types)]
+    G_fr = data.generation_fr[data.generation_fr.columns.intersection(psr_types)]
     
-    # Update layout to match matplotlib's style
-    # fig.update_traces(textinfo='percent+label+value', textposition='inside')
+    # Extract flow data for various transitions
+    F_pt_es = data.flow_pt_to_es["Power"].values[:, None]    # Flow from PT to ES
+    F_es_pt = data.flow_es_to_pt["Power"].values[:, None]    # Flow from ES to PT
+    F_fr_es = data.flow_fr_to_es["Power"].values[:, None]    # Flow from FR to ES
+    F_es_fr = data.flow_es_to_fr["Power"].values[:, None]    # Flow from ES to FR
 
-        # fig.update_layout(
-    #     showlegend=False,
-    #     width=800,
-    #     height=640,
-    #     title_x=0.5,
-    # )
+    # Compute total generation for normalization
+    sum_G_pt = G_pt.sum(axis=1).values[:, None] 
+    sum_G_es = G_es.sum(axis=1).values[:, None]
+    sum_G_fr = G_fr.sum(axis=1).values[:, None]
 
-    # Determine which slices should have outside labels (e.g., less than 5%)
-    threshold = 5
-    print(df)
-    percentages = df / df.sum() * 100
-    print("percentages\n",percentages)
-    pull_values = [0.0 if p >= threshold else 0.2 for p in percentages]
-    text_positions = ['inside' if p >= threshold else 'outside' for p in percentages]
+    # Avoid division by zero by replacing zeros with ones
+    sum_G_pt[sum_G_pt == 0] = 1  # TODO is this needed?
+    sum_G_es[sum_G_es == 0] = 1
+    sum_G_fr[sum_G_fr == 0] = 1
 
-    fig.update_traces(
-        textinfo='percent+label+value',
-        textposition=text_positions,
-        pull=pull_values,
-        # texttemplate='%{label}<br>%{value:,.2f}<br>%{percent:.1f}%',
-        texttemplate='%{label}<br>%{value:,.0f} MW<br>%{percent}',
-        textfont=dict(size=10),
-        insidetextorientation='horizontal'
-    )
+    # Compute Available ES Generation
+    Available_ES_Generation = sum_G_es - F_es_fr + F_fr_es
+    Available_ES_Generation[Available_ES_Generation == 0] = 1  # Avoid division by zero
+    # TODO is this needed?
 
-    fig.update_layout(
-    showlegend=True,  # Enable legend for better readability
-    width=1000,        # Slightly wider to accommodate outside labels
-    height=700,
-    title_x=0.5,
-    legend=dict(
-        orientation="v",
-        yanchor="middle",
-        y=0.5,
-        xanchor="right",
-        x=1.1
-    ),
-    annotations=[dict(
-        text="Source: ENTSO-E",
-        showarrow=False,
-        x=0.5,
-        y=-0.1,
-        xref="paper",
-        yref="paper"
-    )]
-    )
-    
+    # ------------------------------
+    # Define Individual Contributions
+    # ------------------------------
+
+    # 1. Portuguese Contribution (Gpt_contribution)
+    Gpt_contribution = G_pt * (1 - F_pt_es / sum_G_pt)
+
+    # 2. Spanish Contribution (Ges_contribution)
+    # Compute ES fraction
+    ES_fraction = (F_es_pt * (1 - F_es_fr / sum_G_es)) / Available_ES_Generation
+    # Expand dimensions to match G_es dimensions
+    ES_fraction = np.tile(ES_fraction, (1, G_es.shape[1]))
+    Ges_contribution = G_es.values * ES_fraction ## TODO why values here?
+
+    # 3. French Contribution (Gfr_contribution)
+    # Compute FR fraction
+    FR_fraction = (F_es_pt * (F_fr_es / sum_G_fr)) / Available_ES_Generation
+    # Expand dimensions to match G_fr dimensions
+    FR_fraction = np.tile(FR_fraction, (1, G_fr.shape[1]))
+    Gfr_contribution = G_fr.values * FR_fraction  # TODO why values here?
+
+    # Convert contributions to DataFrames with appropriate indices and columns
+    Ges_contribution = pd.DataFrame(Ges_contribution, index=G_es.index, columns=G_es.columns)
+    Gfr_contribution = pd.DataFrame(Gfr_contribution, index=G_fr.index, columns=G_fr.columns)
+
+    # ------------------------------
+    # Compute Total Consumption per Source
+    # ------------------------------
+
+    consumption_per_source = Gpt_contribution.copy()
+    consumption_per_source = consumption_per_source.add(Ges_contribution, fill_value=0)
+    consumption_per_source = consumption_per_source.add(Gfr_contribution, fill_value=0)
+
+    # ------------------------------
+    # Organize the Contributions into a Dictionary
+    # ------------------------------
+    contributions = {
+        'PT': Gpt_contribution,
+        'ES': Ges_contribution,
+        'FR': Gfr_contribution
+    }
+
+    # ------------------------------
+    # Plotting (Optional)
+    # ------------------------------
+    plot_func = globals().get(f'{mode}', None)
+    if plot_func:
+        fig = plot_func(consumption_per_source)
+    else:
+        raise ValueError(f"Plotting function '{mode}' not found in globals.")
 
     return fig
 
 
 
-def _plot_internal_2(df: pd.DataFrame) -> None:
+def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
+    import plotly.express as px
     df = _time_aggregation(df)
 
     # Only plot non-zero values
@@ -205,7 +210,7 @@ def _plot_internal_2(df: pd.DataFrame) -> None:
     fig = px.pie(
         values=df.values,
         names=df.index,
-        title="Electricity Mix by Source Type",
+        title="Electricity Mix by Source Type (Averaged Power)",
         color_discrete_sequence=px.colors.qualitative.Set3,
         hole=.2
     )
@@ -244,144 +249,144 @@ def _plot_internal_2(df: pd.DataFrame) -> None:
     
     return fig
 
-def _format_date_range(df: pd.DataFrame) -> str:
-    start_date = df.index.min()
-    end_date = df.index.max()
-    return f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}"
 
-def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
-    """Aggregate data by source type only."""
-    # Remove columns where all values are 0
-    df = df.loc[:, (df != 0).any()]
-    # Fill any NaN values with 0
-    df = df.fillna(0)
+def _plot_internal_bokeh_2(df: pd.DataFrame, *_):
+    from bokeh.plotting import figure
+    from bokeh.transform import cumsum
+    from bokeh.palettes import Set3
+    from math import pi
+    from bokeh.models import ColumnDataSource, Title, Label
 
-    # Group by source type (in case multiple B-codes map to same source)
-    grouped_data = df.mean()
+    data = _time_aggregation(df)
+    
+    # Only plot non-zero values
+    mask = data > 0
+    data = data[mask]
 
-    return grouped_data
-# def _plot_internal(df: pd.DataFrame) -> None:
-#     plt.figure(figsize=(10, 8))
+    if data.empty:
+        print("No non-zero data to plot")
+        return
 
-#     data = _aggregate_by_source_type(df)
+    # Prepare data
+    total = data.sum()
+    source_data = pd.DataFrame({
+        'source': data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x)),
+        'value': data.values,
+        'percentage': data / total * 100,
+        'angle': data.values / total * 2 * pi,
+        'color': Set3[12][:len(data)] if len(data) <= 12 else (Set3[8] * (len(data) // 8 + 1))[:len(data)]
+    })
+    
+    source_data['start_angle'] = source_data['angle'].cumsum().shift(fill_value=0)
+    source_data['end_angle'] = source_data['start_angle'] + source_data['angle']
+    
+    source = ColumnDataSource(source_data)
 
-#     # Only plot non-zero values
-#     mask = data > 0
-#     data = data[mask]
+    # Modify the figure creation to keep original size
+    p = figure(height=700, width=800,  # Return to original dimensions
+              tools="hover", tooltips="@source: @value{0,0.0} MW (@percentage{0.1}%)",
+              x_range=(-1.5, 1.5), y_range=(-1.5, 1.5))
 
-#     if data.empty:
-#         print("No non-zero data to plot")
-#         return
+    # Draw the outer wedges
+    p.wedge(x=0, y=0,
+            start_angle='start_angle',
+            end_angle='end_angle',
+            radius=1.0,
+            color='color',
+            legend_field='source',
+            source=source)
+    
+    # Draw the inner circle to create the donut hole
+    p.circle(x=0, y=0, radius=0.3, fill_color="white", line_color=None)
 
-#     # Get colors from colormap
-#     colors = self.cmap(np.linspace(0, 1, len(data)))
+    # Customize appearance
+    p.axis.visible = False
+    p.grid.grid_line_color = None
+    p.outline_line_color = None # type: ignore
+    
+    # Add title
+    p.add_layout(Title(text="Portugal Electricity Consumption Mix by Source Type (Averaged Power)", text_font_size="16px"), 'above')
+    
+    # Add source attribution
+    source_label = Label(x=0, y=-1.5, text="Source: ENTSO-E",  # Changed y from -1.3 to -1.5
+                        text_align='center', text_baseline='top')
+    p.add_layout(source_label)
+    
+    # Modify the legend settings to move it slightly more to the right
+    p.legend.location = "right"
+    p.legend.click_policy = "hide"
+    p.legend.border_line_color = None
+    p.legend.background_fill_alpha = 0.7
+    p.legend.glyph_height = 20
+    p.legend.glyph_width = 20
+    p.legend.label_text_font_size = '10pt'
+    p.legend.margin = 20  # Add margin to move legend further right
 
-#     plt.pie(data, labels=data.index, colors=colors,
-#             autopct='%1.1f%%', textprops={'fontsize': 8})
-#     plt.title("Electricity Mix by Source Type")
-#     plt.axis('equal')
-#     plt.tight_layout()
-#     plt.show()
+    return p
 
-# def plot_source_country_pie(self, df: pd.DataFrame) -> None:
-#     plt.figure(figsize=(12, 10))
+def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool|str] = None):
+    import plotly.express as px
+    """Creates a sunburst chart with hierarchy determined by 'by' parameter."""
 
-#     # Clean and prepare data
-#     df = df.loc[:, (df != 0).any()]
-#     df = df.fillna(0)
+    # Time-aggregate each country's data first
+    
+    total_hours = len(data_aggregated)
+    data_by_country_time_aggregated = {
+        country: _time_aggregation(df) 
+        for country, df in data_by_country.items()
+    }
 
-#     # Prepare data for plotting
-#     labels = []
-#     sizes = []
-#     colors = []
+    # Convert dictionary of Series into a single DataFrame
+    df_list = []
+    for country, series in data_by_country_time_aggregated.items():
+        # Convert series to DataFrame
+        df = pd.DataFrame({
+            'power': series,
+            'country': country,
+            'source': series.index
+        })
+        df_list.append(df)
 
-#     for country in ["Portugal", "Spain"]:
-#         country_prefix = f"{country[:2]}_"
-#         country_columns = [col for col in df.columns if col.startswith(country_prefix)]
+    # Concatenate all DataFrames and calculate extras
+    combined_df = pd.concat(df_list, ignore_index=True)
+    combined_df['source'] = combined_df['source'].map(lambda x: PSR_TYPE_MAPPING.get(x, x))
+    combined_df['national_percentage'] = combined_df.groupby('country')['power'].transform(lambda x: x/x.sum() * 100)
+    combined_df['global_percentage'] = combined_df['power']/combined_df['power'].sum() * 100
+    combined_df['energy'] = combined_df['power'] * total_hours
+    combined_df['energy_string'] = combined_df['energy'].map(_calc_energy_string)
 
-#         for col in country_columns:
-#             source = col[3:]  # Remove country prefix
-#             value = df[col].mean()
-#             if value > 0:  # Only include non-zero values
-#                 labels.append(f"{country}\n{source}")
-#                 sizes.append(value)
-#                 colors.append(
-#                     self.source_colors.get(source, self.source_colors["Other"])
-#                 )
-
-#     if not sizes:
-#         print("No non-zero data to plot")
-#         return
-
-#     plt.pie(
-#         sizes,
-#         labels=labels,
-#         colors=colors,
-#         autopct="%1.1f%%",
-#         textprops={"fontsize": 8},
-#     )
-#     plt.title(f"Electricity Mix by Source Type and Country")
-#     #<br><sup>date range</sup>
-#     plt.axis("equal")
-#     plt.tight_layout()
-#     plt.show()
+    
+    print(combined_df)
 
 
-# def plot_nested_pie(self, df: pd.DataFrame) -> None:
-#     plt.figure(figsize=(14, 12))
+    fig = px.sunburst(combined_df, path=['country', 'source'], values='power', custom_data=['power', 'global_percentage', 'national_percentage', 'energy_string'])
 
-#     # Clean and prepare data
-#     df = df.loc[:, (df != 0).any()]
-#     df = df.fillna(0)
+    # Add a second hover template for child nodes only
+    fig.update_traces(insidetextorientation='radial')
 
-#     # Prepare outer ring (countries)
-#     pt_data = df[[col for col in df.columns if col.startswith("PT_")]].mean()
-#     es_data = df[[col for col in df.columns if col.startswith("ES_")]].mean()
-#     country_sizes = [pt_data.sum(), es_data.sum()]
 
-#     if sum(country_sizes) == 0:
-#         print("No non-zero data to plot")
-#         return
+    # fig.update_traces(
+    #     hovertemplate='<b>%{id}</b><br>' +
+    #                   '%{customdata[2]:.1f}% of %{parent}<br>' +
+    #                   '%{customdata[1]:.1f}% of total<br>' +
+    #                   '%{customdata[0]:.0f} MW (average)<br>' +
+    #                   '%{customdata[3]}' +
+    #                   '<extra></extra>',
+    #     level = 0
+    # )    
 
-#     country_colors = [self.country_colors[country] for country in ["Portugal", "Spain"]]
+    # fig.update_traces(
+    #     hovertemplate='<b>%{id}</b><br>' +
+    #                   '%{customdata[1]:.1f}% of total<br>' +
+    #                   '%{customdata[0]:.0f} MW (average)<br>' +
+    #                   '%{customdata[3]}' +
+    #                   '<extra></extra>',
+    #     level = 1
+    # )
+    
+    fig.update_traces(hovertemplate=hovertemplate)
 
-#     # Prepare inner ring (sources)
-#     source_sizes = []
-#     source_colors = []
-#     source_labels = []
-
-#     for country_data, country in zip([pt_data, es_data], ["Portugal", "Spain"]):
-#         if not country_data.empty:
-#             for source, value in country_data.items():
-#                 if value > 0:  # Only include non-zero values
-#                     source_sizes.append(value)
-#                     source_colors.append(
-#                         self.source_colors.get(source[3:], self.source_colors["Other"])
-#                     )
-#                     source_labels.append(f"{country}\n{source[3:]}")
-
-#     # Plot outer ring (countries)
-#     plt.pie(
-#         country_sizes,
-#         colors=country_colors,
-#         radius=1.3,
-#         labels=["Portugal", "Spain"],
-#         autopct="%1.1f%%",
-#         textprops={"fontsize": 10},
-#     )
-
-#     # Plot inner ring (sources)
-#     if source_sizes:
-#         plt.pie(
-#             source_sizes,
-#             colors=source_colors,
-#             radius=1.0,
-#             labels=source_labels,
-#             autopct="%1.1f%%",
-#             textprops={"fontsize": 8},
-#         )
-
-#     plt.title("Electricity Mix by Country and Source Type")
-#     plt.axis("equal")
-#     plt.tight_layout()
-#     plt.show()
+    
+    # import sys
+    # sys.exit()
+    return fig

@@ -33,11 +33,14 @@ def main():
         print("No date parameters provided. Shutting down.")
         return
     
+    config = dict(
+        plot_mode=args.plot_mode if args.plot_mode else "aggregated"
+    )
+    
 
     fig = generate_visualization(
         data_request,
-        backend=args.visualize,
-        reset_cache=args.reset_cache
+        config=config
     )
     
     if fig is not None:
@@ -88,10 +91,17 @@ def parse_arguments():
         help="End date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM:SS)",
     )
     parser.add_argument(
-        "--visualize",
-        # choices=["none", "simple", "country-source", "source-country"],
-        default="none",
-        help="Type of visualization to generate",
+        "--plot_calc_function",
+        default="plot_discriminate_by_country",
+        help="Plot calculating function",
+    )
+    # parser.add_argument(
+    #     "--backend",
+    #     help="Type of visualization to generate",
+    # )
+    parser.add_argument(
+        "--plot-mode",
+        help="Type of plot",
     )
     parser.add_argument(
         "--reset-cache", action="store_true", help="Reset the data cache"

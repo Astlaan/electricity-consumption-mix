@@ -5,8 +5,8 @@ import sys
 import gc
 import os
 from datetime import datetime
-from bokeh.embed import json_item
 
+# Add the project root to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from data_fetcher import SimpleInterval
 from time_pattern import AdvancedPattern  # type: ignore # Add this import
@@ -14,46 +14,72 @@ import utils as utils
 from core import generate_visualization
 
 # Configure logging to write to stderr which Vercel can capture
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
+
+def sanitize_exception(e):
+    # Convert exception to string
+    error_message = str(e)
+    # Check if the API key is in the error message
+    api_key = os.getenv("ENTSOE_API_KEY") 
+    if api_key:
+        if api_key in error_message:
+            error_message = error_message.replace(api_key, '<API-KEY>')
+    return error_message
+
+
 def handle_request(request_body):
-    # Parse request body
     body = json.loads(request_body)
     
-    if body['mode'] == 'simple':
-        data_request = SimpleInterval(
-            start_date=datetime.fromisoformat(body['start_date']), 
-            end_date=datetime.fromisoformat(body['end_date'])
-            )
-    else:
-        data_request = AdvancedPattern(
-            years=body["years"],
-            months=body["months"],
-            days=body["days"],
-            hours=body["hours"])
-
     try:    
-        fig = generate_visualization(data_request, backend="_plot_internal_bokeh_2")
-    except AssertionError as e: # TODO fix
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'error': 'Invalid date range: Dates must be whole hours and within available range'})
-        }
+        if body['mode'] == 'simple':
+            data_request = SimpleInterval(
+                start_date=datetime.fromisoformat(body['start_date']), 
+                end_date=datetime.fromisoformat(body['end_date'])
+                )
+        else:
+            data_request = AdvancedPattern(
+                years=body["years"],
+                months=body["months"],
+                days=body["days"],
+                hours=body["hours"])
+
+        fig = generate_visualization(
+                data_request, 
+                config=body  # Default to 'plot' if not specified
+            )
+    except Exception as e:
+            # Sanitize the exception message
+            sanitized_error = sanitize_exception(e)
+            logger.error("An unexpected error occurred: %s", sanitized_error, exc_info=True)
+            
+            # Return the sanitized error to the client
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': f'Error: {sanitized_error}'
+                })
+            }
     
     if fig is None: # TODO fix
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': 'No data available for the specified time range'})
+            'body': json.dumps({'error': 'No data available for the specified time interval(s)'})
         }
 
-    # Convert Bokeh figure to JSON
-    plot_json = json_item(fig) # type: ignore
+    # Convert Plotly figure to JSON
+    if "backend" in body:
+        if "bokeh" in body["backend"]:
+            from bokeh.embed import json_item
+            plot_json = json_item(fig)  # type: ignore
+        elif "plotly" in body["backend"]:
+            plot_json = fig.to_json()
+        else:
+            raise ValueError(f"Backend {body["backend"]} not supported")
+    else: # Assume plotly
+        plot_json = fig.to_json()
+
     
     return {
         'statusCode': 200,
@@ -82,4 +108,3 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         self.wfile.write(b"Hello, World!") # Placeholder for GET request
-

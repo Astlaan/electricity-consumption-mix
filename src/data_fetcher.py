@@ -10,13 +10,13 @@ import logging
 import shutil
 from dataclasses import dataclass, fields
 import aiofiles
+import time
 
 
 from time_pattern import AdvancedPattern, AdvancedPatternRule
 import time_pattern
 import utils
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Note: All datetimes are assumed to be in UTC, even though they're stored as naive datetimes
@@ -77,10 +77,15 @@ class ENTSOEDataFetcher:
 
     def get_data(self, data_request: DataRequest, progress_callback=None) -> Data:
         """Fetch data according to the request type."""
+        start_time = time.time()
         if isinstance(data_request, SimpleInterval):
-            return self._get_data_simple_interval(data_request, progress_callback)
+            result = self._get_data_simple_interval(data_request, progress_callback)
+            print(f"[get_data] total duration: {time.time() - start_time}s")
+            return result
         elif isinstance(data_request, AdvancedPattern):
-            return self._get_data_advanced_pattern(data_request)
+            result = self._get_data_advanced_pattern(data_request)
+            print(f"[get_data] total duration: {time.time() - start_time}s")
+            return result
         else:
             raise ValueError(f"Invalid data request type: {type(data_request)}")
 
@@ -181,9 +186,9 @@ class ENTSOEDataFetcher:
         index_min = result.index.min()
         index_length = len(result.index)
 
-        print("Index max:", index_max)
-        print("Index min:", index_min)
-        print("Index length:", index_length)
+        logger.debug("Index max:", index_max)
+        logger.debug("Index min:", index_min)
+        logger.debug("Index length:", index_length)
         return result
         
     async def _save_to_cache(
@@ -355,12 +360,16 @@ class ENTSOEDataFetcher:
     async def _make_request_async(
         self, session: aiohttp.ClientSession, params: Dict[str, Any]
     ) -> str:
-        logger.debug(f"[_make_request_async]: {params}")
         params["securityToken"] = self.security_token
-
+        start_dt = datetime.now()
+        print(f"[_make_request_async (start)]: {start_dt.strftime('%H:%M:%S')}s: {params}")
         async with session.get(self.BASE_URL, params=params) as response:
             response.raise_for_status()
-            return await response.text()
+            text = await response.text()
+            end_dt = datetime.now()
+            elapsed = (end_dt - start_dt).total_seconds()
+            print(f"[_make_request_async (finished)] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: {params}")
+            return text
 
     async def _fetch_data_in_chunks(
         self, params: Dict[str, Any], start_date: datetime, end_date: datetime
@@ -392,7 +401,8 @@ class ENTSOEDataFetcher:
         logger.debug(f"Requested date range: {start_date} to {end_date}")
 
         fetch_start = start_date
-        fetch_end = end_date
+        # fetch_end = end_date
+        fetch_end = utils.maximum_date_end_exclusive()
 
         if cached_data is not None: # FULL OR PARTIAL HIT
             df, metadata = cached_data
@@ -452,12 +462,15 @@ class ENTSOEDataFetcher:
     ) -> pd.DataFrame:
         params = {
             "documentType": "A75",
-            "processType": "A16",
+            "processType": "A16", 
             "in_Domain": country_code,
             "outBiddingZone_Domain": country_code,
         }
-
+        start_dt = datetime.now()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        end_dt = datetime.now()
+        elapsed = (end_dt - start_dt).total_seconds()
+        print(f"[async_get_generation_data] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: country: {params['in_Domain']}")
         if progress_callback:
             progress_callback()
         return df
@@ -470,8 +483,11 @@ class ENTSOEDataFetcher:
             "in_Domain": in_domain,
             "out_Domain": out_domain,
         }
-
+        start_dt = datetime.now()
         df = await self._fetch_and_cache_data(params, start_date, end_date)
+        end_dt = datetime.now()
+        elapsed = (end_dt - start_dt).total_seconds()
+        print(f"[async_get_physical_flows] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: from: {out_domain} to {in_domain}")
         if progress_callback:
             progress_callback()
         return df

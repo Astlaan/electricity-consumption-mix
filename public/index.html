@@ -4,23 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <!-- Favicon (.ico, 32x32) -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    
+
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="Portugal Electricity Consumption Mix">
     <meta property="og:description" content="Portugal's electricity consumption taking imports into account.">
     <meta property="og:image" content="https://portugal-electricity-mix.vercel.app/og-image.jpg"> <!-- 1200x630, jpg or png -->
     <meta property="og:url" content="https://portugal-electricity-mix.vercel.app">
     <meta property="og:type" content="website">
-    
+
     <!-- Twitter Card tags -->
     <!-- <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Portugal Electricity Consumption Mix">
     <meta name="twitter:description" content="Analyze and visualize Portugal's electricity consumption patterns and energy mix">
     <meta name="twitter:image" content="https://your-domain.vercel.app/og-image.png"> -->
-    
+
     <title>Portugal Electricity Consumption Mix</title>
     <style>
         body {
@@ -76,11 +76,38 @@
             margin-right: 10px;
         }
 
-        #plotContainer img {
+
+        /* #plotContainer {
+            display: flex;
+            justify-content: center;
             max-width: 100%;
-            height: auto;
+            width: auto;
+            height: 70vh;
+            margin: 20px 0;
+        } */
+
+        #plotContainer {
+            width: 100%;
+            height: 90vh;
+            /* Adjust as needed */
             margin: 20px 0;
         }
+
+        /* #plotContainer>div {
+            width: 100% !important;
+            height: 100% !important;
+        } */
+
+        .plot-container.plotly {
+            justify-items: center;
+        }
+
+        /* #plotContainer img {
+            max-width: 100%;
+            width: auto;
+            height: 80vh;
+            margin: 20px 0;
+        } */
 
         .time-field {
             margin: 10px 0;
@@ -101,24 +128,51 @@
             width: 300px;
             padding: 5px;
         }
+
+        .plot-type-selector {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
+        .plot-type-selector label {
+            margin-right: 15px;
+        }
     </style>
-    <!-- Add these in the <head> section -->
+    <!-- Comment out Bokeh scripts and styles -->
+    <!--
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.css" rel="stylesheet">
     <link href="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.css" rel="stylesheet">
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.3.4.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.3.4.min.js"></script>
+    -->
+
+    <!-- Add Plotly script -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
+    <div id="header"></div>
     <h1>Portugal Electricity Consumption Mix</h1>
 
     <div class="form-container">
+        <!-- <div class="plot-type-selector"> -->
+        <div class="mode-selector">
+            <input type="radio" id="discriminated" name="plotMode" value="discriminated" checked>
+            <label for="discriminated">Discriminated by Country</label>
+            <input type="radio" id="aggregated" name="plotMode" value="aggregated">
+            <label for="aggregated">Aggregated by Source</label>
+        </div>
+
         <div class="mode-selector">
             <input type="radio" id="simpleMode" name="timeMode" value="simple" checked>
             <label for="simpleMode">Simple Interval</label>
             <input type="radio" id="advancedMode" name="timeMode" value="advanced">
             <label for="advancedMode">Advanced Pattern</label>
         </div>
+
+
 
         <form id="plotForm">
             <div id="simpleControls">
@@ -136,7 +190,8 @@
                     <!-- <span>Empty fields means no constraints (all years considered). Ranges (eg. 2020-2023) are inclusive</span><br><br> -->
                     <label for="years">Years:</label>
                     <input type="text" id="years" placeholder="e.g., 2015, 2017, 2020-2023">
-                    <span class="help-text">Empty means no constraint (all years considered). Ranges (eg. 2020-2023) are inclusive</span>
+                    <span class="help-text">Empty means no constraint (all years considered). Ranges (eg. 2020-2023) are
+                        inclusive</span>
                 </div>
                 <div class="time-field">
                     <label for="months">Months:</label>
@@ -152,8 +207,9 @@
                     <label for="hours">Hours:</label>
                     <input type="text" id="hours" placeholder="e.g., 20-23, 23-2">
                     <span class="help-text">
-                        Valid values: [0, 23]. (UTC timezone!) 
-                        <br>Each selected hour represents the interval from that hour's start, till the start of the next hour. 
+                        Valid values: [0, 23]. (UTC timezone!)
+                        <br>Each selected hour represents the interval from that hour's start, till the start of the
+                        next hour.
                         <br>5 represents the interval from 5am-6am
                         <br>14-17 represents the interval 2pm-6pm.</span>
                 </div>
@@ -161,7 +217,8 @@
             <button type="submit" id="submitBtn">Generate Plot</button>
         </form>
         <div id="errorMessage" class="error-message"></div>
-        <div id="loading" class="loading">Generating visualization...</div>
+        <div id="loading" class="loading">Generating visualization...<br>(May take up to 60s if fetching new data is
+            required)</div>
         <!-- <div id="cacheWarning" class="error-message" style="display: none;">
             Warning: Data cache is empty. Please initialize the cache before proceeding.  <button id="initializeCacheBtn">Initialize Cache</button>
         </div> -->
@@ -309,7 +366,23 @@
 
     <div id="plotContainer"></div>
 
+    <!-- <div id="footer"></div> -->
+
     <script>
+        // Load and insert the header
+        fetch('/header.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('header').innerHTML = html;
+            });
+
+        // Load and insert the footer
+        fetch('/footer.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('footer').innerHTML = html;
+            });
+
         async function submitForm(e) {
             e.preventDefault();
 
@@ -324,17 +397,20 @@
 
             try {
                 const mode = document.querySelector('input[name="timeMode"]:checked').value;
+                const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
                 let requestData;
 
                 if (mode === 'simple') {
                     requestData = {
                         mode: 'simple',
+                        plot_mode: plotMode,
                         start_date: document.getElementById('start_date').value,
                         end_date: document.getElementById('end_date').value
                     };
                 } else {
                     requestData = {
                         mode: 'advanced',
+                        plot_mode: plotMode,
                         years: document.getElementById('years').value,
                         months: document.getElementById('months').value,
                         days: document.getElementById('days').value,
@@ -350,9 +426,21 @@
                     body: JSON.stringify(requestData)
                 });
 
-                const data = await response.json();
+                const textResponse = await response.text();
+                let data;
+
+                try {
+                    // Try to parse it as JSON
+                    data = JSON.parse(textResponse);
+                } catch (parseError) {
+                    // If it's not valid JSON, throw an error with the text response
+                    throw new Error(textResponse || 'Invalid server response');
+                }
 
                 if (!response.ok) {
+                    if (response.status == 504) {
+                        throw new Error("Error: Backend timeout");
+                    }
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
@@ -360,8 +448,28 @@
                     // Clear previous plot and error
                     plotContainer.innerHTML = '';
                     errorMessage.style.display = 'none';
-                    // Render the Bokeh plot
-                    Bokeh.embed.embed_item(data.plot, 'plotContainer');
+                    // Bokeh version
+                    // Bokeh.embed.embed_item(data.plot, 'plotContainer');
+
+                    // Plotly version
+                    const plotData = JSON.parse(data.plot);
+                    const layout = { ...plotData.layout };
+                    delete layout.height;
+                    delete layout.width;
+                    // delete layout.title.y;
+                    // delete layout.margin;
+                    // plotData.data[0].hole = 0.0;
+                    // layout.margin.b = 100;
+                    // layout.margin.t = 50;
+                    // layout.annotations[0].y = -0.1;
+                    // layout.autosize = true;
+                    Plotly.newPlot('plotContainer', plotData.data, layout, { responsive: false });
+
+                    // Scroll to center the plot with smooth animation
+                    plotContainer.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
                 } else {
                     throw new Error('No plot data received');
                 }
@@ -386,6 +494,48 @@
             setFormDateBounds();
             validateDates();
         });
+
+        let lastViewportWidth = window.innerWidth;
+        let lastViewportHeight = window.innerHeight;
+        let lastZoomLevel = window.devicePixelRatio;
+
+        window.addEventListener('resize', () => {
+            const currentViewportWidth = window.innerWidth;
+            const currentViewportHeight = window.innerHeight;
+            const currentZoomLevel = window.devicePixelRatio;
+
+            // Check if only the zoom level changed
+            if (currentZoomLevel !== lastZoomLevel) {
+                console.log('Zoom level changed, ignoring resize');
+                lastZoomLevel = currentZoomLevel;
+                return;
+            }
+
+            // Check if the viewport size has actually changed
+            if (currentViewportWidth !== lastViewportWidth || currentViewportHeight !== lastViewportHeight) {
+                console.log('Viewport size changed:', currentViewportWidth, currentViewportHeight);
+
+                const plotContainer = document.getElementById('plotContainer');
+                if (plotContainer.children.length > 0) {
+                    Plotly.Plots.resize('plotContainer');
+                }
+
+                lastViewportWidth = currentViewportWidth;
+                lastViewportHeight = currentViewportHeight;
+            }
+        });
+
+        window.onbeforeunload = function () {
+            window.scrollTo(0, 0);
+        }
+
+        // window.addEventListener('resize', () => {
+        //     const plotContainer = document.getElementById('plotContainer');
+        //     if (plotContainer.children.length > 0) {  // Only resize if there's a plot
+        //         Plotly.Plots.resize('plotContainer');
+        //     }
+        // });
+
     </script>
 </body>
 
