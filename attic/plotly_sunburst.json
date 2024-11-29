@@ -1,0 +1,1133 @@
+{
+    "data": [
+        {
+            "customdata": [
+                [
+                    "\u003cb\u003ePT\u003c\u002fb\u003e\u003cbr\u003e79.0% of total\u003cbr\u003e4855 _overlined('MW') (average)\u003cbr\u003e543.7 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fBiomass\u003c\u002fb\u003e\u003cbr\u003e5.8% of PT\u003cbr\u003e4.6% of total\u003cbr\u003e283 MW (average)\u003cbr\u003e31.67 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fFossil Gas\u003c\u002fb\u003e\u003cbr\u003e19.2% of PT\u003cbr\u003e15.1% of total\u003cbr\u003e930 MW (average)\u003cbr\u003e104.2 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fHydro Pumped Storage\u003c\u002fb\u003e\u003cbr\u003e12.6% of PT\u003cbr\u003e10.0% of total\u003cbr\u003e613 MW (average)\u003cbr\u003e68.61 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fHydro Run-of-river and poundage\u003c\u002fb\u003e\u003cbr\u003e14.0% of PT\u003cbr\u003e11.1% of total\u003cbr\u003e680 MW (average)\u003cbr\u003e76.11 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fHydro Water Reservoir\u003c\u002fb\u003e\u003cbr\u003e9.5% of PT\u003cbr\u003e7.5% of total\u003cbr\u003e460 MW (average)\u003cbr\u003e51.56 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fSolar\u003c\u002fb\u003e\u003cbr\u003e7.0% of PT\u003cbr\u003e5.6% of total\u003cbr\u003e342 MW (average)\u003cbr\u003e38.26 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fWind Onshore\u003c\u002fb\u003e\u003cbr\u003e31.2% of PT\u003cbr\u003e24.6% of total\u003cbr\u003e1514 MW (average)\u003cbr\u003e169.5 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fOther\u003c\u002fb\u003e\u003cbr\u003e0.6% of PT\u003cbr\u003e0.5% of total\u003cbr\u003e31 MW (average)\u003cbr\u003e3.512 GWh"
+                ],
+                [
+                    "\u003cb\u003ePT\u002fWind Offshore\u003c\u002fb\u003e\u003cbr\u003e0.1% of PT\u003cbr\u003e0.0% of total\u003cbr\u003e3 MW (average)\u003cbr\u003e293.3 MWh"
+                ],
+                [
+                    "\u003cb\u003eES\u003c\u002fb\u003e\u003cbr\u003e19.3% of total\u003cbr\u003e1184 _overlined('MW') (average)\u003cbr\u003e132.6 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fBiomass\u003c\u002fb\u003e\u003cbr\u003e1.6% of ES\u003cbr\u003e0.3% of total\u003cbr\u003e19 MW (average)\u003cbr\u003e2.079 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fFossil Gas\u003c\u002fb\u003e\u003cbr\u003e30.8% of ES\u003cbr\u003e5.9% of total\u003cbr\u003e364 MW (average)\u003cbr\u003e40.78 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fFossil Hard coal\u003c\u002fb\u003e\u003cbr\u003e1.4% of ES\u003cbr\u003e0.3% of total\u003cbr\u003e16 MW (average)\u003cbr\u003e1.82 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fFossil Oil\u003c\u002fb\u003e\u003cbr\u003e0.1% of ES\u003cbr\u003e0.0% of total\u003cbr\u003e1 MW (average)\u003cbr\u003e135.5 MWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fHydro Run-of-river and poundage\u003c\u002fb\u003e\u003cbr\u003e3.0% of ES\u003cbr\u003e0.6% of total\u003cbr\u003e36 MW (average)\u003cbr\u003e4.009 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fHydro Water Reservoir\u003c\u002fb\u003e\u003cbr\u003e6.7% of ES\u003cbr\u003e1.3% of total\u003cbr\u003e79 MW (average)\u003cbr\u003e8.852 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fNuclear\u003c\u002fb\u003e\u003cbr\u003e19.9% of ES\u003cbr\u003e3.8% of total\u003cbr\u003e236 MW (average)\u003cbr\u003e26.44 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fOther renewable\u003c\u002fb\u003e\u003cbr\u003e0.3% of ES\u003cbr\u003e0.1% of total\u003cbr\u003e3 MW (average)\u003cbr\u003e369.4 MWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fSolar\u003c\u002fb\u003e\u003cbr\u003e20.0% of ES\u003cbr\u003e3.9% of total\u003cbr\u003e237 MW (average)\u003cbr\u003e26.56 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fWaste\u003c\u002fb\u003e\u003cbr\u003e0.8% of ES\u003cbr\u003e0.2% of total\u003cbr\u003e10 MW (average)\u003cbr\u003e1.069 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fWind Onshore\u003c\u002fb\u003e\u003cbr\u003e12.7% of ES\u003cbr\u003e2.4% of total\u003cbr\u003e150 MW (average)\u003cbr\u003e16.83 GWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fOther\u003c\u002fb\u003e\u003cbr\u003e0.0% of ES\u003cbr\u003e0.0% of total\u003cbr\u003e0 MW (average)\u003cbr\u003e38.11 MWh"
+                ],
+                [
+                    "\u003cb\u003eES\u002fHydro Pumped Storage\u003c\u002fb\u003e\u003cbr\u003e2.7% of ES\u003cbr\u003e0.5% of total\u003cbr\u003e32 MW (average)\u003cbr\u003e3.613 GWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u003c\u002fb\u003e\u003cbr\u003e1.7% of total\u003cbr\u003e104 _overlined('MW') (average)\u003cbr\u003e11.69 GWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fBiomass\u003c\u002fb\u003e\u003cbr\u003e0.6% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e1 MW (average)\u003cbr\u003e66.65 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fFossil Gas\u003c\u002fb\u003e\u003cbr\u003e4.1% of FR\u003cbr\u003e0.1% of total\u003cbr\u003e4 MW (average)\u003cbr\u003e476.1 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fFossil Hard coal\u003c\u002fb\u003e\u003cbr\u003e0.4% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e0 MW (average)\u003cbr\u003e45 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fFossil Oil\u003c\u002fb\u003e\u003cbr\u003e0.1% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e0 MW (average)\u003cbr\u003e14.07 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fHydro Pumped Storage\u003c\u002fb\u003e\u003cbr\u003e0.6% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e1 MW (average)\u003cbr\u003e71.69 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fHydro Run-of-river and poundage\u003c\u002fb\u003e\u003cbr\u003e4.6% of FR\u003cbr\u003e0.1% of total\u003cbr\u003e5 MW (average)\u003cbr\u003e534.3 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fHydro Water Reservoir\u003c\u002fb\u003e\u003cbr\u003e1.7% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e2 MW (average)\u003cbr\u003e196.5 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fNuclear\u003c\u002fb\u003e\u003cbr\u003e71.8% of FR\u003cbr\u003e1.2% of total\u003cbr\u003e75 MW (average)\u003cbr\u003e8.389 GWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fSolar\u003c\u002fb\u003e\u003cbr\u003e2.8% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e3 MW (average)\u003cbr\u003e330 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fWaste\u003c\u002fb\u003e\u003cbr\u003e0.3% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e0 MW (average)\u003cbr\u003e39.9 MWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fWind Onshore\u003c\u002fb\u003e\u003cbr\u003e11.8% of FR\u003cbr\u003e0.2% of total\u003cbr\u003e12 MW (average)\u003cbr\u003e1.382 GWh"
+                ],
+                [
+                    "\u003cb\u003eFR\u002fWind Offshore\u003c\u002fb\u003e\u003cbr\u003e1.2% of FR\u003cbr\u003e0.0% of total\u003cbr\u003e1 MW (average)\u003cbr\u003e144.8 MWh"
+                ]
+            ],
+            "domain": {
+                "x": [
+                    0.0,
+                    1.0
+                ],
+                "y": [
+                    0.0,
+                    1.0
+                ]
+            },
+            "hovertemplate": "%{customdata[0]}\u003cextra\u003e\u003c\u002fextra\u003e",
+            "ids": [
+                "PT",
+                "PT\u002fBiomass",
+                "PT\u002fFossil Gas",
+                "PT\u002fHydro Pumped Storage",
+                "PT\u002fHydro Run-of-river and poundage",
+                "PT\u002fHydro Water Reservoir",
+                "PT\u002fSolar",
+                "PT\u002fWind Onshore",
+                "PT\u002fOther",
+                "PT\u002fWind Offshore",
+                "ES",
+                "ES\u002fBiomass",
+                "ES\u002fFossil Gas",
+                "ES\u002fFossil Hard coal",
+                "ES\u002fFossil Oil",
+                "ES\u002fHydro Run-of-river and poundage",
+                "ES\u002fHydro Water Reservoir",
+                "ES\u002fNuclear",
+                "ES\u002fOther renewable",
+                "ES\u002fSolar",
+                "ES\u002fWaste",
+                "ES\u002fWind Onshore",
+                "ES\u002fOther",
+                "ES\u002fHydro Pumped Storage",
+                "FR",
+                "FR\u002fBiomass",
+                "FR\u002fFossil Gas",
+                "FR\u002fFossil Hard coal",
+                "FR\u002fFossil Oil",
+                "FR\u002fHydro Pumped Storage",
+                "FR\u002fHydro Run-of-river and poundage",
+                "FR\u002fHydro Water Reservoir",
+                "FR\u002fNuclear",
+                "FR\u002fSolar",
+                "FR\u002fWaste",
+                "FR\u002fWind Onshore",
+                "FR\u002fWind Offshore"
+            ],
+            "labels": [
+                "PT",
+                "Biomass",
+                "Fossil Gas",
+                "Hydro Pumped Storage",
+                "Hydro Run-of-river and poundage",
+                "Hydro Water Reservoir",
+                "Solar",
+                "Wind Onshore",
+                "Other",
+                "Wind Offshore",
+                "ES",
+                "Biomass",
+                "Fossil Gas",
+                "Fossil Hard coal",
+                "Fossil Oil",
+                "Hydro Run-of-river and poundage",
+                "Hydro Water Reservoir",
+                "Nuclear",
+                "Other renewable",
+                "Solar",
+                "Waste",
+                "Wind Onshore",
+                "Other",
+                "Hydro Pumped Storage",
+                "FR",
+                "Biomass",
+                "Fossil Gas",
+                "Fossil Hard coal",
+                "Fossil Oil",
+                "Hydro Pumped Storage",
+                "Hydro Run-of-river and poundage",
+                "Hydro Water Reservoir",
+                "Nuclear",
+                "Solar",
+                "Waste",
+                "Wind Onshore",
+                "Wind Offshore"
+            ],
+            "name": "",
+            "parents": [
+                "",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "PT",
+                "",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "ES",
+                "",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR",
+                "FR"
+            ],
+            "values": [
+                4854.830357142856,
+                282.77188210816774,
+                930.455108013689,
+                612.5897577931636,
+                679.5493539305724,
+                460.34237184568536,
+                341.6149842693372,
+                1513.5315543354318,
+                31.356259403890892,
+                2.6190854429188968,
+                1183.8869866471978,
+                18.560922578123787,
+                364.120397747287,
+                16.2535477633943,
+                1.2099524922387541,
+                35.790354408344896,
+                79.03358947006411,
+                236.04892329245294,
+                3.297865161792463,
+                237.17590679758214,
+                9.54419651568758,
+                150.24831392230092,
+                0.34029241524498133,
+                32.262724082684166,
+                104.36904239246668,
+                0.5951087012063455,
+                4.250854973652017,
+                0.4017587586443944,
+                0.12562848282580713,
+                0.6401053892696719,
+                4.770956157389177,
+                1.7545344395572506,
+                74.89882755474639,
+                2.9462220572280193,
+                0.3562248809955726,
+                12.335832293707629,
+                1.2929887032444323
+            ],
+            "type": "sunburst",
+            "branchvalues": "total",
+            "insidetextorientation": "radial"
+        }
+    ],
+    "layout": {
+        "template": {
+            "data": {
+                "histogram2dcontour": [
+                    {
+                        "type": "histogram2dcontour",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "choropleth": [
+                    {
+                        "type": "choropleth",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        }
+                    }
+                ],
+                "histogram2d": [
+                    {
+                        "type": "histogram2d",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "heatmap": [
+                    {
+                        "type": "heatmap",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "heatmapgl": [
+                    {
+                        "type": "heatmapgl",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "contourcarpet": [
+                    {
+                        "type": "contourcarpet",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        }
+                    }
+                ],
+                "contour": [
+                    {
+                        "type": "contour",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "surface": [
+                    {
+                        "type": "surface",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        },
+                        "colorscale": [
+                            [
+                                0.0,
+                                "#0d0887"
+                            ],
+                            [
+                                0.1111111111111111,
+                                "#46039f"
+                            ],
+                            [
+                                0.2222222222222222,
+                                "#7201a8"
+                            ],
+                            [
+                                0.3333333333333333,
+                                "#9c179e"
+                            ],
+                            [
+                                0.4444444444444444,
+                                "#bd3786"
+                            ],
+                            [
+                                0.5555555555555556,
+                                "#d8576b"
+                            ],
+                            [
+                                0.6666666666666666,
+                                "#ed7953"
+                            ],
+                            [
+                                0.7777777777777778,
+                                "#fb9f3a"
+                            ],
+                            [
+                                0.8888888888888888,
+                                "#fdca26"
+                            ],
+                            [
+                                1.0,
+                                "#f0f921"
+                            ]
+                        ]
+                    }
+                ],
+                "mesh3d": [
+                    {
+                        "type": "mesh3d",
+                        "colorbar": {
+                            "outlinewidth": 0,
+                            "ticks": ""
+                        }
+                    }
+                ],
+                "scatter": [
+                    {
+                        "fillpattern": {
+                            "fillmode": "overlay",
+                            "size": 10,
+                            "solidity": 0.2
+                        },
+                        "type": "scatter"
+                    }
+                ],
+                "parcoords": [
+                    {
+                        "type": "parcoords",
+                        "line": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scatterpolargl": [
+                    {
+                        "type": "scatterpolargl",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "bar": [
+                    {
+                        "error_x": {
+                            "color": "#2a3f5f"
+                        },
+                        "error_y": {
+                            "color": "#2a3f5f"
+                        },
+                        "marker": {
+                            "line": {
+                                "color": "#E5ECF6",
+                                "width": 0.5
+                            },
+                            "pattern": {
+                                "fillmode": "overlay",
+                                "size": 10,
+                                "solidity": 0.2
+                            }
+                        },
+                        "type": "bar"
+                    }
+                ],
+                "scattergeo": [
+                    {
+                        "type": "scattergeo",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scatterpolar": [
+                    {
+                        "type": "scatterpolar",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "histogram": [
+                    {
+                        "marker": {
+                            "pattern": {
+                                "fillmode": "overlay",
+                                "size": 10,
+                                "solidity": 0.2
+                            }
+                        },
+                        "type": "histogram"
+                    }
+                ],
+                "scattergl": [
+                    {
+                        "type": "scattergl",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scatter3d": [
+                    {
+                        "type": "scatter3d",
+                        "line": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        },
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scattermapbox": [
+                    {
+                        "type": "scattermapbox",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scatterternary": [
+                    {
+                        "type": "scatterternary",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "scattercarpet": [
+                    {
+                        "type": "scattercarpet",
+                        "marker": {
+                            "colorbar": {
+                                "outlinewidth": 0,
+                                "ticks": ""
+                            }
+                        }
+                    }
+                ],
+                "carpet": [
+                    {
+                        "aaxis": {
+                            "endlinecolor": "#2a3f5f",
+                            "gridcolor": "white",
+                            "linecolor": "white",
+                            "minorgridcolor": "white",
+                            "startlinecolor": "#2a3f5f"
+                        },
+                        "baxis": {
+                            "endlinecolor": "#2a3f5f",
+                            "gridcolor": "white",
+                            "linecolor": "white",
+                            "minorgridcolor": "white",
+                            "startlinecolor": "#2a3f5f"
+                        },
+                        "type": "carpet"
+                    }
+                ],
+                "table": [
+                    {
+                        "cells": {
+                            "fill": {
+                                "color": "#EBF0F8"
+                            },
+                            "line": {
+                                "color": "white"
+                            }
+                        },
+                        "header": {
+                            "fill": {
+                                "color": "#C8D4E3"
+                            },
+                            "line": {
+                                "color": "white"
+                            }
+                        },
+                        "type": "table"
+                    }
+                ],
+                "barpolar": [
+                    {
+                        "marker": {
+                            "line": {
+                                "color": "#E5ECF6",
+                                "width": 0.5
+                            },
+                            "pattern": {
+                                "fillmode": "overlay",
+                                "size": 10,
+                                "solidity": 0.2
+                            }
+                        },
+                        "type": "barpolar"
+                    }
+                ],
+                "pie": [
+                    {
+                        "automargin": true,
+                        "type": "pie"
+                    }
+                ]
+            },
+            "layout": {
+                "autotypenumbers": "strict",
+                "colorway": [
+                    "#636efa",
+                    "#EF553B",
+                    "#00cc96",
+                    "#ab63fa",
+                    "#FFA15A",
+                    "#19d3f3",
+                    "#FF6692",
+                    "#B6E880",
+                    "#FF97FF",
+                    "#FECB52"
+                ],
+                "font": {
+                    "color": "#2a3f5f"
+                },
+                "hovermode": "closest",
+                "hoverlabel": {
+                    "align": "left"
+                },
+                "paper_bgcolor": "white",
+                "plot_bgcolor": "#E5ECF6",
+                "polar": {
+                    "bgcolor": "#E5ECF6",
+                    "angularaxis": {
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "ticks": ""
+                    },
+                    "radialaxis": {
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "ticks": ""
+                    }
+                },
+                "ternary": {
+                    "bgcolor": "#E5ECF6",
+                    "aaxis": {
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "ticks": ""
+                    },
+                    "baxis": {
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "ticks": ""
+                    },
+                    "caxis": {
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "ticks": ""
+                    }
+                },
+                "coloraxis": {
+                    "colorbar": {
+                        "outlinewidth": 0,
+                        "ticks": ""
+                    }
+                },
+                "colorscale": {
+                    "sequential": [
+                        [
+                            0.0,
+                            "#0d0887"
+                        ],
+                        [
+                            0.1111111111111111,
+                            "#46039f"
+                        ],
+                        [
+                            0.2222222222222222,
+                            "#7201a8"
+                        ],
+                        [
+                            0.3333333333333333,
+                            "#9c179e"
+                        ],
+                        [
+                            0.4444444444444444,
+                            "#bd3786"
+                        ],
+                        [
+                            0.5555555555555556,
+                            "#d8576b"
+                        ],
+                        [
+                            0.6666666666666666,
+                            "#ed7953"
+                        ],
+                        [
+                            0.7777777777777778,
+                            "#fb9f3a"
+                        ],
+                        [
+                            0.8888888888888888,
+                            "#fdca26"
+                        ],
+                        [
+                            1.0,
+                            "#f0f921"
+                        ]
+                    ],
+                    "sequentialminus": [
+                        [
+                            0.0,
+                            "#0d0887"
+                        ],
+                        [
+                            0.1111111111111111,
+                            "#46039f"
+                        ],
+                        [
+                            0.2222222222222222,
+                            "#7201a8"
+                        ],
+                        [
+                            0.3333333333333333,
+                            "#9c179e"
+                        ],
+                        [
+                            0.4444444444444444,
+                            "#bd3786"
+                        ],
+                        [
+                            0.5555555555555556,
+                            "#d8576b"
+                        ],
+                        [
+                            0.6666666666666666,
+                            "#ed7953"
+                        ],
+                        [
+                            0.7777777777777778,
+                            "#fb9f3a"
+                        ],
+                        [
+                            0.8888888888888888,
+                            "#fdca26"
+                        ],
+                        [
+                            1.0,
+                            "#f0f921"
+                        ]
+                    ],
+                    "diverging": [
+                        [
+                            0,
+                            "#8e0152"
+                        ],
+                        [
+                            0.1,
+                            "#c51b7d"
+                        ],
+                        [
+                            0.2,
+                            "#de77ae"
+                        ],
+                        [
+                            0.3,
+                            "#f1b6da"
+                        ],
+                        [
+                            0.4,
+                            "#fde0ef"
+                        ],
+                        [
+                            0.5,
+                            "#f7f7f7"
+                        ],
+                        [
+                            0.6,
+                            "#e6f5d0"
+                        ],
+                        [
+                            0.7,
+                            "#b8e186"
+                        ],
+                        [
+                            0.8,
+                            "#7fbc41"
+                        ],
+                        [
+                            0.9,
+                            "#4d9221"
+                        ],
+                        [
+                            1,
+                            "#276419"
+                        ]
+                    ]
+                },
+                "xaxis": {
+                    "gridcolor": "white",
+                    "linecolor": "white",
+                    "ticks": "",
+                    "title": {
+                        "standoff": 15
+                    },
+                    "zerolinecolor": "white",
+                    "automargin": true,
+                    "zerolinewidth": 2
+                },
+                "yaxis": {
+                    "gridcolor": "white",
+                    "linecolor": "white",
+                    "ticks": "",
+                    "title": {
+                        "standoff": 15
+                    },
+                    "zerolinecolor": "white",
+                    "automargin": true,
+                    "zerolinewidth": 2
+                },
+                "scene": {
+                    "xaxis": {
+                        "backgroundcolor": "#E5ECF6",
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "showbackground": true,
+                        "ticks": "",
+                        "zerolinecolor": "white",
+                        "gridwidth": 2
+                    },
+                    "yaxis": {
+                        "backgroundcolor": "#E5ECF6",
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "showbackground": true,
+                        "ticks": "",
+                        "zerolinecolor": "white",
+                        "gridwidth": 2
+                    },
+                    "zaxis": {
+                        "backgroundcolor": "#E5ECF6",
+                        "gridcolor": "white",
+                        "linecolor": "white",
+                        "showbackground": true,
+                        "ticks": "",
+                        "zerolinecolor": "white",
+                        "gridwidth": 2
+                    }
+                },
+                "shapedefaults": {
+                    "line": {
+                        "color": "#2a3f5f"
+                    }
+                },
+                "annotationdefaults": {
+                    "arrowcolor": "#2a3f5f",
+                    "arrowhead": 0,
+                    "arrowwidth": 1
+                },
+                "geo": {
+                    "bgcolor": "white",
+                    "landcolor": "#E5ECF6",
+                    "subunitcolor": "white",
+                    "showland": true,
+                    "showlakes": true,
+                    "lakecolor": "white"
+                },
+                "title": {
+                    "x": 0.05
+                },
+                "mapbox": {
+                    "style": "light"
+                }
+            }
+        },
+        "legend": {
+            "tracegroupgap": 0
+        },
+        "margin": {
+            "t": 50,
+            "b": 100,
+            "l": 0,
+            "r": 0
+        },
+        "title": {
+            "text": "Portugal's Electricity Mix by Source Type",
+            "x": 0.5,
+            "y": 0.99
+        },
+        "width": 700,
+        "height": 800,
+        "autosize": true,
+        "annotations": [
+            {
+                "showarrow": false,
+                "text": "Source: https:\u002f\u002fportugal-electricity-mix.vercel.app\u003cbr\u003eData: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+                "x": 0.5,
+                "y": -0.1
+            }
+        ]
+    }
+}

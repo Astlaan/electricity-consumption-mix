@@ -32,7 +32,6 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series: # aggregate_by_source_type
 
     # Group by source type (in case multiple B-codes map to same source)
     grouped_data = df.mean()
-
     return grouped_data
 
 def ensure_index_and_sorting(data: Data):
@@ -330,7 +329,7 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
         # Add source level for each country
         for source_type, power in series.items():
             if power > 0:  # Only add non-zero values
-                source_name = PSR_TYPE_MAPPING.get(source_type, source_type)
+                source_name = PSR_TYPE_MAPPING.get(source_type, source_type) # type: ignore
                 energy = power * total_hours
                 id = f"{country}/{source_name}"
                 records.append({
