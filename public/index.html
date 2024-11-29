@@ -11,7 +11,8 @@
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="Portugal Electricity Consumption Mix">
     <meta property="og:description" content="Portugal's electricity consumption taking imports into account.">
-    <meta property="og:image" content="https://portugal-electricity-mix.vercel.app/og-image.jpg"> <!-- 1200x630, jpg or png -->
+    <meta property="og:image" content="https://portugal-electricity-mix.vercel.app/og-image.jpg">
+    <!-- 1200x630, jpg or png -->
     <meta property="og:url" content="https://portugal-electricity-mix.vercel.app">
     <meta property="og:type" content="website">
 
@@ -364,7 +365,21 @@
         }
     </script>
 
-    <div id="plotContainer"></div>
+    <div id="plotContainer">
+        <div id="plotControls" class="plot-controls" style="display: none;">
+            <h3 style="margin-top: 0;">Plot Controls</h3>
+            <div>
+                <input type="checkbox" id="plotControlShowDetails" checked>
+                <label for="plotControlShowDetails">Show Details</label>
+            </div>
+            <div>
+                <label for="plotControlPlotSize">Plot Size:</label>
+                <input type="range" id="plotControlPlotSize" min="400" max="1000" value="800" step="50">
+                <!-- <span id="plotHeightValue">800px</span> -->
+            </div>
+        </div>
+        <div id="plotArea"></div>
+    </div>
 
     <!-- <div id="footer"></div> -->
 
@@ -445,25 +460,31 @@
                 }
 
                 if (data.plot) {
-                    // Clear previous plot and error
-                    plotContainer.innerHTML = '';
+                    // Clear only the plotArea div
+                    document.getElementById('plotArea').innerHTML = '';
                     errorMessage.style.display = 'none';
-                    // Bokeh version
-                    // Bokeh.embed.embed_item(data.plot, 'plotContainer');
 
-                    // Plotly version
-                    const plotData = JSON.parse(data.plot);
-                    const layout = { ...plotData.layout };
-                    delete layout.height;
-                    delete layout.width;
-                    // delete layout.title.y;
-                    // delete layout.margin;
-                    // plotData.data[0].hole = 0.0;
-                    // layout.margin.b = 100;
-                    // layout.margin.t = 50;
-                    // layout.annotations[0].y = -0.1;
-                    // layout.autosize = true;
-                    Plotly.newPlot('plotContainer', plotData.data, layout, { responsive: false });
+                    // Store the plot data globally
+                    window.currentPlotData = JSON.parse(data.plot);
+                    const plotType = window.currentPlotData.data[0].type;
+
+                    const plotControlShowDetails = document.getElementById('plotControlsShowDetails');
+
+                    // if (plotType == "pie"){
+                    //     plotControlShowDetails.checked = true;
+                    // }
+                    // else if (plotType == "sunburst") 
+                    //     plotControlShowDetails.checked = false;
+                    // }
+                    // else{
+                    //     throw new Error("Unexpected plot type received");
+                    // }
+
+
+                    updatePlot();
+
+                    // Show the plotControls div
+                    document.getElementById('plotControls').style.display = 'block';
 
                     // Scroll to center the plot with smooth animation
                     plotContainer.scrollIntoView({
@@ -479,6 +500,10 @@
                 errorMessage.innerHTML = `<div class="error-item">${error.message}</div>`;
                 errorMessage.style.display = 'block';
                 plotContainer.innerHTML = ''; // Clear any previous plot
+
+                // Hide the plotControls div
+                document.getElementById('plotControls').style.display = 'none';
+
                 console.error('Error:', error);
             } finally {
                 loading.style.display = 'none';
@@ -523,6 +548,39 @@
                 lastViewportWidth = currentViewportWidth;
                 lastViewportHeight = currentViewportHeight;
             }
+        });
+
+        // Function to update plot based on current controls
+        function updatePlot() {
+            if (!window.currentPlotData) return;
+
+            const data = structuredClone(window.currentPlotData.data);
+            const layout = structuredClone(window.currentPlotData.layout);
+
+            // Change plotSize
+            layout.height = parseInt(document.getElementById('plotControlPlotSize').value);
+            delete layout.width;
+
+            // Change text template
+            const showDetails = document.getElementById('plotControlShowDetails').checked;
+            if (showDetails) {
+                if (data[0].type == "pie")
+                    layout.texttemplate = "%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW"
+                else if (data[0].type == "sunburst")
+                    data[0].texttemplate = "%{label}<br>%{customdata[0]:.1f}%";
+            }
+            else {
+                data[0].texttemplate = "%{label}";
+            }
+
+            Plotly.newPlot('plotArea', data, layout, { responsive: false });
+        }
+
+        // Setup plot control event listeners
+        document.getElementById('plotControlShowDetails').addEventListener('change', updatePlot);
+        document.getElementById('plotControlPlotSize').addEventListener('input', function () {
+            // document.getElementById('plotHeightValue').textContent = this.value + 'px';
+            updatePlot();
         });
 
         window.onbeforeunload = function () {
