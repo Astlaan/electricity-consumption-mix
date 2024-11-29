@@ -2,7 +2,6 @@ from http.server import BaseHTTPRequestHandler
 import json
 import logging
 import sys
-import gc
 import os
 from datetime import datetime
 

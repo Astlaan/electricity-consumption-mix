@@ -1,19 +1,14 @@
 import unittest
 from unittest.mock import patch, Mock, AsyncMock
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import pandas as pd
 import logging
 import os
 import shutil
 from src.data_fetcher import ENTSOEDataFetcher
 import sys
-import os
-import asyncio
-import aiohttp
 from .test_data import test_data
 from utils import AdvancedPattern
-from datetime import datetime, timedelta
-import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 

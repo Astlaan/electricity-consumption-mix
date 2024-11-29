@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import re
 from typing import List
-from enum import Enum
 
 from utils import RECORDS_START, maximum_date_end_exclusive
 

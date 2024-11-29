@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import os
 import json
-from typing import Dict, Any, Optional, List, Tuple, Union
+from typing import Dict, Any, Optional, List, Union
 import aiohttp
 import asyncio
 import logging

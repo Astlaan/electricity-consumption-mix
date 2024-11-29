@@ -2,7 +2,7 @@ from data_fetcher import Data
 import pandas as pd
 import numpy as np
 from config import PSR_COLORS, PSR_TYPE_MAPPING
-from utils import get_active_psr_in_dataframe, apply_to_fields
+from utils import apply_to_fields
 import logging
 logger = logging.getLogger(__name__)
 

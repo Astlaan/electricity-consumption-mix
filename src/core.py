@@ -1,9 +1,6 @@
-from datetime import datetime
 from data_fetcher import ENTSOEDataFetcher, SimpleInterval, DataRequest
 import analyzer
-from typing import Optional
 from tqdm import tqdm  # Add this import
-import asyncio  # Add this import
 import logging
 
 from utils import RECORDS_START, maximum_date_end_exclusive

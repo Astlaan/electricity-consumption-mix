@@ -2,7 +2,7 @@ from data_fetcher import Data
 import pandas as pd
 import numpy as np
 from config import PSR_TYPE_MAPPING
-from utils import get_active_psr_in_dataframe, apply_to_fields
+from utils import apply_to_fields
 
 pd.set_option('display.max_columns', None)  # Show all columns
 pd.set_option('display.max_rows', None)     # Show all rows
@@ -252,7 +252,6 @@ def _plot_internal_plotly_2(df: pd.DataFrame) -> None:
 
 def _plot_internal_bokeh_2(df: pd.DataFrame, *_):
     from bokeh.plotting import figure
-    from bokeh.transform import cumsum
     from bokeh.palettes import Set3
     from math import pi
     from bokeh.models import ColumnDataSource, Title, Label
