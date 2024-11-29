@@ -603,34 +603,33 @@
                 data[0].texttemplate = "%{label}";
             }
 
-            // Change color
+            //Change color
+            if (data[0].type === "sunburst") {
+                // const set3Palette = [
+                //     "#8dd3c7", "#ffffb3", "#bebada", "#fb8072",
+                //     "#80b1d3", "#fdb462", "#b3de69", "#fccde5",
+                //     "#d9d9d9", "#bc80bd", "#ccebc5", "#ffed6f"
+                // ];
 
-            // if (data[0].type === "sunburst") {
-            //     // const set3Palette = [
-            //     //     "#8dd3c7", "#ffffb3", "#bebada", "#fb8072",
-            //     //     "#80b1d3", "#fdb462", "#b3de69", "#fccde5",
-            //     //     "#d9d9d9", "#bc80bd", "#ccebc5", "#ffed6f"
-            //     // ];
+                const colors = {
+                    "PT": "#80b1d3",
+                    "ES": "#fb8072",
+                    // "FR": "#8dd3c7",
+                    "FR": "#b3de69"
+                };
 
-            //     const colors = {
-            //         "PT": "#80b1d3",
-            //         "ES": "#fb8072",
-            //         // "FR": "#8dd3c7",
-            //         "FR": "#b3de69"
-            //     };
+                // Ensure the marker object exists
+                if (!data[0].marker) {
+                    data[0].marker = {};
+                }
 
-            //     // Ensure the marker object exists
-            //     if (!data[0].marker) {
-            //         data[0].marker = {};
-            //     }
-
-            //     // Assign colors only to parent nodes
-            //     data[0].marker.colors = data[0].labels.map((label, i) => {
-            //         // Check if the label is a parent (appears in the parents array)
-            //         // return data[0].parents.includes(label) ? set3Palette[i % set3Palette.length] : null;
-            //         return data[0].parents.includes(label) ? colors[label] : null;
-            //     });
-            // }
+                // Assign colors only to parent nodes
+                data[0].marker.colors = data[0].labels.map((label, i) => {
+                    // Check if the label is a parent (appears in the parents array)
+                    // return data[0].parents.includes(label) ? set3Palette[i % set3Palette.length] : null;
+                    return data[0].parents.includes(label) ? colors[label] : null;
+                });
+            }
 
 
 

@@ -37,12 +37,10 @@ This is fine for now since the goal is to initialize the cache (with `main.py --
 
 ## To-Do Features:
 - Charting:
-  - Chart with the sources aggregated by type, regardless of the country of origin (Done)
   - Chart with the sources grouped (not aggregated by type), and Country of origin is specified for each sub-slice
-  - Chart with the sources group by country, and each subslice represents a type of source
-- Allow the user to specify multiple intervals (eg, 1T from years 2024, 2023, 2022..., 17h-23h daily yearly, or by trimester, etc)
 - Chart the Carbon/Carbon Intensity pie graph
 - Use preset colors for each source (both Aggregated plot and Hierarchical)
+- Use colorblind-friendly colors. https://www.datylon.com/blog/data-visualization-for-colorblind-readers
 
 ## Possible future features:
 - Sankey/Treemap diagrams
