@@ -19,24 +19,21 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_get_data_for_pattern_cache_hit(self):
         """Test pattern-based data fetch when all data is in cache"""
         # Create mock cached data
-        mock_data = pd.DataFrame({
-            'start_time': pd.date_range('2024-01-01', '2024-01-02', freq='H'),
-            '10YPT-REN------W': [100] * 24,  # PT generation
-            '10YES-REE------0': [200] * 24,  # ES generation
-            '10YPT-REN------W_10YES-REE------0': [300] * 24,  # PT to ES flow
-            '10YES-REE------0_10YPT-REN------W': [400] * 24   # ES to PT flow
-        }).set_index('start_time')
+        mock_data = pd.DataFrame(
+            {
+                "start_time": pd.date_range("2024-01-01", "2024-01-02", freq="H"),
+                "10YPT-REN------W": [100] * 24,  # PT generation
+                "10YES-REE------0": [200] * 24,  # ES generation
+                "10YPT-REN------W_10YES-REE------0": [300] * 24,  # PT to ES flow
+                "10YES-REE------0_10YPT-REN------W": [400] * 24,  # ES to PT flow
+            }
+        ).set_index("start_time")
 
         self.fetcher.cached_data = mock_data
 
-        pattern = AdvancedPattern(
-            years="2024",
-            months="1",
-            days="1",
-            hours="0-12"
-        )
+        pattern = AdvancedPattern(years="2024", months="1", days="1", hours="0-12")
 
-        with patch.object(self.fetcher, '_fetch_all_data') as mock_fetch:
+        with patch.object(self.fetcher, "_fetch_all_data") as mock_fetch:
             result = self.fetcher.get_data_for_pattern(pattern)
 
             # Verify no new data was fetched
@@ -49,13 +46,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
     def test_get_data_for_pattern_cache_miss(self):
         """Test pattern-based data fetch when cache needs updating"""
         # Create mock cached data with older dates
-        mock_data = pd.DataFrame({
-            'start_time': pd.date_range('2023-01-01', '2023-01-02', freq='H'),
-            '10YPT-REN------W': [100] * 24,
-            '10YES-REE------0': [200] * 24,
-            '10YPT-REN------W_10YES-REE------0': [300] * 24,
-            '10YES-REE------0_10YPT-REN------W': [400] * 24
-        }).set_index('start_time')
+        mock_data = pd.DataFrame(
+            {
+                "start_time": pd.date_range("2023-01-01", "2023-01-02", freq="H"),
+                "10YPT-REN------W": [100] * 24,
+                "10YES-REE------0": [200] * 24,
+                "10YPT-REN------W_10YES-REE------0": [300] * 24,
+                "10YES-REE------0_10YPT-REN------W": [400] * 24,
+            }
+        ).set_index("start_time")
 
         self.fetcher.cached_data = mock_data
 
@@ -63,19 +62,23 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             years="2024",  # Request newer data than what's in cache
             months="1",
             days="1",
-            hours="0-23"
+            hours="0-23",
         )
 
-        with patch.object(self.fetcher, '_fetch_all_data') as mock_fetch:
-            with patch.object(self.fetcher, '_load_cached_data') as mock_load:
+        with patch.object(self.fetcher, "_fetch_all_data") as mock_fetch:
+            with patch.object(self.fetcher, "_load_cached_data") as mock_load:
                 # Setup mock for new data after fetch
-                new_data = pd.DataFrame({
-                    'start_time': pd.date_range('2024-01-01', '2024-01-02', freq='H'),
-                    '10YPT-REN------W': [100] * 24,
-                    '10YES-REE------0': [200] * 24,
-                    '10YPT-REN------W_10YES-REE------0': [300] * 24,
-                    '10YES-REE------0_10YPT-REN------W': [400] * 24
-                }).set_index('start_time')
+                new_data = pd.DataFrame(
+                    {
+                        "start_time": pd.date_range(
+                            "2024-01-01", "2024-01-02", freq="H"
+                        ),
+                        "10YPT-REN------W": [100] * 24,
+                        "10YES-REE------0": [200] * 24,
+                        "10YPT-REN------W_10YES-REE------0": [300] * 24,
+                        "10YES-REE------0_10YPT-REN------W": [400] * 24,
+                    }
+                ).set_index("start_time")
                 mock_load.return_value = new_data
 
                 result = self.fetcher.get_data_for_pattern(pattern)
@@ -85,17 +88,21 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
                 # Verify results match pattern
                 self.assertEqual(len(result.generation_pt), 24)
-                self.assertTrue(all(idx.year == 2024 for idx in result.generation_pt.index))
+                self.assertTrue(
+                    all(idx.year == 2024 for idx in result.generation_pt.index)
+                )
 
     def test_get_data_for_pattern_complex(self):
         """Test pattern-based data fetch with complex pattern"""
-        mock_data = pd.DataFrame({
-            'start_time': pd.date_range('2024-01-01', '2024-02-28', freq='H'),
-            '10YPT-REN------W': [100] * (24 * 59),
-            '10YES-REE------0': [200] * (24 * 59),
-            '10YPT-REN------W_10YES-REE------0': [300] * (24 * 59),
-            '10YES-REE------0_10YPT-REN------W': [400] * (24 * 59)
-        }).set_index('start_time')
+        mock_data = pd.DataFrame(
+            {
+                "start_time": pd.date_range("2024-01-01", "2024-02-28", freq="H"),
+                "10YPT-REN------W": [100] * (24 * 59),
+                "10YES-REE------0": [200] * (24 * 59),
+                "10YPT-REN------W_10YES-REE------0": [300] * (24 * 59),
+                "10YES-REE------0_10YPT-REN------W": [400] * (24 * 59),
+            }
+        ).set_index("start_time")
 
         self.fetcher.cached_data = mock_data
 
@@ -103,7 +110,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             years="2024",
             months="1,2",
             days="1,15",
-            hours="9-17"  # Business hours
+            hours="9-17",  # Business hours
         )
 
         result = self.fetcher.get_data_for_pattern(pattern)
@@ -117,13 +124,15 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
     def test_get_data_for_pattern_empty_result(self):
         """Test pattern-based data fetch when no data matches pattern"""
-        mock_data = pd.DataFrame({
-            'start_time': pd.date_range('2023-01-01', '2023-01-02', freq='H'),
-            '10YPT-REN------W': [100] * 24,
-            '10YES-REE------0': [200] * 24,
-            '10YPT-REN------W_10YES-REE------0': [300] * 24,
-            '10YES-REE------0_10YPT-REN------W': [400] * 24
-        }).set_index('start_time')
+        mock_data = pd.DataFrame(
+            {
+                "start_time": pd.date_range("2023-01-01", "2023-01-02", freq="H"),
+                "10YPT-REN------W": [100] * 24,
+                "10YES-REE------0": [200] * 24,
+                "10YPT-REN------W_10YES-REE------0": [300] * 24,
+                "10YES-REE------0_10YPT-REN------W": [400] * 24,
+            }
+        ).set_index("start_time")
 
         self.fetcher.cached_data = mock_data
 
@@ -131,7 +140,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             years="2025",  # Year not in cache
             months="1",
             days="1",
-            hours="0-23"
+            hours="0-23",
         )
 
         with self.assertRaises(ValueError) as context:
@@ -181,7 +190,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             "in_Domain": "10YPT-REN------W",
             "outBiddingZone_Domain": "10YPT-REN------W",
             "periodStart": "202401010000",
-            "periodEnd": "202401010100",  
+            "periodEnd": "202401010100",
         }
 
         # params['documentType'] = ""
@@ -200,7 +209,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
             "in_Domain": "10YES-REE------0",
             "outBiddingZone_Domain": "10YES-REE------0",
             "periodStart": "202401010000",
-            "periodEnd": "202401010100",  
+            "periodEnd": "202401010100",
         }
 
         # params['documentType'] = ""
@@ -659,7 +668,7 @@ class TestENTSOEDataFetcher(unittest.TestCase):
 
         self.assertTrue("Resolution must be 1 hour or less" in str(context.exception))
 
-    # TODO: 
+    # TODO:
     # - full hit full range
     # - full hit partial range
     # - Cache exists, partial overlap (fetch date should be = to cache end)

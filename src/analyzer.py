@@ -5,6 +5,7 @@ import numpy as np
 from config import PSR_COLORS, PSR_TYPE_MAPPING
 from utils import apply_to_fields
 import logging
+
 logger = logging.getLogger(__name__)
 
 # pd.set_option('display.max_columns', None)  # Show all columns
@@ -40,12 +41,12 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series:  # aggregate_by_source_typ
 def ensure_index_and_sorting(data: Data):
     # This is handy while the stash fixing saved/loaded indexes is not fixed
     def _ensure_index_and_sorting(df):
-        if 'start_time' in df.columns:
-            df = df.set_index('start_time')
+        if "start_time" in df.columns:
+            df = df.set_index("start_time")
             df.index = pd.to_datetime(df.index)
         df = df.sort_index()
         # Remove duplicates keeping last value
-        df = df[~df.index.duplicated(keep='last')]
+        df = df[~df.index.duplicated(keep="last")]
         return df
 
     apply_to_fields(data, _ensure_index_and_sorting)
@@ -96,6 +97,7 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 #     fig = plot_func(consumption_per_source)
 #     return fig
 
+
 def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     # Ensure 'start_time' is set as index and sorted
     data = ensure_index_and_sorting(data)
@@ -104,12 +106,9 @@ def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     psr_types = list(PSR_TYPE_MAPPING.keys())
 
     # Extract generation data for PT, ES, FR
-    G_pt = data.generation_pt[data.generation_pt.columns.intersection(
-        psr_types)]
-    G_es = data.generation_es[data.generation_es.columns.intersection(
-        psr_types)]
-    G_fr = data.generation_fr[data.generation_fr.columns.intersection(
-        psr_types)]
+    G_pt = data.generation_pt[data.generation_pt.columns.intersection(psr_types)]
+    G_es = data.generation_es[data.generation_es.columns.intersection(psr_types)]
+    G_fr = data.generation_fr[data.generation_fr.columns.intersection(psr_types)]
 
     # Extract flow data for various transitions
     # Flow from PT to ES
@@ -155,8 +154,7 @@ def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
 
     # 2. Spanish Contribution (Ges_contribution)
     # Compute ES fraction
-    ES_fraction = (F_es_pt * (1 - F_es_fr / sum_G_es)) / \
-        Available_ES_Generation
+    ES_fraction = (F_es_pt * (1 - F_es_fr / sum_G_es)) / Available_ES_Generation
     # Expand dimensions to match G_es dimensions
     ES_fraction = np.tile(ES_fraction, (1, G_es.shape[1]))
     Ges_contribution = G_es.values * ES_fraction  # TODO why values here?
@@ -170,27 +168,27 @@ def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
 
     # Convert contributions to DataFrames with appropriate indices and columns
     Ges_contribution = pd.DataFrame(
-        Ges_contribution, index=G_es.index, columns=G_es.columns)
+        Ges_contribution, index=G_es.index, columns=G_es.columns
+    )
     Gfr_contribution = pd.DataFrame(
-        Gfr_contribution, index=G_fr.index, columns=G_fr.columns)
+        Gfr_contribution, index=G_fr.index, columns=G_fr.columns
+    )
 
     # ------------------------------
     # Compute Total Consumption per Source
     # ------------------------------
 
     aggregated = Gpt_contribution.copy()
-    aggregated = aggregated.add(
-        Ges_contribution, fill_value=0)
-    aggregated = aggregated.add(
-        Gfr_contribution, fill_value=0)
+    aggregated = aggregated.add(Ges_contribution, fill_value=0)
+    aggregated = aggregated.add(Gfr_contribution, fill_value=0)
 
     # ------------------------------
     # Organize the Contributions into a Dictionary
     # ------------------------------
     contributions = {
-        'PT': Gpt_contribution,
-        'ES': Ges_contribution,
-        'FR': Gfr_contribution
+        "PT": Gpt_contribution,
+        "ES": Ges_contribution,
+        "FR": Gfr_contribution,
     }
     return aggregated, contributions
 
@@ -220,16 +218,15 @@ def plot(data: Data, config: dict):
         case "aggregated":
             fig = _plot_aggregated(aggregated)
         case "discriminated":
-            fig = _plot_hierarchical(
-                aggregated, contributions, config)
+            fig = _plot_hierarchical(aggregated, contributions, config)
         case _:
-            raise ValueError(
-                f"plot_mode {config["plot_mode"]} is not supported.")
+            raise ValueError(f"plot_mode {config["plot_mode"]} is not supported.")
     return fig
 
 
 def _plot_aggregated(df: pd.DataFrame, *_):
     import plotly.express as px
+
     data = _time_aggregation(df)
 
     # Only plot non-zero values
@@ -245,43 +242,41 @@ def _plot_aggregated(df: pd.DataFrame, *_):
     slice_percentages = (data / total) * 100
 
     pull_values = [0.0 if p >= threshold else 0.1 for p in slice_percentages]
-    text_positions = ['inside' if p >=
-                      threshold else 'outside' for p in slice_percentages]
+    text_positions = [
+        "inside" if p >= threshold else "outside" for p in slice_percentages
+    ]
 
     # Apply PSR_TYPE_MAPPING to the names
     names = data.index.map(lambda x: PSR_TYPE_MAPPING.get(x, x))
-    colors = [PSR_COLORS.get(psr_type_name, '#808080')
-              for psr_type_name in names]
+    colors = [PSR_COLORS.get(psr_type_name, "#808080") for psr_type_name in names]
 
     # Create a DataFrame with our calculated percentages
-    plot_df = pd.DataFrame({
-        'names': names,
-        'values': data.values,
-        'percentages': slice_percentages
-    })
+    plot_df = pd.DataFrame(
+        {"names": names, "values": data.values, "percentages": slice_percentages}
+    )
 
     # plot_df["hover_text"] = plot_df.apply()
 
     fig = px.pie(
         plot_df,
-        values='values',
-        names='names',
+        values="values",
+        names="names",
         color_discrete_sequence=px.colors.qualitative.Set3,
         # color_discrete_sequence=colors,
         hole=0,
-        custom_data=['percentages']  # Include our calculated percentages
+        custom_data=["percentages"],  # Include our calculated percentages
     )
 
     fig.update_traces(
-        textinfo='percent+label',
+        textinfo="percent+label",
         textposition=text_positions,
         pull=pull_values,
         # marker=dict(colors=colors), # TODO use custom colors
         # Use our calculated percentages
-        texttemplate='%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} ' + "MW",
+        texttemplate="%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} " + "MW",
         hovertemplate="%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} " + "MW",
         # textfont=dict(size=10),
-        insidetextorientation='auto',
+        insidetextorientation="auto",
         # insidetextorientation='radial',
         # insidetextanchor="start"
     )
@@ -294,9 +289,9 @@ def _plot_aggregated(df: pd.DataFrame, *_):
         height=800,
         # yaxis=dict(domain=[0.1, 0.9]),
         title={
-            'text': "Portugal's Electricity Mix by Source Type",
-            'x': 0.45,
-            'y': 0.99
+            "text": "Portugal's Electricity Mix by Source Type",
+            "x": 0.45,
+            "y": 0.99,
         },
         # margin=dict(t=0, b=0, l=0, r=0),
         # legend=dict(
@@ -312,8 +307,13 @@ def _plot_aggregated(df: pd.DataFrame, *_):
     return fig
 
 
-def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str, pd.DataFrame], config: dict[str, bool | str]):
+def _plot_hierarchical(
+    data_aggregated: pd.DataFrame,
+    data_by_country: dict[str, pd.DataFrame],
+    config: dict[str, bool | str],
+):
     import plotly.express as px
+
     """Creates a sunburst chart with hierarchy determined by 'by' parameter."""
 
     # Time-aggregate each country's data first
@@ -323,8 +323,9 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     }
 
     # Calculate the total power for percentage calculations
-    total_power = sum(series.sum()
-                      for series in data_by_country_time_aggregated.values())
+    total_power = sum(
+        series.sum() for series in data_by_country_time_aggregated.values()
+    )
     logger.debug(f"{total_hours=}")
     logger.debug(f"{total_power=}")
     # Create records for the hierarchical structure
@@ -342,45 +343,48 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
         # logger.debug(f"PERCENTAGE: {(country_power / total_power):.1f}")
         # Add country level
 
-        records.append({
-            'id': country,
-            'parent': '',
-            'label': country,
-            'power': country_power,
-            'is_leaf': False,
-            'percentage': percentage,
-            'hover_text': (
-                f"<b>{country}</b><br>"
-                f"{percentage:.1f}% of total<br>"
-                f"{country_power:.0f} MW (average)<br>"
-                # f"{country_power:.0f} " + _overlined('MW')  + "<br>"
-                f"{_calc_energy_string(country_energy)}"
-            )
-        })
+        records.append(
+            {
+                "id": country,
+                "parent": "",
+                "label": country,
+                "power": country_power,
+                "is_leaf": False,
+                "percentage": percentage,
+                "hover_text": (
+                    f"<b>{country}</b><br>"
+                    f"{percentage:.1f}% of total<br>"
+                    f"{country_power:.0f} MW (average)<br>"
+                    # f"{country_power:.0f} " + _overlined('MW')  + "<br>"
+                    f"{_calc_energy_string(country_energy)}"
+                ),
+            }
+        )
 
         # Add source level for each country
         for source_type, power in series.items():
             if power > 0:  # Only add non-zero values
-                source_name = PSR_TYPE_MAPPING.get(
-                    source_type, source_type)  # type: ignore
+                source_name = PSR_TYPE_MAPPING.get(source_type, source_type)  # type: ignore
                 energy = power * total_hours
-                percentage = (power / total_power * 100)
+                percentage = power / total_power * 100
                 id = f"{country}/{source_name}"
-                records.append({
-                    'id': f"{country}/{source_name}",
-                    'parent': country,
-                    'label': source_name,
-                    'power': power,
-                    'is_leaf': True,
-                    'percentage': percentage,
-                    'hover_text': (
-                        f"<b>{id}</b><br>"
-                        f"{(power / country_power * 100):.1f}% of {country}<br>"
-                        f"{percentage:.1f}% of total<br>"
-                        f"{power:.0f} MW (average)<br>"
-                        f"{_calc_energy_string(energy)}"
-                    )
-                })
+                records.append(
+                    {
+                        "id": f"{country}/{source_name}",
+                        "parent": country,
+                        "label": source_name,
+                        "power": power,
+                        "is_leaf": True,
+                        "percentage": percentage,
+                        "hover_text": (
+                            f"<b>{id}</b><br>"
+                            f"{(power / country_power * 100):.1f}% of {country}<br>"
+                            f"{percentage:.1f}% of total<br>"
+                            f"{power:.0f} MW (average)<br>"
+                            f"{_calc_energy_string(energy)}"
+                        ),
+                    }
+                )
     logger.debug(records)
 
     # Convert records to DataFrame
@@ -389,21 +393,21 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
     # Create sunburst chart
     fig = px.sunburst(
         df,
-        ids='id',
-        names='label',
-        parents='parent',
-        values='power',
-        custom_data=['percentage', 'hover_text'],
+        ids="id",
+        names="label",
+        parents="parent",
+        values="power",
+        custom_data=["percentage", "hover_text"],
         # title="Portugal's Electricity Mix by Source Type",
     )
 
     # Update hover template for all traces
     fig.update_traces(
-        insidetextorientation='radial',
+        insidetextorientation="radial",
         # textinfo='label+percent parent',  # Don't use percent, since it is relative to parent and not total
         # texttemplate='%{customdata[1]}',  # Use the custom_text for display
-        hovertemplate='%{customdata[1]}<extra></extra>',
-        branchvalues='total'
+        hovertemplate="%{customdata[1]}<extra></extra>",
+        branchvalues="total",
     )
 
     # Customize layout
@@ -411,10 +415,10 @@ def _plot_hierarchical(data_aggregated: pd.DataFrame, data_by_country: dict[str,
         width=700,
         height=800,
         title={
-            'text': "Portugal's Electricity Mix by Source Type",
-            'x': 0.5,
-            'y': 0.99
-        }
+            "text": "Portugal's Electricity Mix by Source Type",
+            "x": 0.5,
+            "y": 0.99,
+        },
     )
 
     _apply_figure_global_settings(fig)
@@ -442,7 +446,7 @@ def _calc_energy_string(energy_in_MWh: float) -> str:
 
     # Format the value to ensure at least 4 significant figures
     # We use .4g for general format with at least 4 significant digits
-    formatted_value = format(value, '.4g')
+    formatted_value = format(value, ".4g")
 
     # Return the formatted string
     return f"{formatted_value} {unit}"
@@ -452,12 +456,14 @@ def _apply_figure_global_settings(fig):
     fig.update_layout(
         autosize=True,
         margin=dict(t=50, b=100, l=0, r=0),
-        annotations=[dict(
-            text="Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
-            showarrow=False,
-            x=0.5,
-            y=-0.1,
-        )]
+        annotations=[
+            dict(
+                text="Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+                showarrow=False,
+                x=0.5,
+                y=-0.1,
+            )
+        ],
     )
 
 

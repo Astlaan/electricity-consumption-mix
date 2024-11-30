@@ -1,6 +1,7 @@
 # src/config.py
 try:
     from plotly.colors import qualitative
+
     Set3 = qualitative.Set3
 except ImportError:
     from bokeh.palettes import Set3_12 as Set3
@@ -34,7 +35,9 @@ COUNTRY_COLORS = {"Portugal": "#006600", "Spain": "#FF0000"}
 PSR_COLORS = {
     "Biomass": Set3[1],  # #ffffb3 - Light yellow (for biomass's organic nature)
     "Fossil Brown coal/Lignite": Set3[7],  # #fccde5 - Pink (closest to brown)
-    "Fossil Coal-derived gas": Set3[6],  # #b3de69 - Light green (as an alternative to red-brown)
+    "Fossil Coal-derived gas": Set3[
+        6
+    ],  # #b3de69 - Light green (as an alternative to red-brown)
     "Fossil Gas": Set3[3],  # #fb8072 - Salmon (for gas)
     "Fossil Hard coal": Set3[8],  # #d9d9d9 - Light grey (for coal-like color)
     "Fossil Oil": Set3[11],  # #ffed6f - Yellow (closest to black for oil)
@@ -42,8 +45,12 @@ PSR_COLORS = {
     "Fossil Peat": Set3[7],  # #fccde5 - Pink (similar to Biomass for thematic link)
     "Geothermal": Set3[5],  # #fdb462 - Orange (for geothermal heat)
     "Hydro Pumped Storage": Set3[0],  # #8dd3c7 - Pale green-blue (for water storage)
-    "Hydro Run-of-river and poundage": Set3[4],  # #80b1d3 - Light blue (for flowing water)
-    "Hydro Water Reservoir": Set3[0],  # #8dd3c7 - Pale green-blue (same as Pumped Storage)
+    "Hydro Run-of-river and poundage": Set3[
+        4
+    ],  # #80b1d3 - Light blue (for flowing water)
+    "Hydro Water Reservoir": Set3[
+        0
+    ],  # #8dd3c7 - Pale green-blue (same as Pumped Storage)
     "Marine": Set3[0],  # #8dd3c7 - Pale green-blue (for marine environments)
     "Nuclear": Set3[7],  # #fb8072 - Salmon (to indicate a unique source)
     "Other renewable": Set3[2],  # #bebada - Light purple (for other renewables)
@@ -51,7 +58,7 @@ PSR_COLORS = {
     "Waste": Set3[9],  # #bc80bd - Purple (indicating waste)
     "Wind Offshore": Set3[10],  # #ccebc5 - Very light green (for offshore wind)
     "Wind Onshore": Set3[6],  # #b3de69 - Light green (for onshore wind)
-    "Other": Set3[8]  # #d9d9d9 - Light grey (for other unspecified sources)
+    "Other": Set3[8],  # #d9d9d9 - Light grey (for other unspecified sources)
 }
 
 # Set3 colors. Only 12 unfortunately.

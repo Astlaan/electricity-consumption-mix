@@ -3,9 +3,11 @@ from datetime import datetime
 from src.utils import AdvancedPattern
 from src.time_pattern import TimePatternValidator
 
+
 # Helper function to create pattern
 def create_pattern(years="", months="", days="", hours=""):
     return AdvancedPattern(years=years, months=months, days=days, hours=hours)
+
 
 class TestTimePatternValidator:
     # Test pattern validation
@@ -15,10 +17,7 @@ class TestTimePatternValidator:
 
     def test_valid_complete_pattern(self):
         pattern = create_pattern(
-            years="2020,2021-2022",
-            months="1,3-5",
-            days="1,15-20",
-            hours="0-8,9-17"
+            years="2020,2021-2022", months="1,3-5", days="1,15-20", hours="0-8,9-17"
         )
         TimePatternValidator.validate_pattern(pattern)  # Should not raise
 
@@ -117,36 +116,36 @@ class TestTimePatternValidator:
 
     def test_pattern_before_records_start(self):
         pattern = create_pattern(years="2014")
-        with pytest.raises(ValueError, match="Pattern requests data.*records only start"):
+        with pytest.raises(
+            ValueError, match="Pattern requests data.*records only start"
+        ):
             TimePatternValidator.validate_pattern_availability(pattern)
 
     def test_pattern_after_available_end(self):
         future_year = datetime.utcnow().year + 1
         pattern = create_pattern(years=str(future_year))
-        with pytest.raises(ValueError, match="Pattern requests data.*only available until"):
+        with pytest.raises(
+            ValueError, match="Pattern requests data.*only available until"
+        ):
             TimePatternValidator.validate_pattern_availability(pattern)
 
     def test_valid_pattern_availability(self):
         pattern = create_pattern(years="2020")
-        assert TimePatternValidator.validate_pattern_availability(pattern, datetime(2023, 1, 1))
+        assert TimePatternValidator.validate_pattern_availability(
+            pattern, datetime(2023, 1, 1)
+        )
 
     # Test earliest/latest time calculations
     def test_get_earliest_time(self):
         pattern = create_pattern(
-            years="2020-2022",
-            months="3-6",
-            days="15-20",
-            hours="9-17"
+            years="2020-2022", months="3-6", days="15-20", hours="9-17"
         )
         earliest = TimePatternValidator._get_earliest_time(pattern)
         assert earliest == datetime(2020, 3, 15, 9)
 
     def test_get_latest_time(self):
         pattern = create_pattern(
-            years="2020-2022",
-            months="3-6",
-            days="15-20",
-            hours="9-17"
+            years="2020-2022", months="3-6", days="15-20", hours="9-17"
         )
         latest = TimePatternValidator._get_latest_time(pattern)
         assert latest == datetime(2022, 6, 20, 17)
@@ -158,13 +157,13 @@ class TestTimePatternValidator:
 
     def test_valid_patterns(self):
         valid_patterns = [
-            "1",            # single number
-            "1-2",         # simple range
-            "1,2",         # two numbers
-            "1-2,3-4",     # two ranges
-            "1,2-3",       # number and range
-            "1-2,3",       # range and number
-            "1-2,3-4,5-6"  # multiple ranges
+            "1",  # single number
+            "1-2",  # simple range
+            "1,2",  # two numbers
+            "1-2,3-4",  # two ranges
+            "1,2-3",  # number and range
+            "1-2,3",  # range and number
+            "1-2,3-4,5-6",  # multiple ranges
         ]
         for pattern in valid_patterns:
             TimePatternValidator._validate_format(pattern, "years")  # Should not raise
@@ -180,39 +179,39 @@ class TestTimePatternValidator:
             "2020,,2021",  # double comma
             "2020-,2021",  # dash followed by comma
             "2020,-2021",  # comma followed by dash
-            "-2020",       # leading dash
-            "2020-",       # trailing dash
-            "--2020",      # double dash
+            "-2020",  # leading dash
+            "2020-",  # trailing dash
+            "--2020",  # double dash
             "2020--2021",  # double dash
-            ",2020",       # leading comma
-            "2020,",       # trailing comma
-            "2020-2021-2022", # too many dashes
-            "a-b", # letters
-            "1-a", # letters
-            "a-1", # letters
-            "1,a", # letters
-            "a,1", # letters
-            "1,2,a", # letters
-            "a,1,2", # letters
-            "1,2,3,", # trailing comma
-            ",1,2,3", # leading comma
-            "1,,2,3", # double comma
-            "1,2,,3", # double comma
-            "1,2,3,", # trailing comma
-            "a", # letters
-            "123a", # letters
-            "123-a", # letters
-            "a-123", # letters
-            "123,a", # letters
-            "a,123", # letters
-            "123,456,a", # letters
-            "a,123,456", # letters
-            " ", # whitespace
-            "1 2", # whitespace
-            "1- 2", # whitespace
-            "1 -2", # whitespace
-            "1-2 ", # whitespace
-            " 1-2", # whitespace
+            ",2020",  # leading comma
+            "2020,",  # trailing comma
+            "2020-2021-2022",  # too many dashes
+            "a-b",  # letters
+            "1-a",  # letters
+            "a-1",  # letters
+            "1,a",  # letters
+            "a,1",  # letters
+            "1,2,a",  # letters
+            "a,1,2",  # letters
+            "1,2,3,",  # trailing comma
+            ",1,2,3",  # leading comma
+            "1,,2,3",  # double comma
+            "1,2,,3",  # double comma
+            "1,2,3,",  # trailing comma
+            "a",  # letters
+            "123a",  # letters
+            "123-a",  # letters
+            "a-123",  # letters
+            "123,a",  # letters
+            "a,123",  # letters
+            "123,456,a",  # letters
+            "a,123,456",  # letters
+            " ",  # whitespace
+            "1 2",  # whitespace
+            "1- 2",  # whitespace
+            "1 -2",  # whitespace
+            "1-2 ",  # whitespace
+            " 1-2",  # whitespace
         ]
 
         for pattern in invalid_patterns:
@@ -245,13 +244,11 @@ class TestTimePatternValidator:
         pattern = create_pattern(years="2020")
         # Should return False since pattern's latest time is after cache_end
         assert not TimePatternValidator.validate_pattern_availability(
-            pattern, 
-            cache_end=datetime(2019, 12, 31)
+            pattern, cache_end=datetime(2019, 12, 31)
         )
         # Should return True since pattern's latest time is before cache_end
         assert TimePatternValidator.validate_pattern_availability(
-            pattern, 
-            cache_end=datetime(2021, 1, 1)
+            pattern, cache_end=datetime(2021, 1, 1)
         )
 
     def test_empty_pattern_boundaries(self):
