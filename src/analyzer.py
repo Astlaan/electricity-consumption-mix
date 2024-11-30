@@ -1,3 +1,4 @@
+from typing import Tuple
 from data_fetcher import Data
 import pandas as pd
 import numpy as np
@@ -95,21 +96,7 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 #     fig = plot_func(consumption_per_source)
 #     return fig
 
-def plot(data: Data, config: dict):
-    """
-    Computes the consumption per source by isolating contributions from
-    Portuguese (PT), Spanish (ES), and French (FR) generations, according to the given mathematical expression.
-
-    Parameters:
-    - data (Data): A data object containing generation and flow information.
-    - mode (str): A string indicating the plotting mode.
-
-    Returns:
-    - consumption_per_source (pd.DataFrame): Total consumption per source.
-    - contributions (dict): Dictionary containing individual contributions from PT, ES, and FR.
-    - fig: The generated plot figure.
-    """
-    logger.debug("FUNCTION: plot_discriminate_by_country")
+def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     # Ensure 'start_time' is set as index and sorted
     data = ensure_index_and_sorting(data)
 
@@ -191,10 +178,10 @@ def plot(data: Data, config: dict):
     # Compute Total Consumption per Source
     # ------------------------------
 
-    consumption_per_source = Gpt_contribution.copy()
-    consumption_per_source = consumption_per_source.add(
+    aggregated = Gpt_contribution.copy()
+    aggregated = aggregated.add(
         Ges_contribution, fill_value=0)
-    consumption_per_source = consumption_per_source.add(
+    aggregated = aggregated.add(
         Gfr_contribution, fill_value=0)
 
     # ------------------------------
@@ -205,17 +192,36 @@ def plot(data: Data, config: dict):
         'ES': Ges_contribution,
         'FR': Gfr_contribution
     }
+    return aggregated, contributions
+
+
+def plot(data: Data, config: dict):
+    """
+    Computes the consumption per source by isolating contributions from
+    Portuguese (PT), Spanish (ES), and French (FR) generations, according to the given mathematical expression.
+
+    Parameters:
+    - data (Data): A data object containing generation and flow information.
+    - mode (str): A string indicating the plotting mode.
+
+    Returns:
+    - consumption_per_source (pd.DataFrame): Total consumption per source.
+    - contributions (dict): Dictionary containing individual contributions from PT, ES, and FR.
+    - fig: The generated plot figure.
+    """
+
+    aggregated, contributions = analyze(data)
 
     # ------------------------------
-    # Plotting (Optional)
+    # Plotting
     # ------------------------------
 
     match config["plot_mode"]:
         case "aggregated":
-            fig = _plot_aggregated(consumption_per_source)
+            fig = _plot_aggregated(aggregated)
         case "discriminated":
             fig = _plot_hierarchical(
-                consumption_per_source, contributions, config)
+                aggregated, contributions, config)
         case _:
             raise ValueError(
                 f"plot_mode {config["plot_mode"]} is not supported.")
