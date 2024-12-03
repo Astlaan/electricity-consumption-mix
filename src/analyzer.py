@@ -1,5 +1,5 @@
 from typing import Tuple
-from data_fetcher import Data
+from data_types import Data
 import pandas as pd
 import numpy as np
 from config import PSR_COLORS, PSR_TYPE_MAPPING
@@ -21,26 +21,18 @@ def _format_date_range(df: pd.DataFrame) -> str:
 
 
 def _time_aggregation(df: pd.DataFrame) -> pd.Series:  # aggregate_by_source_type
-    """Aggregate data by source type only."""
-    # Remove columns where all values are 0
-    df = df.loc[:, (df != 0).any()]
-    # Fill any NaN values with 0
-    # df = df.fillna(0) # TODO fix
-    # df = df.ffill()
-    df = df.interpolate("linear")
-    # Interpolate does not remove first NaNs, which is good.
-    # Removes last NaNs similar to ffill, however, it seems that when a source gets deactivated for
-    # good (ex. Fossil Hard Coal in PT), it's power becomes 0 instead of NaN in PT, ES, FR
-    # France may have mislabeled a lot of its 0 MW periods as NaNs
-
-    # Group by source type (in case multiple B-codes map to same source)
+    """Temporal aggregation of data."""
     grouped_data = df.mean()
     return grouped_data
 
+def remove_empty_columns(df: pd.DataFrame):
+    df = df.loc[:, (df != 0).any()]
+    return df
 
-def ensure_index_and_sorting(data: Data):
+
+def prepare_data(data: Data):
     # This is handy while the stash fixing saved/loaded indexes is not fixed
-    def _ensure_index_and_sorting(df):
+    def _ensure_index_and_sorting(df: pd.DataFrame):
         if "start_time" in df.columns:
             df = df.set_index("start_time")
             df.index = pd.to_datetime(df.index)
@@ -49,7 +41,17 @@ def ensure_index_and_sorting(data: Data):
         df = df[~df.index.duplicated(keep="last")]
         return df
 
+    def _interpolate_missing_data(df: pd.DataFrame):
+        # Remove columns where all values are 0
+        df = df.interpolate("linear")
+        # Interpolate does not remove first NaNs, which is good.
+        # Removes last NaNs similar to ffill, however, it seems that when a source gets deactivated for
+        # good (ex. Fossil Hard Coal in PT), it's power becomes 0 instead of NaN in PT, ES, FR
+        # France may have mislabeled a lot of its 0 MW periods as NaNs
+        return df
+
     apply_to_fields(data, _ensure_index_and_sorting)
+    apply_to_fields(data, _interpolate_missing_data)
     data.assert_equal_length()
 
     return data
@@ -100,7 +102,7 @@ def sub(df1: pd.DataFrame, df2: pd.DataFrame):
 
 def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     # Ensure 'start_time' is set as index and sorted
-    data = ensure_index_and_sorting(data)
+    data = prepare_data(data)
 
     # PSR_TYPE_MAPPING is assumed to be a predefined mapping of types
     psr_types = list(PSR_TYPE_MAPPING.keys())
@@ -181,14 +183,15 @@ def analyze(data: Data) -> Tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     aggregated = Gpt_contribution.copy()
     aggregated = aggregated.add(Ges_contribution, fill_value=0)
     aggregated = aggregated.add(Gfr_contribution, fill_value=0)
+    aggregated = remove_empty_columns(aggregated)
 
     # ------------------------------
     # Organize the Contributions into a Dictionary
     # ------------------------------
     contributions = {
-        "PT": Gpt_contribution,
-        "ES": Ges_contribution,
-        "FR": Gfr_contribution,
+        "PT": remove_empty_columns(Gpt_contribution),
+        "ES": remove_empty_columns(Ges_contribution),
+        "FR": remove_empty_columns(Gfr_contribution),
     }
     return aggregated, contributions
 
