@@ -42,7 +42,7 @@ In order to tackle this problem, some approximations were made:
 
 From the ENTSO-E API it is possible to request data and process it into the following variables:
 
-- $G_{t,s}^{X}$: the generation matrices for Portugal, Spain, and France, respectively. The lines $t$ represent the time (each hour) and the columns $s$ represent the sources. 
+- $G_{t,s}^{X}$: the generation matrix for country $X$. The lines $t$ represent the time (each hour) and the columns $s$ represent the sources. 
 - $F_t^{A \to B}$: A vector representing the (non-netted) cross-border total flows from country A to country B. This vector contains one element for each hour being considered.
 
 We retrieve the generation matrices for Portugal, Spain and France, and the flow vectors for Portugal-Spain and Spain-France (in both direction for each case).
