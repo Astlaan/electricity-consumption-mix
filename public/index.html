@@ -15,6 +15,18 @@
     <!-- 1200x630, jpg or png -->
     <meta property="og:url" content="https://portugal-electricity-mix.vercel.app">
     <meta property="og:type" content="website">
+
+    <!-- SEO -->
+    <link rel="alternate" hreflang="en" href="https://portugal-electricity-mix.vercel.app/" />
+    <link rel="alternate" hreflang="pt" href="https://portugal-electricity-mix.vercel.app/" />
+    
+    <meta name="description" content="Portugal's electricity consumption, including imports. Consumo de eletricidade em Portugal: mix elétrico, energia elétrica e contribuições das importações.">
+
+
+    <!-- Google -->
+    <meta name="google-site-verification" content="gT-Wvv_yWs2-IV3ZnDhnjYsK31nyTMvbrF34_Tb1yzE" />
+
+    <!-- Packages -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- <script src="https://d3js.org/d3.v7.min.js"></script> -->
 
@@ -189,16 +201,16 @@
         <!-- <div class="plot-type-selector"> -->
         <div class="mode-selector">
             <input type="radio" id="discriminated" name="plotMode" value="discriminated" checked>
-            <label for="discriminated">Discriminated by Country</label>
+            <label for="discriminated">Average by Country and Source</label>
             <input type="radio" id="aggregated" name="plotMode" value="aggregated">
-            <label for="aggregated">Aggregated by Source</label>
+            <label for="aggregated">Average by Source</label>
         </div>
 
         <div class="mode-selector">
             <input type="radio" id="simpleMode" name="timeMode" value="simple" checked>
             <label for="simpleMode">Simple Interval</label>
             <input type="radio" id="advancedMode" name="timeMode" value="advanced">
-            <label for="advancedMode">Advanced Pattern</label>
+            <label for="advancedMode">Complex Interval</label>
         </div>
 
 

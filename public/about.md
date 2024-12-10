@@ -98,3 +98,8 @@ We can then use the whole expression to plot the aggregated electricity consumpt
 
 - **Missing data handling:** there are some hour timestamps where no data was registered, for some 
 sources. Missing data is estimated via linear interpolation.
+
+
+## Authors
+
+- Diogo Valada (Owner): [LinkedIn](https://www.linkedin.com/in/diogovalada/)
