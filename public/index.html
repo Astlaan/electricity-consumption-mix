@@ -19,8 +19,9 @@
     <!-- SEO -->
     <link rel="alternate" hreflang="en" href="https://portugal-electricity-mix.vercel.app/" />
     <link rel="alternate" hreflang="pt" href="https://portugal-electricity-mix.vercel.app/" />
-    
-    <meta name="description" content="Portugal's electricity consumption, including imports. Consumo de eletricidade em Portugal: mix elétrico, energia elétrica e contribuições das importações.">
+
+    <meta name="description"
+        content="Portugal's electricity consumption, including imports. Consumo de eletricidade em Portugal: mix elétrico, energia elétrica e contribuições das importações.">
 
 
     <!-- Google -->
@@ -164,6 +165,12 @@
             visibility: visible;
         }
 
+        /* Style labels of disabled radio buttons */
+        input[name="timeMode"]:disabled+label {
+            color: #cccccc;
+            cursor: not-allowed;
+        }
+
         .mode-selector {
             margin-bottom: 20px;
         }
@@ -204,6 +211,8 @@
             <label for="discriminated">Average by Country and Source</label>
             <input type="radio" id="aggregated" name="plotMode" value="aggregated">
             <label for="aggregated">Average by Source</label>
+            <input type="radio" id="areas" name="plotMode" value="areas">
+            <label for="areas">Time-based Chart</label>
         </div>
 
         <div class="mode-selector">
@@ -287,6 +296,37 @@
                     errorMessage.style.display = 'none';
                     errorMessage.innerHTML = '';
                     submitBtn.disabled = false;
+                }
+            });
+        });
+
+        // Add event listener for 'plotMode' radio buttons
+        document.querySelectorAll('input[name="plotMode"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const advancedModeRadio = document.getElementById('advancedMode');
+                const simpleModeRadio = document.getElementById('simpleMode');
+                const advancedControls = document.getElementById('advancedControls');
+                const errorMessage = document.getElementById('errorMessage');
+                const submitBtn = document.getElementById('submitBtn');
+
+                if (this.value === 'areas') {
+                    // Automatically select Simple Interval
+                    simpleModeRadio.checked = true;
+
+                    simpleModeRadio.dispatchEvent(new Event('change'));
+
+                    // Disable Advanced Interval
+                    advancedModeRadio.disabled = true;
+
+                    // Hide Advanced Controls
+                    advancedControls.style.display = 'none';
+
+                    // Clear any existing error messages
+                    errorMessage.style.display = 'none';
+                    errorMessage.innerHTML = '';
+                } else {
+                    // Enable Advanced Interval when not in 'areas' mode
+                    advancedModeRadio.disabled = false;
                 }
             });
         });
@@ -560,6 +600,12 @@
         window.addEventListener('load', function () {
             setFormDateBounds();
             validateDates();
+
+            // Trigger change event for the initially selected 'plotMode'
+            const selectedPlotMode = document.querySelector('input[name="plotMode"]:checked');
+            if (selectedPlotMode) {
+                selectedPlotMode.dispatchEvent(new Event('change'));
+            }
         });
 
         let lastViewportWidth = window.innerWidth;
