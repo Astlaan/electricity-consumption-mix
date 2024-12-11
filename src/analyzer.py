@@ -25,6 +25,7 @@ def _time_aggregation(df: pd.DataFrame) -> pd.Series:  # aggregate_by_source_typ
     grouped_data = df.mean()
     return grouped_data
 
+
 def remove_empty_columns(df: pd.DataFrame):
     df = df.loc[:, (df != 0).any()]
     return df
@@ -222,6 +223,8 @@ def plot(data: Data, config: dict):
             fig = _plot_aggregated(aggregated)
         case "discriminated":
             fig = _plot_hierarchical(aggregated, contributions, config)
+        case "areas":
+            fig = _plot_areas(aggregated, contributions, config)
         case _:
             raise ValueError(f"plot_mode {config["plot_mode"]} is not supported.")
     return fig
@@ -425,6 +428,32 @@ def _plot_hierarchical(
     )
 
     _apply_figure_global_settings(fig)
+    return fig
+
+
+def _plot_areas(aggregated: pd.DataFrame, contributions: dict[str, pd.DataFrame], *_):
+    import plotly.express as px
+
+    aggregated.rename(columns=PSR_TYPE_MAPPING, inplace=True)
+    df_long = aggregated.reset_index().melt(
+        id_vars="start_time", var_name="Source", value_name="Value"
+    )
+
+    fig = px.area(
+        df_long,
+        x="start_time",
+        y="Value",
+        color="Source",
+        color_discrete_sequence=px.colors.qualitative.Set3,
+        title="Electricity Generation by Source Over Time",
+        labels={"Value": "Power (MW)", "start_time": "Time"},
+        custom_data=[df_long["Source"]]
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>%{customdata[0]}</b><br>%{y:.0f} MW<extra></extra>",
+    )
+
     return fig
 
 

@@ -19,8 +19,9 @@
     <!-- SEO -->
     <link rel="alternate" hreflang="en" href="https://portugal-electricity-mix.vercel.app/" />
     <link rel="alternate" hreflang="pt" href="https://portugal-electricity-mix.vercel.app/" />
-    
-    <meta name="description" content="Portugal's electricity consumption, including imports. Consumo de eletricidade em Portugal: mix elétrico, energia elétrica e contribuições das importações.">
+
+    <meta name="description"
+        content="Portugal's electricity consumption, including imports. Consumo de eletricidade em Portugal: mix elétrico, energia elétrica e contribuições das importações.">
 
 
     <!-- Validation -->
@@ -165,6 +166,12 @@
             visibility: visible;
         }
 
+        /* Style labels of disabled radio buttons */
+        input[name="timeMode"]:disabled+label {
+            color: #cccccc;
+            cursor: not-allowed;
+        }
+
         .mode-selector {
             margin-bottom: 20px;
         }
@@ -205,6 +212,8 @@
             <label for="discriminated">Average by Country and Source</label>
             <input type="radio" id="aggregated" name="plotMode" value="aggregated">
             <label for="aggregated">Average by Source</label>
+            <input type="radio" id="areas" name="plotMode" value="areas">
+            <label for="areas">Time-based Chart</label>
         </div>
 
         <div class="mode-selector">
@@ -223,7 +232,7 @@
                     min="2015-01-15T00:00">
 
                 <label for="end_date">End Date (UTC):</label>
-                <input type="datetime-local" id="end_date" required value="2024-01-01T01:00" step="3600"
+                <input type="datetime-local" id="end_date" required value="2024-01-01T02:00" step="3600"
                     min="2015-01-15T01:00">
             </div>
 
@@ -288,6 +297,37 @@
                     errorMessage.style.display = 'none';
                     errorMessage.innerHTML = '';
                     submitBtn.disabled = false;
+                }
+            });
+        });
+
+        // Add event listener for 'plotMode' radio buttons
+        document.querySelectorAll('input[name="plotMode"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const advancedModeRadio = document.getElementById('advancedMode');
+                const simpleModeRadio = document.getElementById('simpleMode');
+                const advancedControls = document.getElementById('advancedControls');
+                const errorMessage = document.getElementById('errorMessage');
+                const submitBtn = document.getElementById('submitBtn');
+
+                if (this.value === 'areas') {
+                    // Automatically select Simple Interval
+                    simpleModeRadio.checked = true;
+
+                    simpleModeRadio.dispatchEvent(new Event('change'));
+
+                    // Disable Advanced Interval
+                    advancedModeRadio.disabled = true;
+
+                    // Hide Advanced Controls
+                    advancedControls.style.display = 'none';
+
+                    // Clear any existing error messages
+                    errorMessage.style.display = 'none';
+                    errorMessage.innerHTML = '';
+                } else {
+                    // Enable Advanced Interval when not in 'areas' mode
+                    advancedModeRadio.disabled = false;
                 }
             });
         });
@@ -388,6 +428,20 @@
             // Check date order
             if (startDate >= endDate) {
                 errors.push("End date must be after start date");
+            }
+
+            const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
+
+            if (plotMode == "areas") {
+                const timeDifference = (endDate - startDate) / (1000 * 60 * 60);
+
+                if (timeDifference < 2) {
+                    errors.push("Time-based charts: Interval must span at least 2 hours.");
+                }
+
+                if (timeDifference > 7 * 24) {
+                    errors.push("Time-based charts: Interval must span at most 7 days (168 hours).");
+                }
             }
 
             // Display errors or hide error container
@@ -561,6 +615,12 @@
         window.addEventListener('load', function () {
             setFormDateBounds();
             validateDates();
+
+            // Trigger change event for the initially selected 'plotMode'
+            const selectedPlotMode = document.querySelector('input[name="plotMode"]:checked');
+            if (selectedPlotMode) {
+                selectedPlotMode.dispatchEvent(new Event('change'));
+            }
         });
 
         let lastViewportWidth = window.innerWidth;
@@ -644,7 +704,11 @@
                 });
             }
 
-
+            if (data[0].type === "scatter") {
+                layout.hovermode = "x";
+                layout.hoverlabel = { namelength: -1 };
+                layout.xaxis = { showspikes: true }
+            }
 
             Plotly.newPlot('plotArea', data, layout, { responsive: false });
         }
