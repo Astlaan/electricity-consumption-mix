@@ -438,15 +438,20 @@ def _plot_areas(aggregated: pd.DataFrame, contributions: dict[str, pd.DataFrame]
     df_long = aggregated.reset_index().melt(
         id_vars="start_time", var_name="Source", value_name="Value"
     )
-    # df_long.rename(columns={"index": "Time"}, inplace=True)
 
     fig = px.area(
         df_long,
         x="start_time",
         y="Value",
         color="Source",
+        color_discrete_sequence=px.colors.qualitative.Set3,
         title="Electricity Generation by Source Over Time",
         labels={"Value": "Power (MW)", "start_time": "Time"},
+        custom_data=[df_long["Source"]]
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>%{customdata[0]}</b><br>%{y:.0f} MW<extra></extra>",
     )
 
     return fig
