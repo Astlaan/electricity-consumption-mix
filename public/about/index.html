@@ -72,7 +72,7 @@
             });
 
         // Load and render the markdown content
-        fetch('/about.md')
+        fetch('about/about.md')
             .then(response => response.text())
             .then(markdown => {
                 const html = marked.parse(markdown);
