@@ -14,7 +14,7 @@ setup.py
 .aider*
 .codebuddy
 .pytest_cache
-.venv
+.venv*
 .aider_env
 .env
 .conda

@@ -1,7 +1,7 @@
 .aider*
 .codebuddy
 .pytest_cache
-.venv
+.venv*
 .aider_env
 .env
 .vercel
