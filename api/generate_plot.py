@@ -28,8 +28,9 @@ def sanitize_exception(e):
 
 
 def handle_request(request_body):
+    print("RUNNING 124")
+    return {"statusCode": 200, "body": json.dumps({"plot": "test"})}
     body = json.loads(request_body)
-
     try:
         if body["mode"] == "simple":
             data_request = SimpleInterval(
@@ -74,12 +75,14 @@ def handle_request(request_body):
 
             plot_json = json_item(fig)  # type: ignore
         elif "plotly" in body["backend"]:
+            print("Generate plotly json")
             plot_json = fig.to_json()
         else:
             raise ValueError(f"Backend {body["backend"]} not supported")
     else:  # Assume plotly
         plot_json = fig.to_json()
 
+    print("returned plotly_json")
     return {"statusCode": 200, "body": json.dumps({"plot": plot_json})}
 
 

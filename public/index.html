@@ -530,6 +530,7 @@
                     };
                 }
 
+                console.log('API CALL');
                 const response = await fetch('/api/generate_plot', {
                     method: 'POST',
                     headers: {
@@ -538,12 +539,17 @@
                     body: JSON.stringify(requestData)
                 });
 
+                console.log("API CALL SENT");
+
                 const textResponse = await response.text();
+                console.log("API CALL RECEIVED", textResponse);
                 let data;
 
                 try {
                     // Try to parse it as JSON
+                    console.log("PARSE 1");
                     data = JSON.parse(textResponse);
+                    console.log("PARSE 1 - SUCCESS", data);
                 } catch (parseError) {
                     // If it's not valid JSON, throw an error with the text response
                     throw new Error(textResponse || 'Invalid server response');
