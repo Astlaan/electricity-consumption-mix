@@ -478,6 +478,8 @@
         <div id="plotArea"></div>
     </div>
 
+    <div id="footer"></div>
+
     <!-- <div id="footer"></div> -->
 
     <script>
@@ -489,11 +491,11 @@
             });
 
         // Load and insert the footer
-        fetch('/footer.html')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('footer').innerHTML = html;
-            });
+        // fetch('/footer.html')
+        //     .then(response => response.text())
+        //     .then(html => {
+        //         document.getElementById('footer').innerHTML = html;
+        //     });
 
         async function submitForm(e) {
             e.preventDefault();
