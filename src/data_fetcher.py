@@ -129,6 +129,9 @@ class ENTSOEDataFetcher:
             flow_pt_to_es=results[4],
             flow_fr_to_es=results[5],
             flow_es_to_fr=results[6],
+            consumption_pt=self._extract_consumption_data(results, 'pt'),
+            consumption_es=self._extract_consumption_data(results, 'es'),
+            consumption_fr=self._extract_consumption_data(results, 'fr'),
         )
 
     def _get_data_advanced_pattern(self, pattern: AdvancedPattern) -> Data:
@@ -306,19 +309,18 @@ class ENTSOEDataFetcher:
         quantity_path = "ns:quantity"
 
         for time_series in root.findall(time_series_path, namespace):
-            if (
-                not is_flow_data
-                and time_series.find(".//ns:outBiddingZone_Domain.mRID", namespace)
-                is not None
-            ):
-                continue
-
+            # Remove the continue statement to include consumption data
             psr_type = None
+            consumption = False  # Flag to identify consumption data
             if not is_flow_data:
                 psr_type_elem = time_series.find(psr_type_path, namespace)
                 psr_type = (
                     psr_type_elem.text if psr_type_elem is not None else "Unknown"
                 )
+                # Identify if the current data is consumption
+                consumption_mode = time_series.find(".//ns:consumption", namespace)
+                if consumption_mode is not None and consumption_mode.text.lower() == "true":
+                    consumption = True
 
             period = time_series.find(period_path, namespace)
             if period is None:
@@ -341,20 +343,19 @@ class ENTSOEDataFetcher:
                     continue
 
                 point_start_time = start_time + resolution * (int(position.text) - 1)  # type: ignore
-                # point_end_time = point_start_time + resolution
 
                 data_point = {
                     "start_time": point_start_time,
-                    # "end_time": point_end_time,
-                    # "resolution": resolution,
                 }
 
-                # Use 'Power' column name for flow data, otherwise use quantity with psr_type
                 if is_flow_data:
                     data_point["Power"] = float(quantity.text)  # type: ignore
                 else:
-                    data_point["quantity"] = float(quantity.text)  # type: ignore
-                    data_point["psr_type"] = psr_type
+                    if consumption:
+                        data_point["consumption"] = float(quantity.text)  # type: ignore
+                    else:
+                        data_point["quantity"] = float(quantity.text)  # type: ignore
+                        data_point["psr_type"] = psr_type
 
                 data.append(data_point)
 
@@ -370,7 +371,6 @@ class ENTSOEDataFetcher:
 
         # Pivot the DataFrame if it's generation data
         if not df.empty and "psr_type" in df.columns:
-            # TODO: Fails without this duplicate finding, figure out why
             # First aggregate any duplicate entries by taking the mean
             df = df.groupby(["start_time", "psr_type"])["quantity"].mean().reset_index()
 
@@ -380,7 +380,6 @@ class ENTSOEDataFetcher:
                 columns="psr_type",
                 values="quantity",
             ).reset_index()
-            # df = df.fillna(0) # TODO: is this fine?
 
             # Remove column name from the pivot operation
             df.columns.name = None
@@ -542,12 +541,60 @@ class ENTSOEDataFetcher:
             progress_callback()
         return df
 
+    async def _async_get_consumption_data(
+        self,
+        country_code: str,
+        start_date: datetime,
+        end_date: datetime,
+        progress_callback=None,
+    ) -> pd.DataFrame:
+        params = {
+            "documentType": "A75",  # Consumption document type
+            "processType": "A16",
+            "in_Domain": country_code,
+            "outBiddingZone_Domain": country_code,
+        }
+        start_dt = datetime.now()
+        df = await self._fetch_and_cache_data(params, start_date, end_date)
+        end_dt = datetime.now()
+        elapsed = (end_dt - start_dt).total_seconds()
+        print(
+            f"[async_get_consumption_data] Start: {start_dt.strftime('%H:%M:%S')}, End: {end_dt.strftime('%H:%M:%S')}, took {elapsed:.2f}s: country: {params['in_Domain']}"
+        )
+        if progress_callback:
+            progress_callback()
+        return df
+
     def reset_cache(self):
         """Delete all cached data."""
         if os.path.exists(self.CACHE_DIR):
             print(f"Deleting cache directory: {self.CACHE_DIR}")
             shutil.rmtree(self.CACHE_DIR)
             os.makedirs(self.CACHE_DIR)  # Recreate empty cache dir
+
+    def _extract_consumption_data(self, results: List[pd.DataFrame], region: str) -> pd.DataFrame:
+        """
+        Extract consumption data for a specific region from the results.
+        
+        Args:
+            results (List[pd.DataFrame]): The list of DataFrames returned by asyncio.gather.
+            region (str): The region code ('pt', 'es', 'fr').
+        
+        Returns:
+            pd.DataFrame: The consumption DataFrame for the specified region.
+        """
+        consumption_df = pd.DataFrame()
+        for df in results:
+            if 'consumption' in df.columns:
+                region_consumption = df[['start_time', 'consumption']].copy()
+                region_consumption.set_index('start_time', inplace=True)
+                consumption_df = pd.concat([consumption_df, region_consumption])
+        
+        if not consumption_df.empty:
+            # Aggregate consumption data if necessary
+            consumption_df = consumption_df.resample('H').sum()
+        
+        return consumption_df
 
     ########## For testing ###########
 
