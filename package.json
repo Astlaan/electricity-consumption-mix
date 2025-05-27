@@ -1,4 +1,12 @@
 {
+  "name": "electricity-consumption-mix-root",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "cd frontend && pnpm dev",
+    "build:frontend": "cd frontend && pnpm build",
+    "lint:frontend": "cd frontend && pnpm lint",
+    "format:frontend": "cd frontend && pnpm format"
+  },
   "dependencies": {
   }
 }

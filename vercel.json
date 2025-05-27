@@ -1,9 +1,19 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/sveltekit"
+    },
+    {
+      "src": "api/**/*.py",
+      "use": "@vercel/python"
+    }
+  ],
   "functions": {
     "api/**": {
-      "excludeFiles": "{**/tests, public}/**",
-      "memory":1024
+      "excludeFiles": "{**/tests, public, frontend}/**",
+      "memory": 1024
     }
   }
 }
