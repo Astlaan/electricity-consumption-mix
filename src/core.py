@@ -63,6 +63,7 @@ def generate_visualization(data_request: DataRequest, config: dict):
         #     logger.warning(f"Invalid plot type: {plot_calc_function}")
         #     return None
         fig = analyzer.plot(data, config)
+        print("figure successfully generated")
 
         return fig
     except Exception as e:

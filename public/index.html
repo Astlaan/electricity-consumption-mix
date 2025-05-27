@@ -478,6 +478,8 @@
         <div id="plotArea"></div>
     </div>
 
+    <div id="footer"></div>
+
     <!-- <div id="footer"></div> -->
 
     <script>
@@ -489,11 +491,11 @@
             });
 
         // Load and insert the footer
-        fetch('/footer.html')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('footer').innerHTML = html;
-            });
+        // fetch('/footer.html')
+        //     .then(response => response.text())
+        //     .then(html => {
+        //         document.getElementById('footer').innerHTML = html;
+        //     });
 
         async function submitForm(e) {
             e.preventDefault();
@@ -530,6 +532,15 @@
                     };
                 }
 
+                console.log('API CALL');
+                // const params = new URLSearchParams(requestData);
+                // const response = await fetch(`/api/generate_plot?${params}`, {
+                //     method: 'GET',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //     }
+                // });
+
                 const response = await fetch('/api/generate_plot', {
                     method: 'POST',
                     headers: {
@@ -538,12 +549,17 @@
                     body: JSON.stringify(requestData)
                 });
 
+                console.log("API CALL SENT");
+
                 const textResponse = await response.text();
+                console.log("API CALL RECEIVED", textResponse);
                 let data;
 
                 try {
                     // Try to parse it as JSON
+                    console.log("PARSE 1");
                     data = JSON.parse(textResponse);
+                    console.log("PARSE 1 - SUCCESS", data);
                 } catch (parseError) {
                     // If it's not valid JSON, throw an error with the text response
                     throw new Error(textResponse || 'Invalid server response');
