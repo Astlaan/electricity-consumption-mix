@@ -28,8 +28,6 @@ def sanitize_exception(e):
 
 
 def handle_request(request_body):
-    print("RUNNING 124")
-    return {"statusCode": 200, "body": json.dumps({"plot": "test"})}
     body = json.loads(request_body)
     try:
         if body["mode"] == "simple":
@@ -87,22 +85,23 @@ def handle_request(request_body):
 
 
 class handler(BaseHTTPRequestHandler):
+    
+    # def do_GET(self):
+    #     response = {"statusCode": 200, "body": json.dumps({"plot": "test"})}
+    #     self.send_response(response['statusCode'])
+    #     self.send_header('Content-type', 'application/json')
+    #     self.end_headers()
+    #     self.wfile.write(response['body'].encode('utf-8'))
+    #     return
+    
     def do_POST(self):
-        self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Content-type", "application/json")
         content_length = int(self.headers["Content-Length"])
         post_data = self.rfile.read(content_length).decode("utf-8")
+
         response = handle_request(post_data)
-        self.send_response(response["statusCode"])
+
+        self.send_response(response['statusCode'])
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(response["body"].encode("utf-8"))
-
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(b"Hello, World!")  # Placeholder for GET request
+        self.wfile.write(response['body'].encode('utf-8'))
+        return

@@ -533,6 +533,14 @@
                 }
 
                 console.log('API CALL');
+                // const params = new URLSearchParams(requestData);
+                // const response = await fetch(`/api/generate_plot?${params}`, {
+                //     method: 'GET',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //     }
+                // });
+
                 const response = await fetch('/api/generate_plot', {
                     method: 'POST',
                     headers: {
