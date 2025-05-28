@@ -29,9 +29,9 @@ In order to tackle this problem, some approximations were made:
    b. This assumption greatly simplifies the problem, which would otherwise require taking the topology of the grid into account (and data that is likely not available). Such a project would be of a whole other scope. 
 
 
-2. **Cross-border flows are assumed to be acyclic.** If there is, for a given border (eg. Spain-France), at any point in time, non-zero flows in both directions, then the exports are assumed not to interfere with the imports. I.e. if Spain is both importing and exporting from/to France at a given time, then the mix of the France $\\to$ Spain flow is assumed to have the same distribution as France's generation. As such, we are discarding any "loop" effects, of flows that enter a country and go back to the country of origin due to subpar transmission infrastructure in that country. This is the case, for example, with Germany, where often electricity is transmitted between the southern and northern regions via a detour through France/Belgium/Netherlands, due to the relatively weak north-south domestic transmission axis.
+2. **Cross-border flows are assumed to be acyclic.** If there is, for a given border (eg. Spain-France), at any point in time, non-zero flows in both directions, then the exports are assumed not to interfere with the imports. I.e. if Spain is both importing and exporting from/to France at a given time, then the mix of the France $\to$ Spain flow is assumed to have the same distribution as France's generation. As such, we are discarding any "loop" effects, of flows that enter a country and go back to the country of origin due to subpar transmission infrastructure in that country. This is the case, for example, with Germany, where often electricity is transmitted between the southern and northern regions via a detour through France/Belgium/Netherlands, due to the relatively weak north-south domestic transmission axis.
    a. This is in general a reasonable approximation to do in the case of the Portugal-Spain flows due to the good domestic transmission networks of both countries. In fact, for each border, flows in only one of the directions were observed for the hourly data on record. For the PT-ES and ES-FR data, simultaneous flows in both directions were observed in only 2.2% and 1.6% of the hourly data points, respectively.
-   b.  However, Spain $\\to$ Portugal flows will consider a recalculated Spanish grid mix that takes the France$\\to$Spain flows into account.
+   b.  However, Spain $\to$ Portugal flows will consider a recalculated Spanish grid mix that takes the France$\to$Spain flows into account.
 
 3. **Only the contributions of Portugal's, Spain's and France's generation were considered.**
    a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21/11/2024 when total imports reached a staggering 48% of consumption, the French contribution was responsible for &lt;5% of the supply. As such, the approximation should have a small impact.  
@@ -43,34 +43,34 @@ In order to tackle this problem, some approximations were made:
 From the ENTSO-E API it is possible to request data and process it into the following variables:
 
 - $G_{t,s}^{X}$: the generation matrix for country $X$. The lines $t$ represent the time (each hour) and the columns $s$ represent the sources. 
-- $F_t^{A \\to B}$: A vector representing the (non-netted) cross-border total flows from country A to country B. This vector contains one element for each hour being considered.
+- $F_t^{A \to B}$: A vector representing the (non-netted) cross-border total flows from country A to country B. This vector contains one element for each hour being considered.
 
 We retrieve the generation matrices for Portugal, Spain and France, and the flow vectors for Portugal-Spain and Spain-France (in both direction for each case).
 
 Based on the data above, and on the approximations described in the previous section, we devised a simple model where, for each country:
 
 1. The relative weight of each source is calculated, for each hourly timestamp, calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
-2. The exports per source are calculated by applying the relative weights to the total exports, e.g. $F_{t}^{FR \\to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}$ in the case of the exports from France to Spain.
-3. The imports per source are calculated in a similar fashion, e.g. $F_{t}^{ES \\to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}}$ in the case of imports from Spain to France.
+2. The exports per source are calculated by applying the relative weights to the total exports, e.g. $F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}$ in the case of the exports from France to Spain.
+3. The imports per source are calculated in a similar fashion, e.g. $F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}}$ in the case of imports from Spain to France.
 3. The effective source mix on the grid is calculated by subtracting the exports (per source and time) from the country's generation, and the imports are added.
 
 We start by calculating the above for the Spain-France pair, in order to calculate the intermediary grid mix for Spain, $G_{t,s}^{ES'}$ (notice the prime symbol '). We calculate the interactions for Portugal-Spain using that intermediary spanish grid mix. These two steps are represented in the expressions below:
 
 $$
-G_{t,s}^{ES'} = G_{t,s}^{ES} - F_{t}^{ES \\to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}} + F_{t}^{FR \\to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}
+G_{t,s}^{ES'} = G_{t,s}^{ES} - F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}} + F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}
 $$
 
 $$
-C_{t,s}^{PT} = G_{t,s}^{PT} - F_{t}^{PT \\to ES}\frac{G_{t,s}^{PT}}{\sum_{s} G_{t,s}^{PT}} + F_{t}^{ES \\to PT}\frac{G_{t,s}^{ES'}}{\sum_{s} G_{t,s}^{ES'}}
+C_{t,s}^{PT} = G_{t,s}^{PT} - F_{t}^{PT \to ES}\frac{G_{t,s}^{PT}}{\sum_{s} G_{t,s}^{PT}} + F_{t}^{ES \to PT}\frac{G_{t,s}^{ES'}}{\sum_{s} G_{t,s}^{ES'}}
 $$
 
 Where $C_{t,s}^{PT}$ is the resulting Portuguese electricity aggregated consumption matrix, indexed by time (hourly) and source. Merging these two expressions, and factorizing the numerator generation terms we get:
 
 $$
 \begin{aligned}
-C_{t,s}^{PT} &= \left( 1 - \frac{F_{t}^{PT \\to ES}}{\sum_{s} G_{t,s}^{PT}} \right) G_{t,s}^{PT} & \text{(Portuguese Contribution)} \newline
-   &+ \frac{F_{t}^{ES \\to PT} \left( 1 - \frac{F_{t}^{ES \\to FR}}{\sum_{s} G_{t,s}^{ES}} \right)}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \\to FR} + F_{t}^{FR \\to ES}} G_{t,s}^{ES} & \text{(Spanish Contribution)} \newline
-   &+ \frac{F_{t}^{ES \\to PT} \cdot \frac{F_{t}^{FR \\to ES}}{\sum_{s} G_{t,s}^{FR}}}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \\to FR} + F_{t}^{FR \\to ES}} G_{t,s}^{FR} & \text{(French Contribution)}
+C_{t,s}^{PT} &= \left( 1 - \frac{F_{t}^{PT \to ES}}{\sum_{s} G_{t,s}^{PT}} \right) G_{t,s}^{PT} & \text{(Portuguese Contribution)} \newline
+   &+ \frac{F_{t}^{ES \to PT} \left( 1 - \frac{F_{t}^{ES \to FR}}{\sum_{s} G_{t,s}^{ES}} \right)}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{ES} & \text{(Spanish Contribution)} \newline
+   &+ \frac{F_{t}^{ES \to PT} \cdot \frac{F_{t}^{FR \to ES}}{\sum_{s} G_{t,s}^{FR}}}{\sum_{s} G_{t,s}^{ES} - F_{t}^{ES \to FR} + F_{t}^{FR \to ES}} G_{t,s}^{FR} & \text{(French Contribution)}
 \end{aligned}
 $$
 
