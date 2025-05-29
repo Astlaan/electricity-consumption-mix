@@ -1,34 +1,33 @@
 import adapter from '@sveltejs/adapter-auto';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { mdsvex } from 'mdsvex';
+import { mathsvex } from 'mathsvex';
+import remarkMath from 'remark-math';
+import rehypeKatexSvelte from 'rehype-katex-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	extensions: ['.svelte', '.md'], // Add .md extension
+	// extensions: ['.svelte', '.md'], // mdsvex
+	extensions: ['.svelte', '.md', '.math.js', '.math.ts'], // mathsvex
 
 	// Consult https://svelte.dev/docs/kit/integrations
 	// for more information about preprocessors
 	preprocess: [
 		vitePreprocess(),
-		mdsvex({
-			extensions: ['.md'], // Tell mdsvex to only process .md files
-			highlight: {
-				// highlighter: customHighlighter, // You can add a syntax highlighter here if needed
-			},
-			// KaTeX configuration for LaTeX
-			// mdsvex has built-in support for KaTeX if remark-math and rehype-katex are not used explicitly
-			// Ensure katex is installed: pnpm add -D katex
-			// You might need to pass options to KaTeX if default behavior isn't sufficient
-			// For example:
-			// remarkPlugins: [], // Add remark plugins here
-			// rehypePlugins: [], // Add rehype plugins here
-			// katex: {
-			//   // KaTeX options, e.g., displayMode: true for block equations
-			//   // See https://katex.org/docs/options.html
-			// }
-			// If remark-math and rehype-katex were intended, they would be configured here.
-			// Since they were removed, relying on mdsvex's direct or default KaTeX handling.
-		})
+		mathsvex(),
+		// mdsvex({
+		// 	extensions: ['.md', '.svx'], // Tell mdsvex to only process .md files
+		// 	highlight: {
+		// 		// highlighter: customHighlighter, // You can add a syntax highlighter here if needed
+		// 	},
+		// 	// Configure remark and rehype plugins for math/KaTeX
+		// 	remarkPlugins: [remarkMath],
+		// 	rehypePlugins: [rehypeKatexSvelte],
+		// 	// You can pass KaTeX options here if needed, e.g., displayMode: true for block equations
+		// 	// katex: {
+		// 	//   // See https://katex.org/docs/options.html
+		// 	// }
+		// })
 	],
 
 	kit: {
