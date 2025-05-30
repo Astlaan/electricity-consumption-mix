@@ -1,3 +1,7 @@
+<svelte:head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</svelte:head>
+
 <script lang="ts">
     import { onMount } from 'svelte';
 

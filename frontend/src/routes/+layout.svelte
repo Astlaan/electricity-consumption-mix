@@ -25,7 +25,6 @@
     <meta name="msvalidate.01" content="B9750948FEDB6C5AB8EB0E4A736E5420" />
 
     <!-- Packages -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <title>Portugal Electricity Consumption Mix</title>
 
