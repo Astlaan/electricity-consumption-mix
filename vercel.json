@@ -2,12 +2,29 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.py",
+      "src": "api/*.py",
       "use": "@vercel/python",
       "config": {
         "memory": 1024,
-        "excludeFiles": "{**/tests, public, frontend}/**"
+        "excludeFiles": "../{tests, frontend}/**, {tests, frontend}/**", 
+        "includeFiles": "src/**" 
       }
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "cwd": "frontend"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
     }
   ]
 }
