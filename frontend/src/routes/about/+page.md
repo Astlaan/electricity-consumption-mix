@@ -26,6 +26,7 @@ In order to tackle this problem, some approximations were made:
 1. **The generated power is assumed to be distributed homogeneously throughout the grid, per country**. For example: taking Spain in isolation, we make the assumption that the mix of electricity provided in any location in the country simply corresponds to the overall mix for the country.
 
    a. **Corollary:** The source mix of a cross-border export is the same as the mix of electricity in the grid of the exporting country. This assumption follows directly from the assumption above.
+   
    b. This assumption greatly simplifies the problem, which would otherwise require taking the topology of the grid into account (and data that is likely not available). Such a project would be of a whole other scope. 
 
 
