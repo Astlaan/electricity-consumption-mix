@@ -50,7 +50,7 @@ We retrieve the generation matrices for Portugal, Spain and France, and the flow
 
 Based on the data above, and on the approximations described in the previous section, we devised a simple model where, for each country:
 
-1. The relative weight of each source is calculated, for each hourly timestamp, calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
+1. The relative weight of each source for each hourly timestamp is calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
 2. The exports per source are calculated by applying the relative weights to the total exports, e.g. $F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}$ in the case of the exports from France to Spain.
 3. The imports per source are calculated in a similar fashion, e.g. $F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}}$ in the case of imports from Spain to France.
 3. The effective source mix on the grid is calculated by subtracting the exports (per source and time) from the country's generation, and the imports are added.
