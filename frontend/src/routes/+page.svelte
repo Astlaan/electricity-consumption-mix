@@ -1,9 +1,15 @@
-<script lang="ts">
-    import { onMount } from 'svelte';
-
+<script context="module" lang="ts">
     // Forward declare Plotly if types are not readily available or for simplicity initially
     // For a more robust solution, one might install @types/plotly.js or define custom types
     declare let Plotly: any; 
+</script>
+
+<svelte:head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</svelte:head>
+
+<script lang="ts">
+    import { onMount } from 'svelte';
 
     // Form state variables
     let plotMode = 'discriminated'; // 'discriminated', 'aggregated', 'areas'
