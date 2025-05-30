@@ -1,3 +1,8 @@
+<svelte:head>
+	<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous" /> -->
+	<link rel="stylesheet" href="/css/katex.min.css" />
+</svelte:head>
+
 # About
 
 This website allows visualizing Portugal's electricity consumption patterns, taking into account both domestic generation and international exchanges.
