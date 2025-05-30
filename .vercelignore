@@ -2,6 +2,7 @@
 !.data_cache
 
 attic
+backup
 docs
 tests
 tools
@@ -13,10 +14,11 @@ setup.py
 
 .aider*
 .codebuddy
-.pytest_cache
-.venv*
-.aider_env
-.env
 .conda
+.continue
+.pytest_cache
+.roo
+.ruff_cache
+.venv
 *.pyc
 *.egg-info
