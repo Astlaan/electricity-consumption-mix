@@ -28,6 +28,7 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <title>Portugal Electricity Consumption Mix</title>
+
 </svelte:head>
 
 <script lang="ts">

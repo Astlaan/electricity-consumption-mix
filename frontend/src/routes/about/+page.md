@@ -26,6 +26,7 @@ In order to tackle this problem, some approximations were made:
 1. **The generated power is assumed to be distributed homogeneously throughout the grid, per country**. For example: taking Spain in isolation, we make the assumption that the mix of electricity provided in any location in the country simply corresponds to the overall mix for the country.
 
    a. **Corollary:** The source mix of a cross-border export is the same as the mix of electricity in the grid of the exporting country. This assumption follows directly from the assumption above.
+   
    b. This assumption greatly simplifies the problem, which would otherwise require taking the topology of the grid into account (and data that is likely not available). Such a project would be of a whole other scope. 
 
 
@@ -34,9 +35,9 @@ In order to tackle this problem, some approximations were made:
    b.  However, Spain $\to$ Portugal flows will consider a recalculated Spanish grid mix that takes the France$\to$Spain flows into account.
 
 3. **Only the contributions of Portugal's, Spain's and France's generation were considered.**
-   a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21/11/2024 when total imports reached a staggering 48% of consumption, the French contribution was responsible for <5% of the supply. As such, the approximation should have a small impact.  
+   a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21/11/2024 when total imports reached a staggering 48% of consumption, the French contribution was responsible for &lt;5% of the supply. As such, the approximation should have a small impact.  
 
-4. **Resampling of Spanish/French generation/cross-border flow data to hourly granularity**, from their original 15 minutes granularity. The need to resample follows from the different `Market Time Unit`(MTU), which define the granularity of data. The MTU is of 1 hour for Portugal, and 15 minutes for Spain and France. The downsampling of Spain/French data was performed by doing a mean aggregation of each hour's four 15 minutes blocks.
+4. **Resampling of Spanish/French generation/cross-border flow data to hourly granularity**, from their original 15 minutes granularity. The need to resample follows from the different Market Time Unit (MTU), which define the granularity of data. The MTU is of 1 hour for Portugal, and 15 minutes for Spain and France. The downsampling of Spain/French data was performed by doing a mean aggregation of each hour's four 15 minutes blocks.
 
 ### Model and calculation
 
@@ -49,7 +50,7 @@ We retrieve the generation matrices for Portugal, Spain and France, and the flow
 
 Based on the data above, and on the approximations described in the previous section, we devised a simple model where, for each country:
 
-1. The relative weight of each source is calculated, for each hourly timestamp, calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
+1. The relative weight of each source for each hourly timestamp is calculated by $\frac{G_{t,s}^{X}}{\sum_{s} G_{t,s}^{X}}$ (for each country X). 
 2. The exports per source are calculated by applying the relative weights to the total exports, e.g. $F_{t}^{FR \to ES}\frac{G_{t,s}^{FR}}{\sum_{s} G_{t,s}^{FR}}$ in the case of the exports from France to Spain.
 3. The imports per source are calculated in a similar fashion, e.g. $F_{t}^{ES \to FR}\frac{G_{t,s}^{ES}}{\sum_{s} G_{t,s}^{ES}}$ in the case of imports from Spain to France.
 3. The effective source mix on the grid is calculated by subtracting the exports (per source and time) from the country's generation, and the imports are added.
