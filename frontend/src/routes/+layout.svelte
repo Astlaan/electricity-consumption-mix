@@ -29,11 +29,6 @@
 
     <title>Portugal Electricity Consumption Mix</title>
 
-    <!-- Add the Temml stylesheet here -->
-    <link
-      rel="stylesheet"
-      href=" https://cdn.jsdelivr.net/npm/temml@0.11.6/dist/Temml-Local.min.css "
-    />
 </svelte:head>
 
 <script lang="ts">
