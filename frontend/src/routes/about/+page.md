@@ -37,7 +37,7 @@ In order to tackle this problem, some approximations were made:
 3. **Only the contributions of Portugal's, Spain's and France's generation were considered.**
    a. Portugal's electricity imports are sizeable. In 2023, around 23% of the electricity was imported. However, in this case, the french contribution represented only 0.5% of the supply. Even in times of extreme imports, like some time periods of 21/11/2024 when total imports reached a staggering 48% of consumption, the French contribution was responsible for &lt;5% of the supply. As such, the approximation should have a small impact.  
 
-4. **Resampling of Spanish/French generation/cross-border flow data to hourly granularity**, from their original 15 minutes granularity. The need to resample follows from the different `Market Time Unit`(MTU), which define the granularity of data. The MTU is of 1 hour for Portugal, and 15 minutes for Spain and France. The downsampling of Spain/French data was performed by doing a mean aggregation of each hour's four 15 minutes blocks.
+4. **Resampling of Spanish/French generation/cross-border flow data to hourly granularity**, from their original 15 minutes granularity. The need to resample follows from the different Market Time Unit (MTU), which define the granularity of data. The MTU is of 1 hour for Portugal, and 15 minutes for Spain and France. The downsampling of Spain/French data was performed by doing a mean aggregation of each hour's four 15 minutes blocks.
 
 ### Model and calculation
 
