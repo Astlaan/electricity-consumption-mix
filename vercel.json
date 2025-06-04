@@ -1,34 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "cwd": "frontend",
-        "distDir": ".vercel/output"
-      }
-    },
-    {
-      "src": "backend/api/**/*.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.12",
-        "memory": 1024,
-        "includeFiles": [
-          "backend/src/**",
-          "backend/requirements.txt"
-        ]
-      }
+    "functions": {
+        "api/*.py": {
+            "memory": 1024,
+            "excludeFiles": ".venv/**,.vercel/cache/**,vscode/**,attic/**,docs/**,public/**,tests/**,tools/**",
+            "maxDuration": 60
+        }
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/api/$1"
-    },
-    {
-      "handle": "filesystem"
-    }
-  ]
 }
