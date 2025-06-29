@@ -469,6 +469,10 @@
                     Show Details <span class="inline-help-text">(You can also hover for the plot for all details)</span>
                 </label>
             </div>
+            <div id="aggregateImportsContainer" style="display: none;">
+                <input type="checkbox" id="plotControlAggregateImports">
+                <label for="plotControlAggregateImports">Aggregate Imports</label>
+            </div>
             <div>
                 <label for="plotControlPlotSize">Plot Size:</label>
                 <input type="range" id="plotControlPlotSize" min="400" max="1000" value="800" step="50">
@@ -673,8 +677,127 @@
         function updatePlot() {
             if (!window.currentPlotData) return;
 
+            const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
+            const aggregateImportsContainer = document.getElementById('aggregateImportsContainer');
+
+            if (plotMode === 'discriminated' && window.currentPlotData) {
+                aggregateImportsContainer.style.display = 'block';
+            } else {
+                aggregateImportsContainer.style.display = 'none';
+            }
+
             const data = structuredClone(window.currentPlotData.data);
             const layout = structuredClone(window.currentPlotData.layout);
+
+            const aggregateImports = document.getElementById('plotControlAggregateImports').checked;
+
+            if (plotMode === 'discriminated' && aggregateImports) {
+                const totalValue = data[0].values.reduce((sum, v, i) => data[0].parents[i] === '' ? sum + v : sum, 0);
+
+                const aggregatedData = {
+                    ids: [],
+                    labels: [],
+                    parents: [],
+                    values: [],
+                    customdata: [],
+                    marker: { colors: [] }
+                };
+                const imports = {
+                    id: "Imports",
+                    label: "Imports",
+                    parent: "",
+                    value: 0,
+                    twh: 0,
+                    color: "#fdb462"
+                };
+                const importSources = {};
+
+                for (let i = 0; i < data[0].ids.length; i++) {
+                    const id = data[0].ids[i];
+                    const label = data[0].labels[i];
+                    const parent = data[0].parents[i];
+                    const value = data[0].values[i];
+                    const customdata = data[0].customdata[i];
+
+                    let twh = 0;
+                    const match = customdata[1].match(/<br>([\d.]+) (T|G)Wh/);
+                    if (match) {
+                        const num = parseFloat(match[1]);
+                        const unit = match[2];
+                        twh = unit === 'G' ? num / 1000 : num;
+                    }
+
+                    if (parent === "" && id !== "PT") {
+                        imports.value += value;
+                        imports.twh += twh;
+                    } else if (id.startsWith("PT")) {
+                        aggregatedData.ids.push(id);
+                        aggregatedData.labels.push(label);
+                        aggregatedData.parents.push(parent);
+                        aggregatedData.values.push(value);
+                        aggregatedData.customdata.push(customdata);
+                    } else {
+                        if (!importSources[label]) {
+                            importSources[label] = {
+                                id: `Imports/${label}`,
+                                label: label,
+                                parent: "Imports",
+                                value: 0,
+                                twh: 0
+                            };
+                        }
+                        importSources[label].value += value;
+                        importSources[label].twh += twh;
+                    }
+                }
+
+                const importsPercentOfTotal = (imports.value / totalValue) * 100;
+                let importsEnergyValue = imports.twh;
+                let importsEnergyUnit = "TWh";
+                if (importsEnergyValue < 1 && importsEnergyValue > 0) {
+                    importsEnergyValue *= 1000;
+                    importsEnergyUnit = "GWh";
+                }
+                imports.customdata = [
+                    importsPercentOfTotal,
+                    `<b>Imports</b><br>${importsPercentOfTotal.toFixed(1)}% of total<br>${Math.round(imports.value)} MW (average)<br>${importsEnergyValue.toFixed(1)} ${importsEnergyUnit}`
+                ];
+
+                aggregatedData.ids.push(imports.id);
+                aggregatedData.labels.push(imports.label);
+                aggregatedData.parents.push(imports.parent);
+                aggregatedData.values.push(imports.value);
+                aggregatedData.customdata.push(imports.customdata);
+
+                for (const source in importSources) {
+                    const sourceData = importSources[source];
+                    const percentOfImports = (sourceData.value / imports.value) * 100;
+                    const percentOfTotal = (sourceData.value / totalValue) * 100;
+
+                    let energyValue = sourceData.twh;
+                    let energyUnit = "TWh";
+                    if (energyValue < 1 && energyValue > 0) {
+                        energyValue *= 1000;
+                        energyUnit = "GWh";
+                    }
+
+                    sourceData.customdata = [
+                        percentOfTotal,
+                        `<b>Imports/${sourceData.label}</b><br>${percentOfImports.toFixed(1)}% of Imports<br>${percentOfTotal.toFixed(1)}% of total<br>${Math.round(sourceData.value)} MW (average)<br>${energyValue.toFixed(1)} ${energyUnit}`
+                    ];
+
+                    aggregatedData.ids.push(sourceData.id);
+                    aggregatedData.labels.push(sourceData.label);
+                    aggregatedData.parents.push(sourceData.parent);
+                    aggregatedData.values.push(sourceData.value);
+                    aggregatedData.customdata.push(sourceData.customdata);
+                }
+
+                data[0] = {
+                    ...data[0],
+                    ...aggregatedData
+                };
+            }
 
             // Change plotSize
             layout.height = parseInt(document.getElementById('plotControlPlotSize').value);
@@ -694,29 +817,23 @@
 
             //Change color
             if (data[0].type === "sunburst") {
-                // const set3Palette = [
-                //     "#8dd3c7", "#ffffb3", "#bebada", "#fb8072",
-                //     "#80b1d3", "#fdb462", "#b3de69", "#fccde5",
-                //     "#d9d9d9", "#bc80bd", "#ccebc5", "#ffed6f"
-                // ];
-
                 const colors = {
                     "PT": "#80b1d3",
                     "ES": "#fb8072",
-                    // "FR": "#8dd3c7",
-                    "FR": "#b3de69"
+                    "FR": "#b3de69",
+                    "Imports": "#fdb462"
                 };
 
-                // Ensure the marker object exists
                 if (!data[0].marker) {
                     data[0].marker = {};
                 }
 
-                // Assign colors only to parent nodes
                 data[0].marker.colors = data[0].labels.map((label, i) => {
-                    // Check if the label is a parent (appears in the parents array)
-                    // return data[0].parents.includes(label) ? set3Palette[i % set3Palette.length] : null;
-                    return data[0].parents.includes(label) ? colors[label] : null;
+                    const parent = data[0].parents[i];
+                    if (parent === "") {
+                        return colors[label];
+                    }
+                    return null;
                 });
             }
 
@@ -731,9 +848,14 @@
 
         // Setup plot control event listeners
         document.getElementById('plotControlShowDetails').addEventListener('change', updatePlot);
+        document.getElementById('plotControlAggregateImports').addEventListener('change', updatePlot);
         document.getElementById('plotControlPlotSize').addEventListener('input', function () {
             // document.getElementById('plotHeightValue').textContent = this.value + 'px';
             updatePlot();
+        });
+
+        document.querySelectorAll('input[name="plotMode"]').forEach(radio => {
+            radio.addEventListener('change', updatePlot);
         });
 
         window.onbeforeunload = function () {
