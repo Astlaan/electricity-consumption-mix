@@ -276,6 +276,362 @@
     </div>
 
     <script>
+        const PSR_TYPE_MAPPING = {
+            "B01": "Biomass",
+            "B02": "Fossil Brown coal/Lignite",
+            "B03": "Fossil Coal-derived gas",
+            "B04": "Fossil Gas",
+            "B05": "Fossil Hard coal",
+            "B06": "Fossil Oil",
+            "B07": "Fossil Oil shale",
+            "B08": "Fossil Peat",
+            "B09": "Geothermal",
+            "B10": "Hydro Pumped Storage",
+            "B11": "Hydro Run-of-river and poundage",
+            "B12": "Hydro Water Reservoir",
+            "B13": "Marine",
+            "B14": "Nuclear",
+            "B15": "Other renewable",
+            "B16": "Solar",
+            "B17": "Waste",
+            "B18": "Wind Offshore",
+            "B19": "Wind Onshore",
+            "B20": "Other",
+        };
+
+        class JsonDataParser {
+            constructor(jsonData) {
+                this.data = JSON.parse(jsonData);
+            }
+
+            get index() {
+                return this.data.index.map(ts => new Date(ts));
+            }
+
+            get columns() {
+                return this.data.columns;
+            }
+
+
+
+            get values() {
+                return this.data.data;
+            }
+
+            mean() {
+                const numRows = this.values.length;
+                if (numRows === 0) return new Map();
+
+                const numCols = this.columns.length;
+                const sums = new Array(numCols).fill(0);
+
+                for (let i = 0; i < numRows; i++) {
+                    for (let j = 0; j < numCols; j++) {
+                        sums[j] += this.values[i][j];
+                    }
+                }
+
+                const means = new Map();
+                for (let j = 0; j < numCols; j++) {
+                    means.set(this.columns[j], sums[j] / numRows);
+                }
+                return means;
+            }
+        }
+
+        class Plotter {
+            constructor(data) {
+                this.aggregated = new JsonDataParser(data.aggregated);
+                this.contributions = {};
+                for (const country in data.contributions) {
+                    this.contributions[country] = new JsonDataParser(data.contributions[country]);
+                }
+            }
+
+            plot(plotMode, timeMode, startDate, endDate) {
+                switch (plotMode) {
+                    case 'aggregated':
+                        return this._plotAggregated(timeMode, startDate, endDate);
+                    case 'discriminated':
+                        return this._plotHierarchical(timeMode, startDate, endDate);
+                    case 'areas':
+                        return this._plotAreas(timeMode, startDate, endDate);
+                    default:
+                        throw new Error(`Unsupported plot mode: ${plotMode}`);
+                }
+            }
+
+            _plotAggregated(timeMode, startDate, endDate) {
+                const data = this.aggregated.mean();
+                const plotData = [];
+                const labels = [];
+                const values = [];
+
+                data.forEach((value, key) => {
+                    if (value > 0) {
+                        labels.push(PSR_TYPE_MAPPING[key] || key);
+                        values.push(value);
+                    }
+                });
+
+                const total = values.reduce((a, b) => a + b, 0);
+                const percentages = values.map(v => (v / total) * 100);
+
+                const trace = {
+                    type: 'pie',
+                    labels: labels,
+                    values: values,
+                    customdata: percentages.map(p => [p]),
+                    textinfo: 'percent+label',
+                    texttemplate: '%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW',
+                    hovertemplate: '%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW',
+                    hole: 0,
+                    insidetextorientation: 'auto',
+                };
+
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
+                const layout = {
+                    title: title,
+                    showlegend: false,
+                    width: 900,
+                    height: 800,
+                    autosize: true,
+                    annotations: [
+                        {
+                            text: "Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+                            showarrow: false,
+                            x: 0.5,
+                            y: -0.1,
+                            xref: 'paper',
+                            yref: 'paper',
+                            xanchor: 'center',
+                            yanchor: 'top',
+                        }
+                    ],
+                    margin: { t: 50, b: 100, l: 0, r: 0 },
+                };
+
+                return { data: [trace], layout: layout };
+            }
+
+            _plotHierarchical(timeMode, startDate, endDate) {
+                const records = [];
+                const totalHours = this.aggregated.index.length;
+                const dataByCountryTimeAggregated = {};
+                let totalPower = 0;
+
+                for (const country in this.contributions) {
+                    const meanData = this.contributions[country].mean();
+                    dataByCountryTimeAggregated[country] = meanData;
+                    meanData.forEach(value => totalPower += value);
+                }
+
+                for (const country in dataByCountryTimeAggregated) {
+                    const series = dataByCountryTimeAggregated[country];
+                    let countryPower = 0;
+                    series.forEach(value => countryPower += value);
+                    const countryEnergy = countryPower * totalHours;
+                    const percentage = (countryPower / totalPower) * 100;
+
+                    records.push({
+                        id: country,
+                        parent: "",
+                        label: country,
+                        power: countryPower,
+                        percentage: percentage,
+                        hover_text: `<b>${country}</b><br>${percentage.toFixed(1)}% of total<br>${countryPower.toFixed(0)} MW (average)<br>${this._calcEnergyString(countryEnergy)}`
+                    });
+
+                    series.forEach((power, source_type) => {
+                        if (power > 0) {
+                            const sourceName = PSR_TYPE_MAPPING[source_type] || source_type;
+                            const energy = power * totalHours;
+                            const sourcePercentage = (power / totalPower) * 100;
+                            const id = `${country}/${sourceName}`;
+                            records.push({
+                                id: id,
+                                parent: country,
+                                label: sourceName,
+                                power: power,
+                                percentage: sourcePercentage,
+                                hover_text: `<b>${id}</b><br>${(power / countryPower * 100).toFixed(1)}% of ${country}<br>${sourcePercentage.toFixed(1)}% of total<br>${power.toFixed(0)} MW (average)<br>${this._calcEnergyString(energy)}`
+                            });
+                        }
+                    });
+                }
+
+                const trace = {
+                    type: 'sunburst',
+                    ids: records.map(r => r.id),
+                    labels: records.map(r => r.label),
+                    parents: records.map(r => r.parent),
+                    values: records.map(r => r.power),
+                    customdata: records.map(r => [r.percentage, r.hover_text]),
+                    insidetextorientation: 'radial',
+                    hovertemplate: '%{customdata[1]}<extra></extra>',
+                    branchvalues: 'total',
+                };
+
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
+                const layout = {
+                    title: title,
+                    width: 700,
+                    height: 800,
+                    autosize: true,
+                    annotations: [
+                        {
+                            text: "Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+                            showarrow: false,
+                            x: 0.5,
+                            y: -0.1,
+                            xref: 'paper',
+                            yref: 'paper',
+                            xanchor: 'center',
+                            yanchor: 'top',
+                        }
+                    ],
+                    margin: { t: 50, b: 100, l: 0, r: 0 },
+                };
+
+                return { data: [trace], layout: layout };
+            }
+
+            _plotAreas(timeMode, startDate, endDate) {
+                const traces = [];
+                const index = this.aggregated.index;
+                const columns = this.aggregated.columns;
+                const values = this.aggregated.values;
+
+                for (let j = 0; j < columns.length; j++) {
+                    const colName = columns[j];
+                    const yValues = values.map(row => row[j]);
+                    traces.push({
+                        x: index,
+                        y: yValues,
+                        name: PSR_TYPE_MAPPING[colName] || colName,
+                        type: 'scatter',
+                        mode: 'lines',
+                        stackgroup: 'one',
+                        hovertemplate: `<b>${PSR_TYPE_MAPPING[colName] || colName}</b><br>%{y:.0f} MW<extra></extra>`,
+                    });
+                }
+
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
+                const layout = {
+                    title: title,
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'Power (MW)' },
+                    autosize: true,
+                    annotations: [
+                        {
+                            text: "Source: https://portugal-electricity-mix.vercel.app<br>Data: ENTSO-E (European Network of Transmission System Operators for Electricity)",
+                            showarrow: false,
+                            x: 0.5,
+                            y: -0.1,
+                            xref: 'paper',
+                            yref: 'paper',
+                            xanchor: 'center',
+                            yanchor: 'top',
+                        }
+                    ],
+                    margin: { t: 50, b: 100, l: 0, r: 0 },
+                };
+
+                return { data: traces, layout: layout };
+            }
+
+            _calcEnergyString(energyInMWh) {
+                const GWh_FACTOR = 1000;
+                const TWh_FACTOR = 1000000;
+                let value, unit;
+
+                if (energyInMWh >= TWh_FACTOR) {
+                    value = energyInMWh / TWh_FACTOR;
+                    unit = "TWh";
+                } else if (energyInMWh >= GWh_FACTOR) {
+                    value = energyInMWh / GWh_FACTOR;
+                    unit = "GWh";
+                } else {
+                    value = energyInMWh;
+                    unit = "MWh";
+                }
+                return `${value.toPrecision(4)} ${unit}`;
+            }
+
+            _formatDateTime(dateTimeString, isEndDate = false, endDateString = null) {
+                const date = new Date(dateTimeString + 'Z'); // Append 'Z' to treat as UTC
+                let day = date.getUTCDate();
+                let month = date.getUTCMonth() + 1; // Months are 0-indexed
+                let year = date.getUTCFullYear();
+                let hours = date.getUTCHours();
+                let minutes = date.getUTCMinutes();
+
+                if (isEndDate && hours === 0 && minutes === 0) {
+                    // If end date and time is 00:00, display previous day
+                    date.setUTCDate(date.getUTCDate() - 1);
+                    day = date.getUTCDate();
+                    month = date.getUTCMonth() + 1;
+                    year = date.getUTCFullYear();
+                }
+
+                const formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+
+                // Check for full day interval
+                if (endDateString) {
+                    const startDateObj = new Date(dateTimeString + 'Z');
+                    const endDateObj = new Date(endDateString + 'Z');
+
+                    const nextDay = new Date(startDateObj);
+                    nextDay.setUTCDate(startDateObj.getUTCDate() + 1);
+                    nextDay.setUTCHours(0, 0, 0, 0);
+
+                    if (startDateObj.getUTCHours() === 0 && startDateObj.getUTCMinutes() === 0 &&
+                        endDateObj.getTime() === nextDay.getTime()) {
+                        return formattedDate; // Return only the date for full day intervals
+                    }
+                }
+
+                if (hours === 0 && minutes === 0) {
+                    return formattedDate;
+                } else {
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 === 0 ? 12 : hours % 12;
+                    const formattedTime = `${formattedHours}${ampm}`;
+                    return `${formattedDate} ${formattedTime}`;
+                }
+            }
+        }
+
 
         // Add radio button change event handlers
         document.querySelectorAll('input[name="timeMode"]').forEach(radio => {
@@ -469,6 +825,10 @@
                     Show Details <span class="inline-help-text">(You can also hover for the plot for all details)</span>
                 </label>
             </div>
+            <div id="aggregateImportsContainer" style="display: none;">
+                <input type="checkbox" id="plotControlAggregateImports">
+                <label for="plotControlAggregateImports">Aggregate Imports</label>
+            </div>
             <div>
                 <label for="plotControlPlotSize">Plot Size:</label>
                 <input type="range" id="plotControlPlotSize" min="400" max="1000" value="800" step="50">
@@ -533,13 +893,6 @@
                 }
 
                 console.log('API CALL');
-                // const params = new URLSearchParams(requestData);
-                // const response = await fetch(`/api/generate_plot?${params}`, {
-                //     method: 'GET',
-                //     headers: {
-                //         'Content-Type': 'application/json',
-                //     }
-                // });
 
                 const response = await fetch('/api/generate_plot', {
                     method: 'POST',
@@ -556,12 +909,8 @@
                 let data;
 
                 try {
-                    // Try to parse it as JSON
-                    console.log("PARSE 1");
                     data = JSON.parse(textResponse);
-                    console.log("PARSE 1 - SUCCESS", data);
                 } catch (parseError) {
-                    // If it's not valid JSON, throw an error with the text response
                     throw new Error(textResponse || 'Invalid server response');
                 }
 
@@ -572,34 +921,26 @@
                     throw new Error(data.error || 'Failed to generate visualization');
                 }
 
-                if (data.plot) {
-                    // Clear only the plotArea div
+                if (data.data) {
                     document.getElementById('plotArea').innerHTML = '';
                     errorMessage.style.display = 'none';
 
-                    // Store the plot data globally
-                    window.currentPlotData = JSON.parse(data.plot);
-                    const plotType = window.currentPlotData.data[0].type;
+                    window.plotter = new Plotter(data.data);
 
-                    const plotControlShowDetails = document.getElementById('plotControlsShowDetails');
+                    const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
+                    let startDate, endDate;
+                    if (mode === 'simple') {
+                        startDate = document.getElementById('start_date').value;
+                        endDate = document.getElementById('end_date').value;
+                    }
 
-                    // if (plotType == "pie"){
-                    //     plotControlShowDetails.checked = true;
-                    // }
-                    // else if (plotType == "sunburst") 
-                    //     plotControlShowDetails.checked = false;
-                    // }
-                    // else{
-                    //     throw new Error("Unexpected plot type received");
-                    // }
-
+                    window.generatedPlotMode = plotMode;
+                    window.currentPlotData = window.plotter.plot(plotMode, timeMode, startDate, endDate);
 
                     updatePlot();
 
-                    // Show the plotControls div
                     document.getElementById('plotControls').style.display = 'block';
 
-                    // Scroll to center the plot with smooth animation
                     plotContainer.scrollIntoView({
                         behavior: 'smooth',
                         block: 'center'
@@ -609,12 +950,10 @@
                 }
 
             } catch (error) {
-                // Display error message
                 errorMessage.innerHTML = `<div class="error-item">${error.message}</div>`;
                 errorMessage.style.display = 'block';
-                plotContainer.innerHTML = ''; // Clear any previous plot
+                document.getElementById('plotArea').innerHTML = '';
 
-                // Hide the plotControls div
                 document.getElementById('plotControls').style.display = 'none';
 
                 console.error('Error:', error);
@@ -632,7 +971,6 @@
             setFormDateBounds();
             validateDates();
 
-            // Trigger change event for the initially selected 'plotMode'
             const selectedPlotMode = document.querySelector('input[name="plotMode"]:checked');
             if (selectedPlotMode) {
                 selectedPlotMode.dispatchEvent(new Event('change'));
@@ -648,20 +986,18 @@
             const currentViewportHeight = window.innerHeight;
             const currentZoomLevel = window.devicePixelRatio;
 
-            // Check if only the zoom level changed
             if (currentZoomLevel !== lastZoomLevel) {
                 console.log('Zoom level changed, ignoring resize');
                 lastZoomLevel = currentZoomLevel;
                 return;
             }
 
-            // Check if the viewport size has actually changed
             if (currentViewportWidth !== lastViewportWidth || currentViewportHeight !== lastViewportHeight) {
                 console.log('Viewport size changed:', currentViewportWidth, currentViewportHeight);
 
                 const plotContainer = document.getElementById('plotContainer');
                 if (plotContainer.children.length > 0) {
-                    Plotly.Plots.resize('plotContainer');
+                    Plotly.Plots.resize('plotArea');
                 }
 
                 lastViewportWidth = currentViewportWidth;
@@ -673,8 +1009,127 @@
         function updatePlot() {
             if (!window.currentPlotData) return;
 
+            const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
+            const aggregateImportsContainer = document.getElementById('aggregateImportsContainer');
+
+            if (window.generatedPlotMode === 'discriminated') {
+                aggregateImportsContainer.style.display = 'block';
+            } else {
+                aggregateImportsContainer.style.display = 'none';
+            }
+
             const data = structuredClone(window.currentPlotData.data);
             const layout = structuredClone(window.currentPlotData.layout);
+
+            const aggregateImports = document.getElementById('plotControlAggregateImports').checked;
+
+            if (plotMode === 'discriminated' && aggregateImports) {
+                const totalValue = data[0].values.reduce((sum, v, i) => data[0].parents[i] === '' ? sum + v : sum, 0);
+
+                const aggregatedData = {
+                    ids: [],
+                    labels: [],
+                    parents: [],
+                    values: [],
+                    customdata: [],
+                    marker: { colors: [] }
+                };
+                const imports = {
+                    id: "Imports",
+                    label: "Imports",
+                    parent: "",
+                    value: 0,
+                    twh: 0,
+                    color: "#fdb462"
+                };
+                const importSources = {};
+
+                for (let i = 0; i < data[0].ids.length; i++) {
+                    const id = data[0].ids[i];
+                    const label = data[0].labels[i];
+                    const parent = data[0].parents[i];
+                    const value = data[0].values[i];
+                    const customdata = data[0].customdata[i];
+
+                    let twh = 0;
+                    const match = customdata[1].match(/<br>([\d.]+) (T|G)Wh/);
+                    if (match) {
+                        const num = parseFloat(match[1]);
+                        const unit = match[2];
+                        twh = unit === 'G' ? num / 1000 : num;
+                    }
+
+                    if (parent === "" && id !== "PT") {
+                        imports.value += value;
+                        imports.twh += twh;
+                    } else if (id.startsWith("PT")) {
+                        aggregatedData.ids.push(id);
+                        aggregatedData.labels.push(label);
+                        aggregatedData.parents.push(parent);
+                        aggregatedData.values.push(value);
+                        aggregatedData.customdata.push(customdata);
+                    } else {
+                        if (!importSources[label]) {
+                            importSources[label] = {
+                                id: `Imports/${label}`,
+                                label: label,
+                                parent: "Imports",
+                                value: 0,
+                                twh: 0
+                            };
+                        }
+                        importSources[label].value += value;
+                        importSources[label].twh += twh;
+                    }
+                }
+
+                const importsPercentOfTotal = (imports.value / totalValue) * 100;
+                let importsEnergyValue = imports.twh;
+                let importsEnergyUnit = "TWh";
+                if (importsEnergyValue < 1 && importsEnergyValue > 0) {
+                    importsEnergyValue *= 1000;
+                    importsEnergyUnit = "GWh";
+                }
+                imports.customdata = [
+                    importsPercentOfTotal,
+                    `<b>Imports</b><br>${importsPercentOfTotal.toFixed(1)}% of total<br>${Math.round(imports.value)} MW (average)<br>${importsEnergyValue.toFixed(1)} ${importsEnergyUnit}`
+                ];
+
+                aggregatedData.ids.push(imports.id);
+                aggregatedData.labels.push(imports.label);
+                aggregatedData.parents.push(imports.parent);
+                aggregatedData.values.push(imports.value);
+                aggregatedData.customdata.push(imports.customdata);
+
+                for (const source in importSources) {
+                    const sourceData = importSources[source];
+                    const percentOfImports = (sourceData.value / imports.value) * 100;
+                    const percentOfTotal = (sourceData.value / totalValue) * 100;
+
+                    let energyValue = sourceData.twh;
+                    let energyUnit = "TWh";
+                    if (energyValue < 1 && energyValue > 0) {
+                        energyValue *= 1000;
+                        energyUnit = "GWh";
+                    }
+
+                    sourceData.customdata = [
+                        percentOfTotal,
+                        `<b>Imports/${sourceData.label}</b><br>${percentOfImports.toFixed(1)}% of Imports<br>${percentOfTotal.toFixed(1)}% of total<br>${Math.round(sourceData.value)} MW (average)<br>${energyValue.toFixed(1)} ${energyUnit}`
+                    ];
+
+                    aggregatedData.ids.push(sourceData.id);
+                    aggregatedData.labels.push(sourceData.label);
+                    aggregatedData.parents.push(sourceData.parent);
+                    aggregatedData.values.push(sourceData.value);
+                    aggregatedData.customdata.push(sourceData.customdata);
+                }
+
+                data[0] = {
+                    ...data[0],
+                    ...aggregatedData
+                };
+            }
 
             // Change plotSize
             layout.height = parseInt(document.getElementById('plotControlPlotSize').value);
@@ -684,7 +1139,7 @@
             const showDetails = document.getElementById('plotControlShowDetails').checked;
             if (showDetails) {
                 if (data[0].type == "pie")
-                    layout.texttemplate = "%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW"
+                    data[0].texttemplate = "%{label}<br>%{customdata[0]:.1f}% | %{value:.1f} MW"
                 else if (data[0].type == "sunburst")
                     data[0].texttemplate = "%{label}<br>%{customdata[0]:.1f}%";
             }
@@ -694,29 +1149,23 @@
 
             //Change color
             if (data[0].type === "sunburst") {
-                // const set3Palette = [
-                //     "#8dd3c7", "#ffffb3", "#bebada", "#fb8072",
-                //     "#80b1d3", "#fdb462", "#b3de69", "#fccde5",
-                //     "#d9d9d9", "#bc80bd", "#ccebc5", "#ffed6f"
-                // ];
-
                 const colors = {
                     "PT": "#80b1d3",
                     "ES": "#fb8072",
-                    // "FR": "#8dd3c7",
-                    "FR": "#b3de69"
+                    "FR": "#b3de69",
+                    "Imports": "#fdb462"
                 };
 
-                // Ensure the marker object exists
                 if (!data[0].marker) {
                     data[0].marker = {};
                 }
 
-                // Assign colors only to parent nodes
                 data[0].marker.colors = data[0].labels.map((label, i) => {
-                    // Check if the label is a parent (appears in the parents array)
-                    // return data[0].parents.includes(label) ? set3Palette[i % set3Palette.length] : null;
-                    return data[0].parents.includes(label) ? colors[label] : null;
+                    const parent = data[0].parents[i];
+                    if (parent === "") {
+                        return colors[label];
+                    }
+                    return null;
                 });
             }
 
@@ -731,9 +1180,14 @@
 
         // Setup plot control event listeners
         document.getElementById('plotControlShowDetails').addEventListener('change', updatePlot);
+        document.getElementById('plotControlAggregateImports').addEventListener('change', updatePlot);
         document.getElementById('plotControlPlotSize').addEventListener('input', function () {
             // document.getElementById('plotHeightValue').textContent = this.value + 'px';
             updatePlot();
+        });
+
+        document.querySelectorAll('input[name="plotMode"]').forEach(radio => {
+            radio.addEventListener('change', updatePlot);
         });
 
         window.onbeforeunload = function () {
