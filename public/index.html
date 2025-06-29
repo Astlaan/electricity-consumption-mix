@@ -348,20 +348,20 @@
                 }
             }
 
-            plot(plotMode) {
+            plot(plotMode, timeMode, startDate, endDate) {
                 switch (plotMode) {
                     case 'aggregated':
-                        return this._plotAggregated();
+                        return this._plotAggregated(timeMode, startDate, endDate);
                     case 'discriminated':
-                        return this._plotHierarchical();
+                        return this._plotHierarchical(timeMode, startDate, endDate);
                     case 'areas':
-                        return this._plotAreas();
+                        return this._plotAreas(timeMode, startDate, endDate);
                     default:
                         throw new Error(`Unsupported plot mode: ${plotMode}`);
                 }
             }
 
-            _plotAggregated() {
+            _plotAggregated(timeMode, startDate, endDate) {
                 const data = this.aggregated.mean();
                 const plotData = [];
                 const labels = [];
@@ -389,8 +389,19 @@
                     insidetextorientation: 'auto',
                 };
 
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
                 const layout = {
-                    title: "Portugal's Electricity Mix by Source Type",
+                    title: title,
                     showlegend: false,
                     width: 900,
                     height: 800,
@@ -413,7 +424,7 @@
                 return { data: [trace], layout: layout };
             }
 
-            _plotHierarchical() {
+            _plotHierarchical(timeMode, startDate, endDate) {
                 const records = [];
                 const totalHours = this.aggregated.index.length;
                 const dataByCountryTimeAggregated = {};
@@ -471,8 +482,19 @@
                     branchvalues: 'total',
                 };
 
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
                 const layout = {
-                    title: "Portugal's Electricity Mix by Source Type",
+                    title: title,
                     width: 700,
                     height: 800,
                     autosize: true,
@@ -494,7 +516,7 @@
                 return { data: [trace], layout: layout };
             }
 
-            _plotAreas() {
+            _plotAreas(timeMode, startDate, endDate) {
                 const traces = [];
                 const index = this.aggregated.index;
                 const columns = this.aggregated.columns;
@@ -514,8 +536,19 @@
                     });
                 }
 
+                let title = "Portugal Electricity Consumption Mix";
+                if (timeMode === 'simple' && startDate && endDate) {
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
+                }
+
                 const layout = {
-                    title: 'Electricity Generation by Source Over Time',
+                    title: title,
                     xaxis: { title: 'Time' },
                     yaxis: { title: 'Power (MW)' },
                     autosize: true,
@@ -553,6 +586,49 @@
                     unit = "MWh";
                 }
                 return `${value.toPrecision(4)} ${unit}`;
+            }
+
+            _formatDateTime(dateTimeString, isEndDate = false, endDateString = null) {
+                const date = new Date(dateTimeString + 'Z'); // Append 'Z' to treat as UTC
+                let day = date.getUTCDate();
+                let month = date.getUTCMonth() + 1; // Months are 0-indexed
+                let year = date.getUTCFullYear();
+                let hours = date.getUTCHours();
+                let minutes = date.getUTCMinutes();
+
+                if (isEndDate && hours === 0 && minutes === 0) {
+                    // If end date and time is 00:00, display previous day
+                    date.setUTCDate(date.getUTCDate() - 1);
+                    day = date.getUTCDate();
+                    month = date.getUTCMonth() + 1;
+                    year = date.getUTCFullYear();
+                }
+
+                const formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+
+                // Check for full day interval
+                if (endDateString) {
+                    const startDateObj = new Date(dateTimeString + 'Z');
+                    const endDateObj = new Date(endDateString + 'Z');
+
+                    const nextDay = new Date(startDateObj);
+                    nextDay.setUTCDate(startDateObj.getUTCDate() + 1);
+                    nextDay.setUTCHours(0, 0, 0, 0);
+
+                    if (startDateObj.getUTCHours() === 0 && startDateObj.getUTCMinutes() === 0 &&
+                        endDateObj.getTime() === nextDay.getTime()) {
+                        return formattedDate; // Return only the date for full day intervals
+                    }
+                }
+
+                if (hours === 0 && minutes === 0) {
+                    return formattedDate;
+                } else {
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 === 0 ? 12 : hours % 12;
+                    const formattedTime = `${formattedHours}${ampm}`;
+                    return `${formattedDate} ${formattedTime}`;
+                }
             }
         }
 
@@ -850,7 +926,16 @@
                     errorMessage.style.display = 'none';
 
                     window.plotter = new Plotter(data.data);
-                    window.currentPlotData = window.plotter.plot(plotMode);
+
+                    const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
+                    let startDate, endDate;
+                    if (mode === 'simple') {
+                        startDate = document.getElementById('start_date').value;
+                        endDate = document.getElementById('end_date').value;
+                    }
+
+                    window.generatedPlotMode = plotMode;
+                    window.currentPlotData = window.plotter.plot(plotMode, timeMode, startDate, endDate);
 
                     updatePlot();
 
@@ -927,7 +1012,7 @@
             const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
             const aggregateImportsContainer = document.getElementById('aggregateImportsContainer');
 
-            if (plotMode === 'discriminated' && window.currentPlotData) {
+            if (window.generatedPlotMode === 'discriminated') {
                 aggregateImportsContainer.style.display = 'block';
             } else {
                 aggregateImportsContainer.style.display = 'none';
