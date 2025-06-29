@@ -43,9 +43,9 @@ def handle_request(request_body):
                 hours=body["hours"],
             )
 
-        fig = generate_visualization(
+        aggregated, contributions = generate_visualization(
             data_request,
-            config=body,  # Default to 'plot' if not specified
+            config=body,
         )
     except Exception as e:
         # Sanitize the exception message
@@ -58,7 +58,7 @@ def handle_request(request_body):
             "body": json.dumps({"error": f"Error: {sanitized_error}"}),
         }
 
-    if fig is None:  # TODO fix
+    if aggregated is None or contributions is None:
         return {
             "statusCode": 400,
             "body": json.dumps(
@@ -66,22 +66,19 @@ def handle_request(request_body):
             ),
         }
 
-    # Convert Plotly figure to JSON
-    if "backend" in body:
-        if "bokeh" in body["backend"]:
-            from bokeh.embed import json_item
+    # Serialize the dataframes
+    aggregated_json = aggregated.to_json(orient="split")
+    contributions_json = {
+        country: df.to_json(orient="split") for country, df in contributions.items()
+    }
 
-            plot_json = json_item(fig)  # type: ignore
-        elif "plotly" in body["backend"]:
-            print("Generate plotly json")
-            plot_json = fig.to_json()
-        else:
-            raise ValueError(f"Backend {body["backend"]} not supported")
-    else:  # Assume plotly
-        plot_json = fig.to_json()
+    # Create the response body
+    response_data = {
+        "aggregated": aggregated_json,
+        "contributions": contributions_json,
+    }
 
-    print("returned plotly_json")
-    return {"statusCode": 200, "body": json.dumps({"plot": plot_json})}
+    return {"statusCode": 200, "body": json.dumps({"data": response_data})}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -100,8 +97,8 @@ class handler(BaseHTTPRequestHandler):
 
         response = handle_request(post_data)
 
-        self.send_response(response['statusCode'])
+        self.send_response(int(response['statusCode']))
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(response['body'].encode('utf-8'))
+        self.wfile.write(str(response['body']).encode('utf-8'))
         return

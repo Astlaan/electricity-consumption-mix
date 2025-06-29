@@ -53,21 +53,12 @@ def generate_visualization(data_request: DataRequest, config: dict):
         ):
             raise ValueError("No data found for the specified date range.")
 
-        # if plot_calc_function == "plot":
-        #     if plot_type != "simple":
-        #         raise ValueError("plot_calc_function 'plot' only supports plot_type 'simple'")
-        #     fig = analyzer.plot(data, backend)
-        # elif plot_calc_function == "plot_discriminate_by_country":
-        #     fig = analyzer.plot_discriminate_by_country(data, backend, plot_type)
-        # else:
-        #     logger.warning(f"Invalid plot type: {plot_calc_function}")
-        #     return None
-        fig = analyzer.plot(data, config)
-        print("figure successfully generated")
+        aggregated, contributions = analyzer.analyze(data)
+        print("data successfully generated")
 
-        return fig
+        return aggregated, contributions
     except Exception as e:
         logger.exception(
             f"An error occurred during visualization generation: {e}"
         )  # Log the error with traceback
-        return None
+        return None, None

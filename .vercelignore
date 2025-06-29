@@ -20,3 +20,4 @@ setup.py
 .conda
 *.pyc
 *.egg-info
+node_modules
