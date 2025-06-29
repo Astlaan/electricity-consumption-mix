@@ -391,7 +391,13 @@
 
                 let title = "Portugal Electricity Consumption Mix";
                 if (timeMode === 'simple' && startDate && endDate) {
-                    title += ` (${this._formatDateTime(startDate)} - ${this._formatDateTime(endDate, true)})`;
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
                 }
 
                 const layout = {
@@ -478,7 +484,13 @@
 
                 let title = "Portugal Electricity Consumption Mix";
                 if (timeMode === 'simple' && startDate && endDate) {
-                    title += ` (${this._formatDateTime(startDate)} - ${this._formatDateTime(endDate, true)})`;
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
                 }
 
                 const layout = {
@@ -526,7 +538,13 @@
 
                 let title = "Portugal Electricity Consumption Mix";
                 if (timeMode === 'simple' && startDate && endDate) {
-                    title += ` (${this._formatDateTime(startDate)} - ${this._formatDateTime(endDate, true)})`;
+                    const formattedStartDate = this._formatDateTime(startDate, false, endDate);
+                    const formattedEndDate = this._formatDateTime(endDate, true);
+                    if (formattedStartDate === formattedEndDate) {
+                        title += ` (${formattedStartDate})`;
+                    } else {
+                        title += ` (${formattedStartDate} - ${formattedEndDate})`;
+                    }
                 }
 
                 const layout = {
@@ -570,7 +588,7 @@
                 return `${value.toPrecision(4)} ${unit}`;
             }
 
-            _formatDateTime(dateTimeString, isEndDate = false) {
+            _formatDateTime(dateTimeString, isEndDate = false, endDateString = null) {
                 const date = new Date(dateTimeString + 'Z'); // Append 'Z' to treat as UTC
                 let day = date.getUTCDate();
                 let month = date.getUTCMonth() + 1; // Months are 0-indexed
@@ -587,6 +605,21 @@
                 }
 
                 const formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+
+                // Check for full day interval
+                if (endDateString) {
+                    const startDateObj = new Date(dateTimeString + 'Z');
+                    const endDateObj = new Date(endDateString + 'Z');
+
+                    const nextDay = new Date(startDateObj);
+                    nextDay.setUTCDate(startDateObj.getUTCDate() + 1);
+                    nextDay.setUTCHours(0, 0, 0, 0);
+
+                    if (startDateObj.getUTCHours() === 0 && startDateObj.getUTCMinutes() === 0 &&
+                        endDateObj.getTime() === nextDay.getTime()) {
+                        return formattedDate; // Return only the date for full day intervals
+                    }
+                }
 
                 if (hours === 0 && minutes === 0) {
                     return formattedDate;
@@ -901,6 +934,7 @@
                         endDate = document.getElementById('end_date').value;
                     }
 
+                    window.generatedPlotMode = plotMode;
                     window.currentPlotData = window.plotter.plot(plotMode, timeMode, startDate, endDate);
 
                     updatePlot();
@@ -978,7 +1012,7 @@
             const plotMode = document.querySelector('input[name="plotMode"]:checked').value;
             const aggregateImportsContainer = document.getElementById('aggregateImportsContainer');
 
-            if (plotMode === 'discriminated' && window.currentPlotData) {
+            if (window.generatedPlotMode === 'discriminated') {
                 aggregateImportsContainer.style.display = 'block';
             } else {
                 aggregateImportsContainer.style.display = 'none';
