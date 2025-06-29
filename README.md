@@ -1,46 +1,38 @@
-## Important note
-1) Right now the data-fetcher is not capable of pulling data older than what it has cached, only more recent data.
-This is fine for now since the goal is to initialize the cache (with `main.py --initialize-cache`) with the entirety of past data when it is plugged into the website.
+# sv
 
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## To-Do Fixes:
-- Data is provided in MW. I have to calculate by the granularity in order to obtain MWh
-- Give proper error message if user tries to provide interval for which there is no data
+## Creating a project
 
-- There may be gaps in the data, due to information outages. How to deal with these?
-- Will the mean work well if there are gaps in the data? Ex. in one of the hours, only 3 blocks exist due to data outage? (Have to check if production zero of a source is represented in the data by an absense or a zero)
-- I may be forcing a conversion from NaN to 0 somewhere, check if it is sensible.
-- Actual Consumption from the energy sources themselves is not being considered. Take a look at how big they are and if they really should be included 
+If you're seeing this, you've probably already done this step. Congrats!
 
+```bash
+# create a new project in the current directory
+npx sv create
 
-- Try ENTSOE-py package
-- Hydro Pumped Storage: how to deal with this source? (has both consumption and production)
-    - Simply ignore, and only consider real energy production?
-- How to deal with data gaps? (NaN)
-  - Some sources don't appear at all in the data (ex. no Coal columns for Portugal)
-  - Some appear but are NaN always (Offshore Wind in Portugal and Spain)
-  - Some appear but are 0 most of the time
-  - Sometimes whole hours have no data at all for all sources
-  - df.ffill?
+# create a new project in my-app
+npx sv create my-app
+```
 
-- Put data-cache in blob instead of root/.data_cache. Use an environment variable to specify the alternate location (ex. blob) of data cache
-- How will the asynchronous read/writes on the blob work? Will it be a problem?
+## Developing
 
-- Meter warning se cache não detetada
-- Change to pipfile
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-- Charting: Select and use custom colors ( https://plotly.com/python/discrete-color/ )
+```bash
+npm run dev
 
-- Check code TODOs
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
 
-- Check why 2015-2024 Portugal consumption has more wind than hydro
+## Building
 
-## To-Do Features:
-- Charting:
-  - Chart with the sources grouped (not aggregated by type), and Country of origin is specified for each sub-slice
-- Chart the Carbon/Carbon Intensity pie graph
-- Use preset colors for each source (both Aggregated plot and Hierarchical)
-- Use colorblind-friendly colors. https://www.datylon.com/blog/data-visualization-for-colorblind-readers
+To create a production version of your app:
 
-## Possible future features:
-- Sankey/Treemap diagrams
+```bash
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
