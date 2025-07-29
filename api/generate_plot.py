@@ -10,7 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "core"))
 from data_fetcher import SimpleInterval
 from time_pattern import AdvancedPattern  # type: ignore # Add this import
 import utils as utils
-from core import generate_visualization
+from core.core import generate_visualization
 
 # Configure logging to write to stderr which Vercel can capture
 logger = logging.getLogger(__name__)

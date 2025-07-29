@@ -1,8 +1,11 @@
 {
+    "buildCommand": "pnpm build",
+    "devCommand": "pnpm run dev",
+    "installCommand": "pnpm install",
     "functions": {
         "api/*.py": {
             "memory": 1024,
-            "excludeFiles": ".venv/**,.vercel/cache/**,.vscode/**,attic/**,docs/**,public/**,tests/**,tools/**",
+            "excludeFiles": ".venv/**,.svelte-kit/**,.vercel/cache/**,.vscode/**,attic/**,build/**,docs/**,mcp-servers/**,node_modules/**,public/**,tests/**,tools/**,src/**,static/**",
             "maxDuration": 60
         }
     }

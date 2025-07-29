@@ -9,7 +9,6 @@
     "buildCommand": null,
     "outputDirectory": null,
     "rootDirectory": null,
-    "directoryListing": false,
-    "nodeVersion": "20.x"
+    "directoryListing": false
   }
 }

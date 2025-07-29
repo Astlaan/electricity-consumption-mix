@@ -7,7 +7,7 @@ node_modules
 
 # Output
 .output
-.vercel
+.vercel/cache/**
 .netlify
 .wrangler
 /.svelte-kit
