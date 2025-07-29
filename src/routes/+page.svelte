@@ -2,11 +2,13 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </svelte:head>
 
-<script lang="ts">
-    import { onMount } from 'svelte';
-
+<script context="module" lang="ts">
     // Forward declare Plotly for robust type checking
     declare let Plotly: any;
+</script>
+
+<script lang="ts">
+    import { onMount } from 'svelte';
 
     // --- Constants ---
     const PSR_TYPE_MAPPING = {
@@ -147,7 +149,7 @@
             const values = this.aggregated.values;
             for (let j = 0; j < columns.length; j++) {
                 const colName = columns[j];
-                const yValues = values.map(row => row[j]);
+                const yValues = values.map((row: any) => row[j]);
                 traces.push({
                     x: index, y: yValues, name: PSR_TYPE_MAPPING[colName as keyof typeof PSR_TYPE_MAPPING] || colName,
                     type: 'scatter', mode: 'lines', stackgroup: 'one',
@@ -166,7 +168,7 @@
             return { data: traces, layout };
         }
 
-        _getBaseLayout(title: string) {
+        _getBaseLayout(title: string): any {
             return {
                 title: title, showlegend: false,
                 colorway: ['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'],
@@ -339,7 +341,7 @@
         if (generatedPlotMode === 'discriminated' && plotControlAggregateImports) {
             const totalValue = data[0].values.reduce((sum: number, v: number, i: number) => data[0].parents[i] === '' ? sum + v : sum, 0);
             const aggregatedData: any = { ids: [], labels: [], parents: [], values: [], customdata: [], marker: { colors: [] } };
-            const imports = { id: "Imports", label: "Imports", parent: "", value: 0, twh: 0, color: "#fdb462" };
+            const imports: any = { id: "Imports", label: "Imports", parent: "", value: 0, twh: 0, color: "#fdb462" };
             const importSources: { [key: string]: any } = {};
             for (let i = 0; i < data[0].ids.length; i++) {
                 const id = data[0].ids[i], label = data[0].labels[i], parent = data[0].parents[i];
@@ -401,6 +403,9 @@
     else { errorMessage = ''; errorDetails = []; submitDisabled = false; }
     $: if (plotMode === 'areas') timeMode = 'simple';
     $: if (currentPlotData) updatePlot();
+    $: if (currentPlotData && plotControlShowDetails !== undefined) updatePlot();
+    $: if (currentPlotData && plotControlAggregateImports !== undefined) updatePlot();
+    $: if (currentPlotData && plotControlPlotSize) updatePlot();
 
 </script>
 
